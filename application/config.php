@@ -15,7 +15,17 @@ return [
     // +----------------------------------------------------------------------
 
     // 应用调试模式
-    'app_debug'              => false,
+    "EXTEND"   =>"/../extend",
+    'msg'=>[
+        'gateway'=>'',
+        'appkey'=>''
+    ],
+    'email'=>[
+        'host'=>'smtp.qq.com',
+        'username'=>'2537033935@qq.com',
+        'password'=>'ipatqfxhyyqjdhia'
+    ],
+    'app_debug'              => true,
     // 应用Trace
     'app_trace'              => false,
     // 应用模式状态
@@ -54,13 +64,13 @@ return [
     // +----------------------------------------------------------------------
 
     // 默认模块名
-    'default_module'         => 'index',
+    'default_module'         => 'admin',
     // 禁止访问模块
     'deny_module_list'       => ['common'],
     // 默认控制器名
     'default_controller'     => 'Index',
     // 默认操作名
-    'default_action'         => 'index',
+    'default_action'         => 'home',
     // 默认验证器
     'default_validate'       => '',
     // 默认的空控制器名
