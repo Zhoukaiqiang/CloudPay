@@ -9,9 +9,8 @@ namespace app\admin\controller;
 class Index
 {
 
-    public function index() {
-
-        return 'hello admin! this is homepage.';
+    public function index()
+    {
 
     }
 
