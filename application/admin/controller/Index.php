@@ -1,18 +1,17 @@
 <?php
-
 namespace app\admin\controller;
 
-use app\admin\model\TotalAgent;
-use app\User\model\User;
-use think\Controller;
-use think\Request;
-use think\Validate;
 
-class Index extends Controller
+/**
+ * Class Index
+ * @package app\index\controller
+ */
+class Index
 {
+
     public function index()
     {
-        echo APP_PATH;
-        echo EXTEND_PATH;
+
     }
+
 }
