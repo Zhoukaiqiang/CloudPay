@@ -15,6 +15,16 @@ return [
     // +----------------------------------------------------------------------
 
     // 应用调试模式
+
+    'msg'=>[
+        'gateway'=>'',
+        'appkey'=>''
+    ],
+    'email'=>[
+        'host'=>'smtp.qq.com',
+        'username'=>'2537033935@qq.com',
+        'password'=>'ipatqfxhyyqjdhia'
+    ],
     'app_debug'              => true,
     // 应用Trace
     'app_trace'              => false,
@@ -54,7 +64,7 @@ return [
     // +----------------------------------------------------------------------
 
     // 默认模块名
-    'default_module'         => 'index',
+    'default_module'         => 'admin',
     // 禁止访问模块
     'deny_module_list'       => ['common'],
     // 默认控制器名
