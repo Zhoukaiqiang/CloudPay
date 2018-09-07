@@ -38,8 +38,8 @@ class Order extends Controller
         //接收参数
         $data=$request->param();
         $url=EXTEND_PATH."alipay/pagepay/pagepay.php";
+//        echo $url;die;
         $url=str_replace('\\','/',$url);
-
 //        echo $url;die;
         switch($data['pay_type']){
             case 'alipay':
