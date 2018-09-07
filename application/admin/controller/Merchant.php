@@ -3,9 +3,10 @@
 namespace app\admin\controller;
 
 use think\Controller;
+use app\admin\model\TotalMerchant;
 use think\Request;
 
-class Totalmerchants extends Controller
+class Merchant extends Controller
 {
     /**
      * 商户首页(默认显示通过审核的商户) 0待审核 1开通中 2通过 3未通过
@@ -14,8 +15,8 @@ class Totalmerchants extends Controller
      */
     public function index()
     {
-        $data=\app\admin\model\TotalMerchants::where('review_status',2)->select();
-        return view('data',$data);
+        $data=TotalMerchant::where('review_status',2)->select();
+        return_msg('200','success',$data);
     }
 
     /**
@@ -26,8 +27,8 @@ class Totalmerchants extends Controller
     public function normal_detail()
     {
         $id=request()->param('id');
-        $data=\app\admin\model\TotalMerchants::where('id',$id)->find();
-        return view('normal_detail',['data'=>$data]);
+        $data=TotalMerchant::where('id',$id)->find();
+        return_msg('200','success',$data);
     }
 
     /**
@@ -41,7 +42,7 @@ class Totalmerchants extends Controller
         //获取商户id
         $id=request()->param('id');
         //修改商户状态
-        $result=\app\admin\model\TotalMerchants::where('id',$id)->update(['status'=>0]);
+        $result=TotalMerchant::where('id',$id)->update(['status'=>0]);
         if($result){
             $this->success('已启用','index');
         }else{
@@ -60,7 +61,7 @@ class Totalmerchants extends Controller
         //获取商户id
         $id=request()->param('id');
         //修改商户状态
-        $result=\app\admin\model\TotalMerchants::where('id',$id)->update(['status'=>1]);
+        $result=TotalMerchant::where('id',$id)->update(['status'=>1]);
         if($result){
             $this->success('已停用','index');
         }else{
@@ -77,13 +78,13 @@ class Totalmerchants extends Controller
      */
     public function review_list()
     {
-        //显示审核中以及不属于间联的商户
+        //显示审核中的直联商户
         $where=[
             'review_status'=>['<>',2],
             'channel'       =>['<>','middle']
         ];
-        $data=\app\admin\model\TotalMerchants::where($where)->select();
-        return view('review_list',['data'=>$data]);
+        $data=TotalMerchant::where($where)->select();
+        return_msg('200','success',$data);
     }
 
     /**
@@ -97,8 +98,8 @@ class Totalmerchants extends Controller
     {
         $id=request()->param('id');
         //显示当前商户数据
-        $data=\app\admin\model\TotalMerchants::where('id',$id)->find();
-        return view('review_detail',['data'=>$data]);
+        $data=TotalMerchant::where('id',$id)->find();
+        return_msg('200','success',$data);
     }
 
     /**
@@ -111,7 +112,7 @@ class Totalmerchants extends Controller
     {
         $id=request()->param('id');
         //修改审核状态
-        $result=\app\admin\model\TotalMerchants::where('id',$id)->update(['review_status'=>1]);
+        $result=TotalMerchant::where('id',$id)->update(['review_status'=>1]);
         if($result){
             //提交给第三方审核
 
@@ -131,7 +132,7 @@ class Totalmerchants extends Controller
     public function review_rejected()
     {
         $data=request()->param();
-        $result=\app\admin\model\TotalMerchants::where('id',$data['id'])->update(['review_status'=>3,'rejected'=>$data['rejected']]);
+        $result=TotalMerchant::where('id',$data['id'])->update(['review_status'=>3,'rejected'=>$data['rejected']]);
         if($result){
             $this->success('已驳回','index');
         }else{
@@ -153,8 +154,8 @@ class Totalmerchants extends Controller
             'review_status'=>['=',3],
             'channel'       =>['=','middle']
         ];
-        $data=\app\admin\model\TotalMerchants::where($where)->select();
-        return view('review_middle',['data'=>$data]);
+        $data=TotalMerchant::where($where)->select();
+        return_msg('200','success',$data);
     }
 
     /**
@@ -167,8 +168,8 @@ class Totalmerchants extends Controller
     {
         $id=request()->param('id');
         //显示当前商户数据
-        $data=\app\admin\model\TotalMerchants::where('id',$id)->find();
-        return view('middle_detail',['data'=>$data]);
+        $data=TotalMerchant::where('id',$id)->find();
+        return_msg('200','success',$data);
     }
 
 }

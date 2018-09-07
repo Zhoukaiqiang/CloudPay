@@ -12,6 +12,7 @@ class Index extends Controller
 {
     public function index()
     {
-        echo 1;
+        echo APP_PATH;
+        echo EXTEND_PATH;
     }
 }

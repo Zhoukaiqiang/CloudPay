@@ -2,10 +2,11 @@
 
 namespace app\admin\controller;
 
+use app\admin\model\TotalAgent;
 use think\Controller;
 use think\Request;
 
-class Totalagent extends Controller
+class Agent extends Controller
 {
     /**
      * 代理商首页
@@ -14,20 +15,9 @@ class Totalagent extends Controller
      */
     public function index()
     {
-        $stime=microtime(true);
-        echo $stime ."<br/>";
-        //验证请求是否超时
             //取出数据表中的数据
-//            $data=\app\admin\model\TotalAgent::field(['id','agent_name','contact_person','agent_mode','agent_area','admin_id','create_time','contract_time','status'])->select();
-        $data=\app\admin\model\TotalAgent::select();
-        $ltime=microtime(true);
-        echo $ltime;die;
-        $s=set_time_limit(0.1);
-        echo $s;
-            dump($data);die();
-            return view('index',['data'=>$data]);
-
-
+            $data=TotalAgent::field(['id','agent_name','contact_person','agent_mode','agent_area','admin_id','create_time','contract_time','status'])->select();
+            return_msg('200','success',$data);
     }
 
     /**
@@ -38,9 +28,8 @@ class Totalagent extends Controller
      */
     public function add()
     {
-        //
-        if(request()->isPost()){
             $data=request()->post();
+            dump($data);die;
             /*$rule=[
                 'agent_mode'    =>'require',
                 'agent_name'    =>'require',
@@ -95,7 +84,7 @@ class Totalagent extends Controller
             $data['contract_picture']=json_encode($data['contract_picture']);
 //            $data['contract_time']=strtotime($data['contract_time']);
             //保存到数据表
-            $info=\app\admin\model\TotalAgent::create($data,true);
+            $info=TotalAgent::create($data,true);
             if($info){
                 //保存成功
                 return_msg('200','保存成功',$info);
@@ -107,9 +96,6 @@ class Totalagent extends Controller
                  $error=$validate->getError();
                  $this->error($error);
              }*/
-        }else{
-            return view();
-        }
 
     }
 
@@ -126,11 +112,12 @@ class Totalagent extends Controller
         //
         if(request()->isPost()){
             $data=$request->post();
+            //上传图片
             $data['contract_picture']=$this->upload_logo();
             $data['contract_picture']=json_encode($data['contract_picture']);
 //            $data['contract_time']=strtotime($data['contract_time']);
             //保存到数据表
-            $info=\app\admin\model\TotalAgent::where('id','=',$data['id'])->update($data,true);
+            $info=TotalAgent::where('id','=',$data['id'])->update($data,true);
             if($info){
                 //保存成功
                 return_msg('200','修改成功',$info);
@@ -140,8 +127,8 @@ class Totalagent extends Controller
             }
         }else{
             $id=request()->param('id');
-            $data=\app\admin\model\TotalAgent::where('id',$id)->find();
-            return view('edit',['data'=>$data]);
+            $data=TotalAgent::where('id',$id)->find();
+            return_msg(200,'success',$data);
         }
     }
 
@@ -165,7 +152,7 @@ class Totalagent extends Controller
      */
     public function delete($id)
     {
-        $result=\app\admin\model\TotalAgent::destroy($id);
+        $result=TotalAgent::destroy($id);
         if($result){
             //删除成功
             $this->success('删除成功','index');
