@@ -6,7 +6,7 @@
  * Time: 16:35
  */
 
-namespace app\index\controller;
+namespace app\admin\controller;
 
 
 use app\index\model\TotalAd;

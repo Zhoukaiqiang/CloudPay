@@ -1,5 +1,5 @@
 <?php
-namespace app\index\controller;
+namespace app\admin\controller;
 
 
 /**
@@ -8,8 +8,11 @@ namespace app\index\controller;
  */
 class Index
 {
+
     public function index() {
-        echo 'hello admin!';
+
+        return 'hello admin! this is homepage.';
+
     }
 
 }
