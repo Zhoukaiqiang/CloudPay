@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>login</title>
+    <script src="https://cdn.bootcss.com/jquery/3.3.1/jquery.min.js"></script>
+</head>
+<body>
+    <h1>login page</h1>
+    <form id="uploadForm" action="" enctype="multipart/form-data">
+        <input type="file" name="image">
+        <input type="submit">
+    </form>
+    <script>
+        $(function () {
+            $('form').submit(function(e) {
+                e.preventDefault();
+                $.ajax({
+                    url: 'http://www.cloudpay.com/index/user/img_upload',
+                    type: "POST",
+                    data: new FormData($('#uploadForm')[0]),
+                    processData: false,
+                    contentType: false,
+                    dataType:"json",
+                    success: function (e) {
+                        console.log(e);
+                    },
+                    error: function (e) {
+                        console.log(e);
+                    }
+                })
+            })
+        })
+    </script>
+</body>
+</html>
