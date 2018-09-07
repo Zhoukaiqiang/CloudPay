@@ -14,8 +14,8 @@ if(!function_exists('encrypt_password')){
     //定义密码加密函数
     function encrypt_password($password){
         //加密方式
-        $salt = 'asd123';//自定义字符串
-        return md5( md5($password) . $salt );
+        $salt = 'yunshangfu';//自定义字符串
+        return md5('$lt'. md5($password) . $salt );
     }
 }
 /**
@@ -123,3 +123,44 @@ if(!function_exists('make_code')){
         return rand($min, $max);
     }
 }
+
+/**
+ * api 数据返回
+ * @param [int] $code [结果码 200：正常/4**数据问题/5**服务器问题]]
+ * @param [string] $msg [接口码要返回的提示信息]
+ * @param [array] $data [接口要返回的数据]
+ *
+ */
+if(!function_exists('return_msg')){
+    function return_msg($code, $msg = '', $data = [])
+    {
+        /* 组合数据 */
+        $return_data['code'] = $code;
+        $return_data['msg'] = $msg;
+        $return_data['data'] = $data;
+        /* ---------返回信息并终止脚本---------- */
+
+        echo json_encode($return_data);die;
+    }
+}
+
+/**
+ * 验证请求是否超时
+ * @param [int] $code [结果码 200：正常/4**数据问题/5**服务器问题]]
+ * @param [string] $msg [接口码要返回的提示信息]
+ * @param [array] $data [接口要返回的数据]
+ *
+ */
+if(!function_exists('check_time')) {
+    function check_time()
+    {
+        $time=time();
+        session('check_time',$time);
+        if((time()-session('check_time')) < 0.0001){
+            return true;
+        }else{
+            return false;
+        }
+    }
+}
+

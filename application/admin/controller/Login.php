@@ -1,8 +1,8 @@
 <?php
 
-namespace app\User\controller;
+namespace app\admin\controller;
 
-use app\User\model\User;
+use app\admin\model\TotalAdmin;
 use think\Controller;
 use think\Request;
 use think\Validate;
@@ -15,29 +15,30 @@ class Login extends Controller
      * $username 用户名
      * $password 密码
      */
-    public function login(Request $request,User $user)
+    public function login(Request $request,TotalAdmin $user)
     {
         if($request->isPost()){
             $data=$request->post();
             $rule=[
-                'username'=>'require',
+                'name'=>'require',
                 'password'=>'require|min:6'
             ];
             $msg=[
-                'username.require'=>'用户名必填',
+                'name.require'=>'用户名必填',
                 'password.require'=>'密码必填',
                 'password.min'=>'密码至少6位',
             ];
             $validate=new Validate($rule,$msg);
             if($validate->check($data)){
                 $where=[
-                    'username'=>addslashes($data['username']),
+                    'name'=>addslashes($data['name']),
                     'password'=>encrypt_password(addslashes($data['password']))
                 ];
                 if($info=$user->where($where)->find()){
                     //使用session保存用户信息
                     session('userinfo',$info->toArray());
-                    $this->redirect('user/home/home');
+                    echo '登录成功';die;
+                    $this->redirect('admin/index/index');
                 }else{
                     $this->error('用户名或密码错误');
                 }

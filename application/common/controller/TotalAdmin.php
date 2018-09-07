@@ -1,11 +1,11 @@
 <?php
 
-namespace app\User\controller;
+namespace app\common\controller;
 
 use think\Controller;
 use think\Request;
 
-class NewStore extends Controller
+class TotalAdmin extends Controller
 {
     /**
      * 显示资源列表
