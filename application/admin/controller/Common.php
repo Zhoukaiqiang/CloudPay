@@ -12,6 +12,7 @@ class Common extends Controller
     protected $request;
     protected $validater;
     protected $params;
+
     protected $rules = array(
         'User' => array(
             'login' => array(
@@ -28,6 +29,30 @@ class Common extends Controller
                 'password' => 'require|length:32',
                 'code' => 'require|number|length:6'
             ],
+            'changePwd' => [
+                'phone' => 'require',
+                'password' => 'require|length:32',
+                'ini_pwd' => 'require|length:32',
+
+            ],
+            'findPwd' => [
+                'phone' => 'require',
+                'password' => 'require|length:32',
+                'code' => 'require|length:6|number',
+
+            ],
+            'bind_phone' => [
+                'user_id' => 'require|number',
+                'phone' => ['require', 'regex' => '/^1[34578]\d{9}$/'],
+                'code' => 'require|length:6|number',
+
+            ],
+            'bind_email' => [
+                'user_id' => 'require|number',
+                'email' => ['require', 'email'],
+                'code' => 'require|length:6|number',
+
+            ],
             'addStaff' => [
                 'name' => ['require', 'max' => 20],
                 'phone' => ['require', 'length' => 11, 'number'],
@@ -36,12 +61,15 @@ class Common extends Controller
             ],
             'test' => [],
         ),
-        'Code' => array(
-            'get_code' => array(
-                'phone' => 'require',
+        'Code' => [
+            'get_code' => [
+                'user_type' => 'require',
                 'is_exist' => 'require|number|length:1',
-            ),
-        ),
+            ],
+            'get_code_by_username' => [],
+            'send_code_to_phone' => [],
+
+        ]
 
     );
 
@@ -111,7 +139,9 @@ class Common extends Controller
     public function check_params($arr)
     {
         /* 获取参数的验证规则 */
+
         $rule = $this->rules[$this->request->controller()][$this->request->action()];
+
         /* 验证参数并返回错误 */
         $this->validater = new Validate($rule);
         if (!$this->validater->check($arr)) {
@@ -130,34 +160,35 @@ class Common extends Controller
     public function check_username($phone)
     {
 
-        $result = Db::table('cloud_total_admin')->where('phone', $phone)->find();
-
-        if (!$result) {
-            return $this->return_msg(400, '用户不存在！');
-        } else {
-            $name = Db::table('cloud_total_admin')->where('phone', $phone)->value('name');
-            return $name;
-        }
-
-//        /* 判断是否为邮箱 */
-//        $is_email = Validate::is($username, 'email') ? 1 : 0;
-//        /* 判断是否为手机  */
-//        $is_phone = preg_match('/^1[34578]\d{9}$/', $username) ? 4 : 2;
-//        $flag = $is_email + $is_phone;
-//        switch ($flag) {
-//            /* not phone not email */
-//            case 2:
-//                $this->return_msg(400, '邮箱或手机号不正确!' );
-//                break;
-//            /* is email not phone */
-//            case 3:
-//                return 'email';
-//                break;
-//            case 4:
-//                return 'phone';
-//                break;
+//        $result = Db::table('cloud_total_admin')->where('phone', $phone)->find();
 //
+//        if (!$result) {
+//            return $this->return_msg(400, '用户不存在！');
+//        } else {
+//            $name = Db::table('cloud_total_admin')->where('phone', $phone)->value('name');
+//            if ($name) {return 'phone'; }
 //        }
+
+
+        /* 判断是否为邮箱 */
+        $is_email = Validate::is($phone, 'email') ? 1 : 0;
+        /* 判断是否为手机  */
+        $is_phone = preg_match('/^1[34578]\d{9}$/', $phone) ? 4 : 2;
+        $flag = $is_email + $is_phone;
+        switch ($flag) {
+            /* not phone not email */
+            case 2:
+                $this->return_msg(400, '邮箱或手机号不正确!' );
+                break;
+            /* is email not phone */
+            case 3:
+                return 'email';
+                break;
+            case 4:
+                return 'phone';
+                break;
+
+        }
 
     }
 
@@ -204,8 +235,9 @@ class Common extends Controller
      */
     public function check_code($user_name, $code)
     {
-        /* 检测是否超时*/
+        /* 检测是否超时 创建session */
         $last_time = session($user_name . '_last_send_time');
+
         if (time() - $last_time > 300) {
             $this->return_msg(400, '验证超时，请在5分钟内验证！');
         }
@@ -243,8 +275,8 @@ class Common extends Controller
 
     /**
      * 密码加密
-     * @param $password [加密前的密码]
-     * @return string [加密后的密码]
+     * @param [sting] $password [加密前的密码]
+     * @return [string] [加密后的密码]
      *
      */
     public function encrypt_password($password)

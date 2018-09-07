@@ -1,6 +1,6 @@
 <?php
 namespace app\admin\controller;
-
+use PHPMailer\PHPMailer;
 
 
 class Code extends Common
@@ -8,22 +8,21 @@ class Code extends Common
 
     public function get_code()
     {
-        $this->params = $this->request->param();
 
-        $phone = $this->params['phone'];
+        $user_type = $this->params['user_type'];
         $exist = $this->params['is_exist'];
 
 
-        //$username_type = $this->check_username($username);
+        $username_type = $this->check_username($user_type);
 
-        $username_type = 'phone';
+        //$username_type = 'phone';
 
         switch ($username_type) {
             case "phone":
-                $this->get_code_by_username($phone, 'phone', $exist);
+                $this->get_code_by_username($user_type, 'phone', $exist);
                 break;
             case "email":
-                $this->get_code_by_username($phone, 'email', $exist);
+                $this->get_code_by_username($user_type, 'email', $exist);
                 break;
         }
 
@@ -37,7 +36,7 @@ class Code extends Common
      *
      */
 
-    public function get_code_by_username($username, $type = 'phone', $exist)
+    public function get_code_by_username($username, $type, $exist)
     {
 
         if ($type == 'phone') {
@@ -66,10 +65,46 @@ class Code extends Common
             $this->send_code_to_phone($username, $code);
 
         } else {
-            //$this->send_code_to_email($username, $code);
+
+            $this->send_code_to_email($username, $code);
         }
     }
 
+    /**
+     * 发送邮件验证码
+     * @param $email
+     * @param $code
+     * @throws \PHPMailer\Exception
+     */
+    public function send_code_to_email($email, $code) {
+        $toemail = $email;
+        $mail = new PHPMailer();
+        $mail->isSMTP();
+        $mail->CharSet = 'utf-8';
+        $mail->Host = 'smtp.163.com';
+        $mail->SMTPAuth = true;
+        $mail->Username =  'a169kai@163.com';
+        $mail->Password = 'zkq2552907';
+        $mail->SMTPSecure= "ssl";
+        $mail->Port = 994;
+        $mail->setFrom('a169kai@163.com', 'test api');
+        $mail->addAddress($toemail,'test');
+        $mail->addReplyTo('a169kai@163.com', 'Reply');
+        $mail->Subject = "您有新的验证码！";
+        $mail->Body = '您的验证码是'.$code.', 验证码有效期为5分钟，请勿回复本邮件。';
+        if (!$mail->send()) {
+            $this->return_msg(400, $mail->ErrorInfo);
+        }else {
+            $this->return_msg(200, '邮箱发送成功！');
+        }
+    }
+    /**
+     * 手机验证码发送
+     * @description Submail api
+     * @param $phone
+     * @param $code
+     * @return [json] 返回成功或者失败的消息
+     */
     public function send_code_to_phone($phone, $code)
     {
         $curl = curl_init();

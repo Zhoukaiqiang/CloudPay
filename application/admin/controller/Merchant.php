@@ -5,7 +5,7 @@ namespace app\admin\controller;
 use think\Controller;
 use think\Request;
 
-class Totalmerchants extends Controller
+class Merchant extends Controller
 {
     /**
      * 商户首页(默认显示通过审核的商户) 0待审核 1开通中 2通过 3未通过
