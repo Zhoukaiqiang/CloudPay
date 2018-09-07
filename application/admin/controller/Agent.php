@@ -28,8 +28,8 @@ class Agent extends Controller
      */
     public function add()
     {
-            $data=request()->post();
-            dump($data);die;
+        if(request()->isPost()) {
+            $data = request()->post();
             /*$rule=[
                 'agent_mode'    =>'require',
                 'agent_name'    =>'require',
@@ -68,10 +68,10 @@ class Agent extends Controller
                 'agent_money.require'            =>'请输入代理费用',
                 'agent_money.number'            =>'代理费用必须是数字',
                 'contract_time.require'        =>'请选择合同期限',
-                'alipay_rate.number'            =>'支付宝间联费用必须是数字',
-                'alipay_rate.max'               =>'支付宝间联费用最高是0.6',
-                'wechat_rate.number'            =>'微信间联费用必须是数字',
-                'wechat_rate.max'               =>'微信间联费用最高是0.6',
+                'alipay_rate.number'            =>'支付宝间联费率必须是数字',
+                'alipay_rate.max'               =>'支付宝间联费率最高是0.6',
+                'wechat_rate.number'            =>'微信间联费率必须是数字',
+                'wechat_rate.max'               =>'微信间联费率最高是0.6',
                 'contract_picture.require'      =>'请上传合同图片',
                 'phone.require'                 =>'请填写联系方式',
                 'phone.regex.require'          =>'联系方式格式不正确',
@@ -80,23 +80,25 @@ class Agent extends Controller
             $validate=new Validate($rule,$msg);
             if($validate->check($data)){*/
             //上传图片
-            $data['contract_picture']=$this->upload_logo();
-            $data['contract_picture']=json_encode($data['contract_picture']);
+            $data['contract_picture'] = $this->upload_logo();
+            $data['contract_picture'] = json_encode($data['contract_picture']);
 //            $data['contract_time']=strtotime($data['contract_time']);
             //保存到数据表
-            $info=TotalAgent::create($data,true);
-            if($info){
+            $info = TotalAgent::create($data, true);
+            if ($info) {
                 //保存成功
-                return_msg('200','保存成功',$info);
-            }else{
+                return_msg('200', '保存成功', $info);
+            } else {
                 //保存失败
-                return_msg('400','保存失败');
+                return_msg('400', '保存失败');
             }
             /* }else{
                  $error=$validate->getError();
                  $this->error($error);
              }*/
-
+        }else{
+            return view();
+        }
     }
 
 
@@ -107,14 +109,18 @@ class Agent extends Controller
      * @param  $contract_picture 合同图片
      * @return \think\Response
      */
-    public function edit(Request $request)
+    public function detail(Request $request)
     {
         //
         if(request()->isPost()){
             $data=$request->post();
             //上传图片
-            $data['contract_picture']=$this->upload_logo();
-            $data['contract_picture']=json_encode($data['contract_picture']);
+            //如果没有上传图片用原来的图片
+            $file=$request->file('contract_picture');
+            if(!empty($file)){
+                $data['contract_picture']=$this->upload_logo();
+                $data['contract_picture']=json_encode($data['contract_picture']);
+            }
 //            $data['contract_time']=strtotime($data['contract_time']);
             //保存到数据表
             $info=TotalAgent::where('id','=',$data['id'])->update($data,true);
