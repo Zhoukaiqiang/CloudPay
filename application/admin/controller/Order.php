@@ -2,7 +2,9 @@
 
 namespace app\admin\controller;
 
+use app\admin\model\TotalAgent;
 use think\Controller;
+use think\Loader;
 use think\Request;
 
 class Order extends Controller
@@ -14,7 +16,7 @@ class Order extends Controller
      */
     public function index()
     {
-        //
+
     }
 
     /**
