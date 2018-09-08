@@ -39,15 +39,15 @@ class Order extends Controller
     {
         //接收参数
         $data=$request->param();
-        $url=EXTEND_PATH."alipay/pagepay/pagepay.php";
+//        $url=EXTEND_PATH."pay/alipay/pagepay/pagepay.php";
 //        echo $url;die;
-        $url=str_replace('\\','/',$url);
+//        $url=str_replace('\\','/',$url);
 //        echo $url;die;
         switch($data['pay_type']){
             case 'alipay':
                 //支付宝
                 //跳转到支付宝支付页面
-                $html = "<form id='alipayment' action='{$url}' method='post' style='display:none'>
+                $html = "<form id='alipayment' action='/pay/alipay/pagepay/pagepay.php' method='post' style='display:none'>
 <input id='WIDout_trade_no' name='WIDout_trade_no' value='123465789' />
 <input id='WIDsubject' name='WIDsubject' value='云商付订单'/>
 <input id='WIDtotal_amount' name='WIDtotal_amount' value='123' />

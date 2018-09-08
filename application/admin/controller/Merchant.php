@@ -15,7 +15,11 @@ class Merchant extends Controller
      */
     public function index()
     {
-        $data=TotalMerchant::where('review_status',2)->select();
+        $data=TotalMerchant::alias('a')
+            ->field('a.id,a.name,a.phone,a.address,a.contact,a.channel,a.create_time,a.status,b.contact_person,b.phone as agent_phone')
+            ->join('cloud_total_agent b','a.agent_id=b.id','left')
+            ->where('a.review_status=2')
+            ->select();
         return_msg('200','success',$data);
     }
 
@@ -44,9 +48,9 @@ class Merchant extends Controller
         //修改商户状态
         $result=TotalMerchant::where('id',$id)->update(['status'=>0]);
         if($result){
-            $this->success('已启用','index');
+            return_msg(200,"启用成功");
         }else{
-            $this->error('启用失败','index');
+            return_msg(400,"启用失败");
         }
     }
 
@@ -63,9 +67,9 @@ class Merchant extends Controller
         //修改商户状态
         $result=TotalMerchant::where('id',$id)->update(['status'=>1]);
         if($result){
-            $this->success('已停用','index');
+            return_msg(200,"已停用");
         }else{
-            $this->error('停用失败','index');
+            return_msg(400,"停用失败");
         }
     }
 
@@ -115,10 +119,9 @@ class Merchant extends Controller
         $result=TotalMerchant::where('id',$id)->update(['review_status'=>1]);
         if($result){
             //提交给第三方审核
-
-            $this->success('已提交审核','index');
+            return_msg(200,"提交审核成功");
         }else{
-            $this->error('提交审核失败','index');
+            return_msg(400,"提交审核失败");
         }
     }
 
@@ -134,9 +137,9 @@ class Merchant extends Controller
         $data=request()->param();
         $result=TotalMerchant::where('id',$data['id'])->update(['review_status'=>3,'rejected'=>$data['rejected']]);
         if($result){
-            $this->success('已驳回','index');
+            return_msg(200,"已驳回");
         }else{
-            $this->error('驳回失败','index');
+            return_msg(400,"驳回失败");
         }
     }
 
@@ -172,4 +175,22 @@ class Merchant extends Controller
         return_msg('200','success',$data);
     }
 
+    /**
+     * 间联详情页提交
+     *
+     * @param
+     * @return
+     */
+    public function middle_submit()
+    {
+        $id=request()->param('id');
+        //修改审核状态
+        $result=TotalMerchant::where('id',$id)->update(['review_status'=>1]);
+        if($result){
+            //提交给第三方审核
+            return_msg(200,"提交审核成功");
+        }else{
+            return_msg(400,"提交审核失败");
+        }
+    }
 }

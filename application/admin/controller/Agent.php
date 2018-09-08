@@ -2,6 +2,7 @@
 
 namespace app\admin\controller;
 
+use app\admin\model\TotalAdmin;
 use app\admin\model\TotalAgent;
 use think\Controller;
 use think\Request;
@@ -16,7 +17,10 @@ class Agent extends Controller
     public function index()
     {
             //取出数据表中的数据
-            $data=TotalAgent::field(['id','agent_name','contact_person','agent_mode','agent_area','admin_id','create_time','contract_time','status'])->select();
+            $data=TotalAgent::alias('a')
+                ->field('a.id,a.agent_name,a.contact_person,a.agent_mode,a.agent_area,a.create_time,a.contract_time,a.status,b.name')
+                ->join('cloud_total_admin b','a.admin_id=b.id','left')
+                ->select();
             return_msg('200','success',$data);
     }
 
@@ -97,7 +101,12 @@ class Agent extends Controller
                  $this->error($error);
              }*/
         }else{
-            return view();
+            //取出所有人员信息
+            $data=TotalAdmin::field(['id','name','role_id'])->select();
+            //取出所有一级代理商名称
+            $info=TotalAgent::where('superior_level',0)->field('agent_name')->select();
+            $data['info']=$info;
+            return_msg(200,'success',$data);
         }
     }
 
@@ -134,6 +143,14 @@ class Agent extends Controller
         }else{
             $id=request()->param('id');
             $data=TotalAgent::where('id',$id)->find();
+            $data['contract_picture']=json_decode($data['contract_picture']);
+            //取出所有人员信息
+            $admin=TotalAdmin::field(['id','name','role_id'])->select();
+            //取出所有一级代理
+            $info=TotalAgent::where('superior_level',0)->field('agent_name')->select();
+            $data['admin']=$admin;
+            $data['info']=$info;
+//            dump($data);die;
             return_msg(200,'success',$data);
         }
     }
