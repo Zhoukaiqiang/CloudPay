@@ -48,7 +48,7 @@ class Login extends Controller
             }
         }else{
             $this->view->engine->layout(false);
-            return view();
+            //return view();
         }
     }
 

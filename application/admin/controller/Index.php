@@ -11,7 +11,7 @@ class Index
 
     public function index()
     {
-
+        return 'index method';
     }
 
 }

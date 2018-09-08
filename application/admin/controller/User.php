@@ -10,6 +10,7 @@ namespace app\admin\controller;
 
 
 use app\index\model\TotalAd;
+
 use think\Db;
 use think\Controller;
 use think\Request;
@@ -25,12 +26,15 @@ class User extends Common
     {
         parent::_initialize();
         $this->request = Request::instance();
+
     }
 
 
     /**
      * 用户登录
-     * @return mixed
+     * @param [strin]   user_name 用户名（电话）
+     * @param [stirng]  password  用户密码
+     * @return [json] 返回信息
      */
     public function login()
     {
@@ -49,14 +53,18 @@ class User extends Common
         }
     }
 
+
     /**
-     * 注册方法
+     * 注册
+     * @param [string]  user_name 用户名
+     * @param [string]  code      验证码
+     * @return [json]   msg      返回消息
      */
     public function register()
     {
         /* 接受参数 */
         $data = $this->request->param();
-        dump($data['code']);die;
+
         $this->check_code($data['phone'], $data['code']);
         /* 检测用户名 */
 
@@ -140,6 +148,7 @@ class User extends Common
     /**
      * 删除图片
      * @param [id]  图片;
+     * @return [json] 返回信息
      */
     public function deleteAd($id)
     {
@@ -170,6 +179,15 @@ class User extends Common
 
     }
 
+    /**
+     * 检测用户是否存在于数据库
+     *
+     * @param $phone 用户手机号
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     * @return [json]  检测结果
+     */
     public function check_phone($phone)
     {
         $result = Db::table('cloud_total_admin')->where('phone', $phone)->find();
@@ -215,9 +233,109 @@ class User extends Common
 
     }
 
+    /**
+     * 用户改密码
+     * @param [int] phone 用户手机号
+     * @param [string] ini_pwd 老密码
+     * @param [string]  password 新密码
+     * @return [json] 返回消息
+     */
+    public function changePwd() {
+        /* 接受参数 */
+        $data = $this->params;
+
+        /* 检测用户名并取出数据库中的密码 */
+        $user_name_type = $this->check_username($data['phone']);
+        switch ($user_name_type) {
+            case "phone":
+                $this->check_exist($data['phone'], 'phone', 1);
+                $where['phone'] = $data['phone'];
+                break;
+            case "email":
+                # code..
+                break;
+        }
+        /* 判断原始密码是否正确 */
+        $db_ini_pwd = db('total_admin')->where($where)->value('password');
+        if ($db_ini_pwd !== $data['ini_pwd']) {
+            $this->return_msg(400, '密码错误!');
+        }
+
+        /* 把新的密码存入数据库 */
+        $res = db('total_admin')->where($where)->setField('password', $data['password']);
+        if ($res !== false) {
+            $this->return_msg(200, '密码修改成功！');
+        }else {
+            $this->return_msg(400, '密码修改失败！');
+        }
+    }
+
+    public function findPwd() {
+        /* 接受参数 */
+        $data = $this->params;
+
+        /* 检测验证码 */
+        $this->check_code($data['phone'], $data['code']);
+
+        /* 检测用户名 */
+        $user_name_type = $this->check_username($data['phone']);
+        switch ($user_name_type) {
+            case "phone":
+                $this->check_exist($data['phone'], 'phone', 1);
+                $where['phone'] = $data['phone'];
+                break;
+            case "email":
+                # code..
+                break;
+        }
+
+        /* 修改数据库 */
+        $res = db('total_admin')->where($where)->setField('password', $data['password']);
+        if ($res !== false) {
+            $this->return_msg(200, '密码修改成功！');
+        }else {
+            $this->return_msg(400, '密码修改失败！');
+        }
+    }
+
+    /**
+     * 绑定手机
+     * @return string
+     */
+
+    public function bind_phone() {
+        /* 接受参数 */
+        $data = $this->params;
+        /* 验证验证码 */
+        $this->check_code($data['phone'], $data['code']);
+
+        /* 修改数据库 */
+        $res = db('total_admin')->where('id', $data['user_id'])->setField('phone', $data['phone']);
+        if ($res !== false) {
+            $this->return_msg(200, '手机号绑定成功！');
+        }else {
+            $this->return_msg(400, '手机号绑定失败！');
+        }
+
+    }
+    public function bind_email() {
+        /* 接受参数 */
+        $data = $this->params;
+        /* 验证验证码 */
+        $this->check_code($data['email'], $data['code']);
+
+        /* 修改数据库 */
+        $res = db('total_admin')->where('id', $data['user_id'])->setField('email', $data['email']);
+        if ($res !== false) {
+            $this->return_msg(200, '邮箱绑定成功！');
+        }else {
+            $this->return_msg(400, '邮箱绑定失败！');
+        }
+    }
+
     public function test() {
        //获取当前模块名字
-        dump($this->request->header());
+
     }
 
 }
