@@ -74,7 +74,7 @@ class Code extends Common
      * 发送邮件验证码
      * @param $email
      * @param $code
-     * @throws \PHPMailer\Exception
+     * @throws [string / exception]  返回信息
      */
     public function send_code_to_email($email, $code) {
         $toemail = $email;
