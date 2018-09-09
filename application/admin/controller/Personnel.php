@@ -29,7 +29,7 @@ class Personnel extends Controller
     public function add()
     {
         if(request()->isPost()){
-            $data=request()->param();
+            $data=request()->post();
             //查询用户名是否存在
             $user=TotalAdmin::where('name',$data['name'])->find();
             if($user){

@@ -105,14 +105,14 @@ class Agent extends Controller
             $data=TotalAdmin::field(['id','name','role_id'])->select();
             //取出所有一级代理商名称
             $info=TotalAgent::where('superior_level',0)->field('agent_name')->select();
-            $data['info']=$info;
+            $data['agent']=$info;
             return_msg(200,'success',$data);
         }
     }
 
 
     /**
-     * 修改代理商.
+     * 代理商详情.
      *
      * @param  $contract_time 合同有效期
      * @param  $contract_picture 合同图片
@@ -147,24 +147,50 @@ class Agent extends Controller
             //取出所有人员信息
             $admin=TotalAdmin::field(['id','name','role_id'])->select();
             //取出所有一级代理
-            $info=TotalAgent::where('superior_level',0)->field('agent_name')->select();
+            $info=TotalAgent::where('parent_id',0)->field('agent_name')->select();
             $data['admin']=$admin;
-            $data['info']=$info;
+            $data['agent']=$info;
 //            dump($data);die;
             return_msg(200,'success',$data);
         }
     }
 
     /**
-     * 保存更新的资源
+     * 启用代理商
      *
-     * @param  \think\Request  $request
-     * @param  int  $id
+     * @param  status 1启用 0停用
      * @return \think\Response
      */
-    public function update(Request $request, $id)
+    public function open(Request $request)
     {
-        //
+        //获取商户id
+        $id=$request->param('id');
+        //修改商户状态
+        $result=TotalAgent::where('id',$id)->update(['status'=>1]);
+        if($result){
+            return_msg(200,"启用成功");
+        }else {
+            return_msg(400, "启用失败");
+        }
+    }
+
+    /**
+     * 停用代理商
+     *
+     * @param  status 1启用 0停用
+     * @return \think\Response
+     */
+    public function stop(Request $request)
+    {
+        //获取商户id
+        $id=$request->param('id');
+        //修改商户状态
+        $result=TotalAgent::where('id',$id)->update(['status'=>0]);
+        if($result){
+            return_msg(200,"已停用");
+        }else {
+            return_msg(400, "停用失败");
+        }
     }
 
     /**
