@@ -1,46 +1,77 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html>
-<head>
-	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-	<title>支付</title>
-</head>
 <?php
-require_once dirname(dirname(__FILE__)).'/config.php';
-require_once dirname(__FILE__).'/service/AlipayTradeService.php';
-require_once dirname(__FILE__).'/buildermodel/AlipayTradePagePayContentBuilder.php';
 
-    //商户订单号，商户网站订单系统中唯一订单号，必填
-    $out_trade_no = trim($_POST['WIDout_trade_no']);
+namespace alipay;
 
-    //订单名称，必填
-    $subject = trim($_POST['WIDsubject']);
+use think\Loader;
 
-    //付款金额，必填
-    $total_amount = trim($_POST['WIDtotal_amount']);
+Loader::import('alipay.pay.service.AlipayTradeService');
+loader::import('alipay.pay.buildermodel.AlipayTradePagePayContentBuilder');
 
-    //商品描述，可空
-    $body = trim($_POST['WIDbody']);
+/**
+ * 电脑网站支付(扫码支付或账号支付)
+ *
+ * 用法:
+ * 调用 \alipay\Pagepay::pay($params) 即可
+ */
+class Pagepay
+{
+    /**
+     * 主入口
+     * @param array  $params 支付参数, 具体如下
+     * @param string $params['subject'] 订单标题
+     * @param string $params['out_trade_no'] 订单商户号
+     * @param float  $params['total_amount'] 订单金额
+     */
+    public static function pay($params)
+    {
+        // 1.校检参数
+        self::checkParams($params);
 
-	//构造参数
-	$payRequestBuilder = new AlipayTradePagePayContentBuilder();
-	$payRequestBuilder->setBody($body);
-	$payRequestBuilder->setSubject($subject);
-	$payRequestBuilder->setTotalAmount($total_amount);
-	$payRequestBuilder->setOutTradeNo($out_trade_no);
+        // 2.构造参数
+        $payRequestBuilder = new \AlipayTradePagePayContentBuilder();
+        $payRequestBuilder->setSubject($params['subject']);
+        $payRequestBuilder->setTotalAmount($params['total_amount']);
+        $payRequestBuilder->setOutTradeNo($params['out_trade_no']);
 
-	$aop = new AlipayTradeService($config);
+        // 3.获取配置
+        $config = config('alipay');
+        $aop = new \AlipayTradeService($config);
 
-	/**
-	 * pagePay 电脑网站支付请求
-	 * @param $builder 业务参数，使用buildmodel中的对象生成。
-	 * @param $return_url 同步跳转地址，公网可以访问
-	 * @param $notify_url 异步通知地址，公网可以访问
-	 * @return $response 支付宝返回的信息
- 	*/
-	$response = $aop->pagePay($payRequestBuilder,$config['return_url'],$config['notify_url']);
+        /**
+         * 4.电脑网站支付请求(会自动跳转到支付页面)
+         * @param $builder 业务参数，使用buildmodel中的对象生成。
+         * @param $return_url 同步跳转地址，公网可以访问
+         * @param $notify_url 异步通知地址，公网可以访问
+         * @return $response 支付宝返回的信息
+         */
+        $aop->pagePay($payRequestBuilder, $config['return_url'],$config['notify_url']);
+    }
 
-	//输出表单
-	var_dump($response);
-?>
-</body>
-</html>
+
+    /**
+     * 校检参数
+     */
+    private static function checkParams($params)
+    {
+        if (empty(trim($params['out_trade_no']))) {
+            self::processError('商户订单号(out_trade_no)必填');
+        }
+
+        if (empty(trim($params['subject']))) {
+            self::processError('商品标题(subject)必填');
+        }
+
+        if (floatval(trim($params['total_amount'])) <= 0) {
+            self::processError('退款金额(total_amount)为大于0的数');
+        }
+    }
+
+    /**
+     * 统一错误处理接口
+     * @param  string $msg 错误描述
+     */
+    private static function processError($msg)
+    {
+        throw new \think\Exception($msg);
+    }
+}

@@ -82,7 +82,7 @@ class Merchant extends Controller
      * 显示直联待审列表
      *
      * @param  $review_status 审核状态 0待审核 1开通中 2通过 3未通过
-     * @param  $channel 当前通道 0支付宝 1微信 2支付宝间联 3微信间联 4微信和支付宝间联
+     * @param  $channel 当前通道 0支付宝 1微信 2支付宝微信直联 3间联
      * @return \think\Response
      */
     public function review_list()
@@ -90,7 +90,7 @@ class Merchant extends Controller
         //显示审核中的直联商户
         $where=[
             'review_status'=>['<>',2],
-            'channel'       =>['<','2']
+            'channel'       =>['<','3']
         ];
         $data=TotalMerchant::alias('a')
             ->field('a.id,a.name,a.phone,a.address,a.contact,a.channel,a.create_time,a.review_status,b.contact_person,b.agent_phone')
@@ -159,16 +159,15 @@ class Merchant extends Controller
      * 显示间联未通过列表
      *
      * @param  $review_status 审核状态 0待审核 1开通中 2通过 3未通过
-     * @param  $channel alipay支付宝直联 wechat微信直联 middle间联
+     * @param  $channel //当前通道 0支付宝 1微信 2支付宝微信直联 3间联
      * @return
      */
     public function review_middle()
     {
         //显示未通过并属于间联的商户
-        //当前通道 0支付宝 1微信 2支付宝间联 3微信间联 4微信和支付宝间联
         $where=[
             'review_status'=>['=',3],
-            'channel'       =>['>','1']
+            'channel'       =>['=','3']
         ];
         $data=TotalMerchant::alias('a')
             ->field('a.id,a.name,a.phone,a.address,a.contact,a.channel,a.create_time,a.rejected,b.contact_person,b.agent_phone')
@@ -189,7 +188,7 @@ class Merchant extends Controller
         $id=request()->param('id');
         //显示当前商户数据
         $data=TotalMerchant::where('id',$id)->find();
-        //取出所有代理商 一级代理??
+        //取出所有代理商
         $info=$this->get_agent();
         $data['agent']=$info;
         return_msg('200','success',$data);

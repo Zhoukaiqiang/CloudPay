@@ -2,6 +2,7 @@
 
 namespace app\admin\controller;
 
+use alipay\Pagepay;
 use app\admin\model\TotalAgent;
 use think\Controller;
 use think\Loader;
@@ -38,12 +39,24 @@ class Order extends Controller
     public function pay(Request $request)
     {
         //接收参数
-        $data=$request->param();
+//        $data=$request->param();
 //        $url=EXTEND_PATH."pay/alipay/pagepay/pagepay.php";
 //        echo $url;die;
 //        $url=str_replace('\\','/',$url);
 //        echo $url;die;
-        switch($data['pay_type']){
+        $out_trade_no=time().rand(1000,9999);
+        $order=array(
+            'out_trade_no'=>$out_trade_no,
+            'total_amount'=>0.01,
+            'subject'=>'宝宝'
+        );
+        $params = [
+            'out_trade_no' => $order['out_trade_no'],
+            'total_amount' => $order['total_amount'],
+            'subject'      =>$order['subject']
+        ];
+        Pagepay::pay($params);
+        /*switch($data['pay_type']){
             case 'alipay':
                 //支付宝
                 //跳转到支付宝支付页面
@@ -63,7 +76,7 @@ class Order extends Controller
                 //银联
                 echo '支付成功';
                 break;
-        }
+        }*/
     }
 
     /**
@@ -72,17 +85,20 @@ class Order extends Controller
      * @param
      * @return \think\Response
      */
-    public function callback()
+    public function callback(Request $request)
     {
         //接收参数
-        $data=request()->param();
-        dump($data);die;
+        $data=$request->get();
+        unset($data['/admin/order/callback']);
+//        dump($data);die;
         //验签
-        require_once("./plugins/alipay/config.php");
-        require_once './plugins/alipay/pagepay/service/AlipayTradeService.php';
+        $config = config('alipay');
+        Loader::import('pay.alipay.pagepay.service.AlipayTradeService');
         $alipaySevice = new \AlipayTradeService($config);
+//        dump($alipaySevice);die;
         $result=$alipaySevice->check($data);
         if($result){
+            echo 'success';die;
             //验证成功
             $order_sn=$data['out_trade_no'];
             $total_amount=$data['total_amount'];
@@ -90,6 +106,7 @@ class Order extends Controller
             return view('paysuccess', ['total_amount' => $total_amount]);
         }else{
             //验证失败
+            echo 'false';die;
             return view('payfail', ['error' => '支付失败，请稍后再试']);
         }
     }

@@ -28,8 +28,8 @@ class TotalMerchant extends Model
 
     public function getChannelAttr($value)
     {
-        //  当前通道 0支付宝 1微信 2支付宝间联 3微信间联
-        $attr_input_type = ['支付宝', '微信', '支付宝','微信','微信 支付宝'];
+        //  当前通道 0支付宝 1微信 2支付宝微信直联 3间联
+        $attr_input_type = ['支付宝', '微信','微信 支付宝','微信 支付宝'];
         return $attr_input_type[$value];
     }
 }

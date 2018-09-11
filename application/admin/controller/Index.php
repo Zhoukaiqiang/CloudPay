@@ -11,7 +11,8 @@ class Index
 
     public function index()
     {
-        return 'index method';
+        echo dirname(dirname ( __FILE__ ));
+//        echo __FILE__;
     }
 
 }

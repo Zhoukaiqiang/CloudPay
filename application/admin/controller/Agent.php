@@ -221,7 +221,7 @@ class Agent extends Controller
                 $goods_pics[]=$goods_logo;
             }else{
                 $error=$info->getError();
-                $this->error($error);
+                return_msg(400,$error);
             }
         }
         return $goods_pics;
