@@ -2,6 +2,7 @@
 
 namespace app\admin\controller;
 
+use app\admin\model\TotalAdmin;
 use app\admin\model\TotalAgent;
 use think\Controller;
 use think\Request;
@@ -16,7 +17,10 @@ class Agent extends Controller
     public function index()
     {
             //取出数据表中的数据
-            $data=TotalAgent::field(['id','agent_name','contact_person','agent_mode','agent_area','admin_id','create_time','contract_time','status'])->select();
+            $data=TotalAgent::alias('a')
+                ->field('a.id,a.agent_name,a.contact_person,a.agent_mode,a.agent_area,a.create_time,a.contract_time,a.status,b.name')
+                ->join('cloud_total_admin b','a.admin_id=b.id','left')
+                ->select();
             return_msg('200','success',$data);
     }
 
@@ -97,13 +101,18 @@ class Agent extends Controller
                  $this->error($error);
              }*/
         }else{
-            return view();
+            //取出所有人员信息
+            $data=TotalAdmin::field(['id','name','role_id'])->select();
+            //取出所有一级代理商名称
+            $info=TotalAgent::where('superior_level',0)->field('agent_name')->select();
+            $data['agent']=$info;
+            return_msg(200,'success',$data);
         }
     }
 
 
     /**
-     * 修改代理商.
+     * 代理商详情.
      *
      * @param  $contract_time 合同有效期
      * @param  $contract_picture 合同图片
@@ -134,20 +143,54 @@ class Agent extends Controller
         }else{
             $id=request()->param('id');
             $data=TotalAgent::where('id',$id)->find();
+            $data['contract_picture']=json_decode($data['contract_picture']);
+            //取出所有人员信息
+            $admin=TotalAdmin::field(['id','name','role_id'])->select();
+            //取出所有一级代理
+            $info=TotalAgent::where('parent_id',0)->field('agent_name')->select();
+            $data['admin']=$admin;
+            $data['agent']=$info;
+//            dump($data);die;
             return_msg(200,'success',$data);
         }
     }
 
     /**
-     * 保存更新的资源
+     * 启用代理商
      *
-     * @param  \think\Request  $request
-     * @param  int  $id
+     * @param  status 1启用 0停用
      * @return \think\Response
      */
-    public function update(Request $request, $id)
+    public function open(Request $request)
     {
-        //
+        //获取商户id
+        $id=$request->param('id');
+        //修改商户状态
+        $result=TotalAgent::where('id',$id)->update(['status'=>1]);
+        if($result){
+            return_msg(200,"启用成功");
+        }else {
+            return_msg(400, "启用失败");
+        }
+    }
+
+    /**
+     * 停用代理商
+     *
+     * @param  status 1启用 0停用
+     * @return \think\Response
+     */
+    public function stop(Request $request)
+    {
+        //获取商户id
+        $id=$request->param('id');
+        //修改商户状态
+        $result=TotalAgent::where('id',$id)->update(['status'=>0]);
+        if($result){
+            return_msg(200,"已停用");
+        }else {
+            return_msg(400, "停用失败");
+        }
     }
 
     /**
@@ -178,7 +221,7 @@ class Agent extends Controller
                 $goods_pics[]=$goods_logo;
             }else{
                 $error=$info->getError();
-                $this->error($error);
+                return_msg(400,$error);
             }
         }
         return $goods_pics;

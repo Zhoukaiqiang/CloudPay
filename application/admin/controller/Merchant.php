@@ -2,6 +2,7 @@
 
 namespace app\admin\controller;
 
+use app\admin\model\TotalAgent;
 use think\Controller;
 use app\admin\model\TotalMerchant;
 use think\Request;
@@ -9,13 +10,18 @@ use think\Request;
 class Merchant extends Controller
 {
     /**
-     * 商户首页(默认显示通过审核的商户) 0待审核 1开通中 2通过 3未通过
+     * 商户首页(默认显示通过审核的商户)
+     * review_status 0待审核 1开通中 2通过 3未通过
      *
      * @return \think\Response
      */
     public function index()
     {
-        $data=TotalMerchant::where('review_status',2)->select();
+        $data=TotalMerchant::alias('a')
+            ->field('a.id,a.name,a.phone,a.address,a.contact,a.channel,a.opening_time,a.status,b.contact_person,b.agent_phone')
+            ->join('cloud_total_agent b','a.agent_id=b.id','left')
+            ->where('a.review_status=2')
+            ->select();
         return_msg('200','success',$data);
     }
 
@@ -28,6 +34,9 @@ class Merchant extends Controller
     {
         $id=request()->param('id');
         $data=TotalMerchant::where('id',$id)->find();
+        //获取所有代理商
+        $info=$this->get_agent();
+        $data['agent']=$info;
         return_msg('200','success',$data);
     }
 
@@ -44,9 +53,9 @@ class Merchant extends Controller
         //修改商户状态
         $result=TotalMerchant::where('id',$id)->update(['status'=>0]);
         if($result){
-            $this->success('已启用','index');
+            return_msg(200,"启用成功");
         }else{
-            $this->error('启用失败','index');
+            return_msg(400,"启用失败");
         }
     }
 
@@ -63,9 +72,9 @@ class Merchant extends Controller
         //修改商户状态
         $result=TotalMerchant::where('id',$id)->update(['status'=>1]);
         if($result){
-            $this->success('已停用','index');
+            return_msg(200,"已停用");
         }else{
-            $this->error('停用失败','index');
+            return_msg(400,"停用失败");
         }
     }
 
@@ -73,7 +82,7 @@ class Merchant extends Controller
      * 显示直联待审列表
      *
      * @param  $review_status 审核状态 0待审核 1开通中 2通过 3未通过
-     * @param  $channel alipay支付宝直联 wechat微信直联 middle间联
+     * @param  $channel 当前通道 0支付宝 1微信 2支付宝微信直联 3间联
      * @return \think\Response
      */
     public function review_list()
@@ -81,9 +90,13 @@ class Merchant extends Controller
         //显示审核中的直联商户
         $where=[
             'review_status'=>['<>',2],
-            'channel'       =>['<>','middle']
+            'channel'       =>['<','3']
         ];
-        $data=TotalMerchant::where($where)->select();
+        $data=TotalMerchant::alias('a')
+            ->field('a.id,a.name,a.phone,a.address,a.contact,a.channel,a.create_time,a.review_status,b.contact_person,b.agent_phone')
+            ->join('cloud_total_agent b','a.agent_id=b.id','left')
+            ->where($where)
+            ->select();
         return_msg('200','success',$data);
     }
 
@@ -99,6 +112,9 @@ class Merchant extends Controller
         $id=request()->param('id');
         //显示当前商户数据
         $data=TotalMerchant::where('id',$id)->find();
+        //获取所有代理商
+        $info=$this->get_agent();
+        $data['agent']=$info;
         return_msg('200','success',$data);
     }
 
@@ -115,10 +131,9 @@ class Merchant extends Controller
         $result=TotalMerchant::where('id',$id)->update(['review_status'=>1]);
         if($result){
             //提交给第三方审核
-
-            $this->success('已提交审核','index');
+            return_msg(200,"提交审核成功");
         }else{
-            $this->error('提交审核失败','index');
+            return_msg(400,"提交审核失败");
         }
     }
 
@@ -134,9 +149,9 @@ class Merchant extends Controller
         $data=request()->param();
         $result=TotalMerchant::where('id',$data['id'])->update(['review_status'=>3,'rejected'=>$data['rejected']]);
         if($result){
-            $this->success('已驳回','index');
+            return_msg(200,"已驳回");
         }else{
-            $this->error('驳回失败','index');
+            return_msg(400,"驳回失败");
         }
     }
 
@@ -144,7 +159,7 @@ class Merchant extends Controller
      * 显示间联未通过列表
      *
      * @param  $review_status 审核状态 0待审核 1开通中 2通过 3未通过
-     * @param  $channel alipay支付宝直联 wechat微信直联 middle间联
+     * @param  $channel //当前通道 0支付宝 1微信 2支付宝微信直联 3间联
      * @return
      */
     public function review_middle()
@@ -152,9 +167,13 @@ class Merchant extends Controller
         //显示未通过并属于间联的商户
         $where=[
             'review_status'=>['=',3],
-            'channel'       =>['=','middle']
+            'channel'       =>['=','3']
         ];
-        $data=TotalMerchant::where($where)->select();
+        $data=TotalMerchant::alias('a')
+            ->field('a.id,a.name,a.phone,a.address,a.contact,a.channel,a.create_time,a.rejected,b.contact_person,b.agent_phone')
+            ->join('cloud_total_agent b','a.agent_id=b.id','left')
+            ->where($where)
+            ->select();
         return_msg('200','success',$data);
     }
 
@@ -169,7 +188,34 @@ class Merchant extends Controller
         $id=request()->param('id');
         //显示当前商户数据
         $data=TotalMerchant::where('id',$id)->find();
+        //取出所有代理商
+        $info=$this->get_agent();
+        $data['agent']=$info;
         return_msg('200','success',$data);
     }
 
+    /**
+     * 间联详情页提交
+     *
+     * @param
+     * @return
+     */
+    public function middle_submit()
+    {
+        $id=request()->param('id');
+        //修改审核状态
+        $result=TotalMerchant::where('id',$id)->update(['review_status'=>1]);
+        if($result){
+            //提交给银行审核
+            return_msg(200,"提交审核成功");
+        }else{
+            return_msg(400,"提交审核失败");
+        }
+    }
+
+    //取出所有代理商
+    private function get_agent(){
+        $info=TotalAgent::field(['id','agent_name'])->select();
+        return $info;
+    }
 }

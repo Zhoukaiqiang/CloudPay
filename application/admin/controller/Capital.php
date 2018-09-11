@@ -11,6 +11,7 @@ class Capital extends Controller
 {
     /**
      * 显示未结算的首页列表
+     * status 0未结款 1已结款
      *
      * @return \think\Response
      */
@@ -44,9 +45,9 @@ class Capital extends Controller
             ];
             $result=TotalCapital::update($data);
             if($result){
-                $this->success('已结款','index');
+                return_msg(200,'已结款');
             }else{
-                $this->error('结款失败','index');
+                return_msg(400,'结款失败');
             }
         }else{
             $id=request()->param('id');
@@ -104,37 +105,5 @@ class Capital extends Controller
         return_msg('200','success',$data);
     }
 
-    /**
-     * 显示编辑资源表单页.
-     *
-     * @param  int  $id
-     * @return \think\Response
-     */
-    public function edit($id)
-    {
-        //
-    }
 
-    /**
-     * 保存更新的资源
-     *
-     * @param  \think\Request  $request
-     * @param  int  $id
-     * @return \think\Response
-     */
-    public function update(Request $request, $id)
-    {
-        //
-    }
-
-    /**
-     * 删除指定资源
-     *
-     * @param  int  $id
-     * @return \think\Response
-     */
-    public function delete($id)
-    {
-        //
-    }
 }
