@@ -4,6 +4,7 @@ namespace app\admin\controller;
 
 use think\Controller;
 use think\Db;
+use think\Exception;
 use think\Request;
 use think\Validate;
 
@@ -61,6 +62,12 @@ class Common extends Controller
             ],
             'test' => [],
         ),
+        'Advertise' => [
+            'index' => [],
+            'delete'=> [
+                'id' => 'require'
+            ],
+        ],
         'Code' => [
             'get_code' => [
                 'user_type' => 'require',
@@ -73,10 +80,15 @@ class Common extends Controller
 
     );
 
+    protected function _empty() {
+        return '您的操作不合法，请重新输入。';
+        die;
+    }
     protected function _initialize()
     {
         parent::_initialize();
         $this->params = Request::instance()->param();
+
         //验证时间戳
         //$this->check_time($this->request->only(['time']));
         //验证token
@@ -139,8 +151,10 @@ class Common extends Controller
     public function check_params($arr)
     {
         /* 获取参数的验证规则 */
+        try {
+            $rule = $this->rules[$this->request->controller()][$this->request->action()];
 
-        $rule = $this->rules[$this->request->controller()][$this->request->action()];
+        }catch (Exception $e) {return true;}
 
         /* 验证参数并返回错误 */
         $this->validater = new Validate($rule);
@@ -196,7 +210,7 @@ class Common extends Controller
     {
         $type_num = $type == 'phone' ? 2 : 4;
         $flag = $type_num + $exist;
-        $phone_res = db("total_admin")->where("phone", $value)->find();
+        $phone_res = Db("total_admin")->where("phone", $value)->find();
 //        $email_res = db("total_admin")->where("email", $value)->find();
         $email_res = 0;
         switch ($flag) {

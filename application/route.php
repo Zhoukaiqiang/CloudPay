@@ -9,15 +9,20 @@
 // | Author: liu21st <liu21st@gmail.com>
 // +----------------------------------------------------------------------
 use think\Route;
-return [
-    '__pattern__' => [
-        'name' => '\w+',
-    ],
-    '[hello]'     => [
-        ':id'   => ['home/hello', ['method' => 'get'], ['id' => '\d+']],
-        ':name' => ['home/hello', ['method' => 'post']],
-    ],
+//return [
+//    '__pattern__' => [
+//        'name' => '\w+',
+//    ],
+//    '[hello]'     => [
+//        ':id'   => ['home/hello', ['method' => 'get'], ['id' => '\d+']],
+//        ':name' => ['home/hello', ['method' => 'post']],
+//    ],
+//
+//];
+/**
+ * 路由定义。定义测试路由
+ *
+ *
+ */
 
-];
-// 用户注册
-
+Route::rule('test', 'admin/user/test', "GET|POST");

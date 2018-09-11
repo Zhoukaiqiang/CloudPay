@@ -2,7 +2,7 @@
 /**
  *   加密工具类
  *
- * admin: jiehua
+ * User: jiehua
  * Date: 16/3/30
  * Time: 下午3:25
  */

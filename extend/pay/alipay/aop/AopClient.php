@@ -1,6 +1,6 @@
 <?php
+namespace pay\alipay\aop;
 
-require_once 'AopEncrypt.php';
 
 class AopClient {
 	//应用ID
@@ -56,7 +56,7 @@ class AopClient {
 
 	public $encryptType = "AES";
 
-	protected $alipaySdkVersion = "alipay-sdk-php-20161101";
+	protected $alipaySdkVersion = "alipay-sdk-php-20180705";
 
 	public function generateSign($params, $signType = "RSA") {
 		return $this->sign($this->getSignContent($params), $signType);
@@ -534,13 +534,14 @@ class AopClient {
 				$signData = $this->parserJSONSignData($request, $resp, $respObject);
 			}
 		} else if ("xml" == $this->format) {
-
+			$disableLibxmlEntityLoader = libxml_disable_entity_loader(true);
 			$respObject = @ simplexml_load_string($resp);
 			if (false !== $respObject) {
 				$respWellFormed = true;
 
 				$signData = $this->parserXMLSignData($request, $resp);
 			}
+			libxml_disable_entity_loader($disableLibxmlEntityLoader);
 		}
 
 
@@ -569,7 +570,9 @@ class AopClient {
 				$resp = $this->encryptXMLSignSource($request, $resp);
 
 				$r = iconv($this->postCharset, $this->fileCharset . "//IGNORE", $resp);
+				$disableLibxmlEntityLoader = libxml_disable_entity_loader(true);
 				$respObject = @ simplexml_load_string($r);
+				libxml_disable_entity_loader($disableLibxmlEntityLoader);
 
 			}
 		}
@@ -645,10 +648,10 @@ class AopClient {
 	 *  公钥是否是读取字符串还是读取文件，是根据初始化传入的值判断的。
 	 **/
 	public function rsaCheckV1($params, $rsaPublicKeyFilePath,$signType='RSA') {
-			$sign = $params['sign'];
-			$params['sign_type'] = null;
-			$params['sign'] = null;
-			return $this->verify($this->getSignContent($params), $sign, $rsaPublicKeyFilePath,$signType);
+		$sign = $params['sign'];
+		$params['sign_type'] = null;
+		$params['sign'] = null;
+		return $this->verify($this->getSignContent($params), $sign, $rsaPublicKeyFilePath,$signType);
 	}
 	public function rsaCheckV2($params, $rsaPublicKeyFilePath, $signType='RSA') {
 		$sign = $params['sign'];
@@ -675,10 +678,11 @@ class AopClient {
 
 		//调用openssl内置方法验签，返回bool值
 
+		$result = FALSE;
 		if ("RSA2" == $signType) {
-			$result = (bool)openssl_verify($data, base64_decode($sign), $res, OPENSSL_ALGO_SHA256);
+			$result = (openssl_verify($data, base64_decode($sign), $res, OPENSSL_ALGO_SHA256)===1);
 		} else {
-			$result = (bool)openssl_verify($data, base64_decode($sign), $res);
+			$result = (openssl_verify($data, base64_decode($sign), $res)===1);
 		}
 
 		if(!$this->checkEmpty($this->alipayPublicKey)) {
@@ -905,7 +909,7 @@ class AopClient {
 
 	function parserJSONSource($responseContent, $nodeName, $nodeIndex) {
 		$signDataStartIndex = $nodeIndex + strlen($nodeName) + 2;
-		$signIndex = strpos($responseContent, "\"" . $this->SIGN_NODE_NAME . "\"");
+		$signIndex = strrpos($responseContent, "\"" . $this->SIGN_NODE_NAME . "\"");
 		// 签名前-逗号
 		$signDataEndIndex = $signIndex - 1;
 		$indexLen = $signDataEndIndex - $signDataStartIndex;
@@ -966,7 +970,7 @@ class AopClient {
 
 	function parserXMLSource($responseContent, $nodeName, $nodeIndex) {
 		$signDataStartIndex = $nodeIndex + strlen($nodeName) + 1;
-		$signIndex = strpos($responseContent, "<" . $this->SIGN_NODE_NAME . ">");
+		$signIndex = strrpos($responseContent, "<" . $this->SIGN_NODE_NAME . ">");
 		// 签名前-逗号
 		$signDataEndIndex = $signIndex - 1;
 		$indexLen = $signDataEndIndex - $signDataStartIndex + 1;

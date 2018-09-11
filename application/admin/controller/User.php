@@ -9,10 +9,9 @@
 namespace app\admin\controller;
 
 
-use app\index\model\TotalAd;
+use app\admin\model\TotalAd;
 
 use think\Db;
-use think\Controller;
 use think\Request;
 
 /**
@@ -21,13 +20,20 @@ use think\Request;
  */
 class User extends Common
 {
-
+    /**
+     * 前置操作（调用某个方法时先调用设置的前置方法）
+     * @var array
+     */
+    protected $beforeActionList = [
+        //'bbb' => ['only' => 'test']
+    ];
     protected function _initialize()
     {
         parent::_initialize();
         $this->request = Request::instance();
 
     }
+
 
 
     /**
@@ -42,7 +48,7 @@ class User extends Common
         $data = $this->params;
         $user_name_type = 'phone';
         $this->check_exist($data['phone'], 'phone', 1);
-        $db_res = db('total_admin')->field('id,name,phone,status,password,is_super_vip')
+        $db_res = Db('total_admin')->field('id,name,phone,status,password,is_super_vip')
             ->where('phone', $data['phone'])->find();
 
         if ($db_res['password'] !== $data['password']) {
@@ -99,66 +105,7 @@ class User extends Common
 
 
 
-    /**
-     * 总后台 - 广告图片上传处理
-     * @param [file]  image
-     * @return [json]  成功或者失败的消息
-     */
-    // 图片上传处理
-    public function img_upload()
-    {
 
-        // 获取表单上传文件 例如上传了001.jpg
-        $file = request()->file('image');
-        //校验器，判断图片格式是否正确
-        if (true !== $this->validate(['image' => $file], ['image' => 'require|image'])) {
-            $this->error('请选择图像文件');
-        } else {
-            // 移动到框架应用根目录/public/uploads/ 目录下
-            $info = $file->move(ROOT_PATH . 'public' . DS . 'uploads');
-            if ($info) {
-                // 成功上传后 获取上传信息
-                //存入相对路径/upload/日期/文件名
-                $data = DS . 'uploads' . DS . $info->getSaveName();
-                $url = str_replace('\\', '/', $data);
-                $insertData = array(
-                    'url' => $url,
-                );
-                $result = TotalAd::create($insertData);
-                if ($result) {
-                    $id = TotalAd::where(['url' => $url])->value('id');
-                    $data_arr = ['id' => $id, 'url' => $url];
-                    Common::return_msg(200, '图片上传成功', $data_arr);
-                } else {
-                    Common::return_msg(400, '图片上传失败');
-
-                }
-
-
-                //模板变量赋值
-                // $this->assign('image', $data);
-                // return $this->fetch('index');
-            } else {
-                // 上传失败获取错误信息
-                echo $file->getError();
-            }
-        }
-    }
-
-    /**
-     * 删除图片
-     * @param [id]  图片;
-     * @return [json] 返回信息
-     */
-    public function deleteAd($id)
-    {
-        $result = TotalAd::destroy($id);
-        if ($result) {
-            return $this->success('删除成功');
-        } else {
-            return $this->error('删除失败', 'login');
-        }
-    }
 
     public function addStaff()
     {
@@ -334,8 +281,9 @@ class User extends Common
     }
 
     public function test() {
-       //获取当前模块名字
-
+//        $this->redirect('http://thinkphp.cn/blog/2',302);
+        $time = null;
+        dump(empty($time));
     }
 
 }
