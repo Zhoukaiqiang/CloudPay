@@ -164,6 +164,59 @@ if(!function_exists('check_time')) {
     }
 }
 
+/**
+ *  app支付宝请求头
+ */
+if(!function_exists('jsonReturn')) {
+    function jsonReturn($status=0, $code=0, $data='', $msg='',$type = 1)
+    {
 
+        $json_arr = array('status'=>$status,'code'=>$code);
+        if(!empty($msg)){
+            $json_arr['msg'] = $msg;
+        }
+        if(!empty($data)){
+            $json_arr['data'] = $data;
+        }
+        header('Content-Type:application/json; charset=utf-8');
+        if ($type == 1) {
+            exit(json_encode($json_arr));
+        } else if ($type == 2) {
+            return json_encode($json_arr);
+        }
+
+    }
+
+    /**
+     * 分页
+     * $page 当前页
+     * $rows 总行数
+     * $limit 每页显示的记录数
+     */
+    if(!function_exists('page')) {
+        function page($page,$rows,$limit=5){
+            //获取总页数
+            $pageCount=ceil($rows/$limit);
+            //偏移量
+            $offset=($page-1)*$limit;
+            //上一页
+            $pagePrev=$page-1;
+            if($pagePrev<=1){
+                $pagePrev=1;
+            }
+            //下一页
+            $pageNext=$page+1;
+            if($pageNext>=$pageCount){
+                $pageNext=$pageCount;
+            }
+            $data['pageCount']=$pageCount;
+            $data['offset']=$offset;
+            $data['pagePrev']=$pagePrev;
+            $data['pageNext']=$pageNext;
+            $data['limit']=$limit;
+            return $data;
+        }
+    }
+}
 
 

@@ -17,11 +17,18 @@ class Merchant extends Controller
      */
     public function index()
     {
+        //获取页数
+        $page=request()->param('page') ? request()->param('page') : 1;
+        //获取总行数
+        $row=TotalMerchant::where('review_status',2)->count();
+        $pages=page($page,$row);
         $data=TotalMerchant::alias('a')
             ->field('a.id,a.name,a.phone,a.address,a.contact,a.channel,a.opening_time,a.status,b.contact_person,b.agent_phone')
             ->join('cloud_total_agent b','a.agent_id=b.id','left')
             ->where('a.review_status=2')
+            ->limit($pages['offset'],$pages['limit'])
             ->select();
+        $data['pages']=$pages;
         return_msg('200','success',$data);
     }
 
@@ -92,11 +99,19 @@ class Merchant extends Controller
             'review_status'=>['<>',2],
             'channel'       =>['<','3']
         ];
+        //获取页数
+        $page=request()->param('page') ? request()->param('page') : 1;
+        //获取总行数
+        $row=TotalMerchant::where($where)->count();
+        $pages=page($page,$row);
+        //显示审核中的直联商户
         $data=TotalMerchant::alias('a')
             ->field('a.id,a.name,a.phone,a.address,a.contact,a.channel,a.create_time,a.review_status,b.contact_person,b.agent_phone')
             ->join('cloud_total_agent b','a.agent_id=b.id','left')
             ->where($where)
+            ->limit($pages['offset'],$pages['limit'])
             ->select();
+        $data['pages']=$pages;
         return_msg('200','success',$data);
     }
 
@@ -169,11 +184,18 @@ class Merchant extends Controller
             'review_status'=>['=',3],
             'channel'       =>['=','3']
         ];
+        //获取页数
+        $page=request()->param('page') ? request()->param('page') : 1;
+        //获取总行数
+        $row=TotalMerchant::where($where)->count();
+        $pages=page($page,$row);
         $data=TotalMerchant::alias('a')
             ->field('a.id,a.name,a.phone,a.address,a.contact,a.channel,a.create_time,a.rejected,b.contact_person,b.agent_phone')
             ->join('cloud_total_agent b','a.agent_id=b.id','left')
             ->where($where)
+            ->limit($pages['offset'],$pages['limit'])
             ->select();
+        $data['pages']=$pages;
         return_msg('200','success',$data);
     }
 

@@ -24,7 +24,7 @@ class Alipay extends Controller
 
         $aop = new \AopClient();
         $aop->gatewayUrl            = config('alipay')['gatewayUrl'];
-        $aop->appId                 = config('alipay')['appId'];
+        $aop->appId                 = config('alipay')['app_id'];
         $aop->rsaPrivateKey         = config('alipay')['merchant_private_key'];
         $aop->format                = 'json';
         $aop->charset               = 'UTF-8';
@@ -46,6 +46,25 @@ class Alipay extends Controller
         $response = $aop->sdkExecute($request);
         return $response;
 
+    }
+
+//    public function notify(){
+//        $data = $_POST;
+//        $aop = new \AopClient;
+//        $aop->alipayrsaPublicKey = config('alipay')['alipay_public_key'];
+//        $flag = $aop->rsaCheckV1($data, NULL, "RSA2");
+//        return $flag;
+//    }
+    /**
+     * 异步通知验签
+     *
+     * @param string $params 参数
+     * @param string $signType 签名类型：默认RSA
+     * @return bool 是否通过
+     */
+    public function rsaCheck($params, $signType)
+    {
+        return $this->aop->rsaCheckV1($params, NULL, $signType);
     }
 
 }
