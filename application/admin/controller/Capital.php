@@ -17,13 +17,11 @@ class Capital extends Controller
      */
     public function index()
     {
-        //获取页数
-        $page=request()->param('page') ? request()->param('page') : 1;
         //获取总行数
         $rows=TotalCapital::where('status',0)->count();
-        $pages=page($page,$rows);
+        $pages=page($rows);
         $data=TotalCapital::alias('a')
-            ->field('a.id,a.date,a.settlement_start,a.settlement_end,a.description,a.account,a.invoice,b.agent_name,b.contact_person, b.agent_area,b.agent_money ')
+            ->field('a.id,a.date,a.settlement_start,a.settlement_end,a.description,a.account,a.invoice,b.agent_name,b.contact_person, b.agent_area,a.settlement_money ')
             ->join('cloud_total_agent b','a.agent_id=b.id','left')
             ->where('a.status=0')
             ->limit($pages['offset'],$pages['limit'])
@@ -104,13 +102,12 @@ class Capital extends Controller
      */
     public function settled()
     {
-        //获取页数
-        $page=request()->param('page') ? request()->param('page') : 1;
         //获取总行数
         $rows=TotalCapital::where('status',1)->count();
-        $pages=page($page,$rows);
+        //分页
+        $pages=page($rows);
         $data=TotalCapital::alias('a')
-            ->field('a.date,a.settlement_start,a.settlement_end,a.account,b.agent_name,a.settlement_time,a.invoice,b.contact_person, b.agent_area,b.agent_money ')
+            ->field('a.date,a.settlement_start,a.settlement_end,a.account,b.agent_name,a.settlement_time,a.invoice,b.contact_person, b.agent_area,a.settlement_money ')
             ->join('cloud_total_agent b','a.agent_id=b.id','left')
             ->where('a.status=1')
             ->limit($pages['offset'],$pages['limit'])

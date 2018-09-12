@@ -14,7 +14,11 @@ class Capital extends Controller
      */
     public function capital_apply()
     {
-        //
+        if(request()->isPost()){
+
+        }else{
+
+        }
     }
 
     /**
