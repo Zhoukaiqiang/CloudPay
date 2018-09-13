@@ -246,7 +246,8 @@ class User extends Common
     }
 
     /**
-     * 绑定手机
+     * 用户绑定手机
+     * @param [int] 手机号
      * @return string
      */
 
@@ -265,6 +266,13 @@ class User extends Common
         }
 
     }
+
+    /**
+     * 绑定邮箱
+     * @paraam 邮箱地址 [string]
+     * @param [int] 验证码
+     * @retrun [json] 返回验证结果
+     */
     public function bind_email() {
         /* 接受参数 */
         $data = $this->params;
@@ -281,9 +289,8 @@ class User extends Common
     }
 
     public function test() {
-//        $this->redirect('http://thinkphp.cn/blog/2',302);
-        $time = null;
-        dump(empty($time));
+        $this->redirect('http://thinkphp.cn/blog/2',302);
+
     }
 
 }

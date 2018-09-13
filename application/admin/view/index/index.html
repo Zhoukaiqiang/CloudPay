@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+
+<body>
+<script src="https://cdn.bootcss.com/jquery/3.3.1/jquery.min.js"></script>
+<form action="">
+    <input type="text" name="past">
+    <input type="text" name="persent">
+    <input type="submit" value="submit">
+</form>
+<script>
+
+    $(function () {
+
+        $("form").submit(function (e) {
+            e.preventDefault();
+            var time = ['2018-6-10', '2018-8-12'];
+            console.log(time);
+
+            $.ajax({
+                'url':'http://www.cloudpay.com/admin/index/vendor_search',
+                data:{
+                    'time' : JSON.stringify(time),
+                },
+                success:function(d) {
+                    console.log(d)
+                },
+                error: function(d) {
+                    console.log(d)
+                }
+            })
+        })
+    })
+</script>
+</body>
+</html>

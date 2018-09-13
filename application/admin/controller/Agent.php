@@ -11,8 +11,9 @@ class Agent extends Controller
 {
     /**
      * 代理商首页
-     *
-     * @return \think\Response
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
      */
     public function index()
     {
