@@ -16,11 +16,20 @@ class Merchant extends Controller
      */
     public function normal_list()
     {
+        $where=[
+            'review_status' =>2,
+            'status'=>0
+        ];
+        //获取总行数
+        $rows=TotalMerchant::where($where)->count();
+        $pages=page($rows);
         $data=TotalMerchant::alias('a')
             ->field('a.id,a.name,a.phone,a.address,a.contact,a.channel,a.opening_time,a.status,b.contact_person,b.agent_phone')
             ->join('cloud_total_agent b','a.agent_id=b.id','left')
             ->where('a.review_status=2 and a.status=0')
+            ->limit($pages['offset'],$pages['limit'])
             ->select();
+        $data['pages']=$pages;
         return_msg('200','success',$data);
     }
 
@@ -31,10 +40,18 @@ class Merchant extends Controller
      */
     public function stop_list()
     {
+        $where=[
+            'review_status' =>2,
+            'status'=>1
+        ];
+        //获取总行数
+        $rows=TotalMerchant::where($where)->count();
+        $pages=page($rows);
         $data=TotalMerchant::alias('a')
             ->field('a.id,a.name,a.phone,a.address,a.contact,a.channel,a.opening_time,a.status,b.contact_person,b.agent_phone')
             ->join('cloud_total_agent b','a.agent_id=b.id','left')
             ->where('a.review_status=2 and a.status=1')
+            ->limit($pages['offset'],$pages['limit'])
             ->select();
         return_msg('200','success',$data);
     }
@@ -48,11 +65,15 @@ class Merchant extends Controller
     public function review_list(Request $request)
     {
         //
+        $rows=TotalMerchant::where(['review_status'=>['<',2]])->count();
+        $pages=page($rows);
         $data=TotalMerchant::alias('a')
             ->field('a.id,a.name,a.phone,a.address,a.contact,a.channel,a.opening_time,a.status,b.contact_person,b.agent_phone')
             ->join('cloud_total_agent b','a.agent_id=b.id','left')
             ->where('a.review_status<2')
+            ->limit($pages['offset'],$pages['limit'])
             ->select();
+        $data['pages']=$pages;
         return_msg('200','success',$data);
     }
 
@@ -65,11 +86,15 @@ class Merchant extends Controller
     public function reject($id)
     {
         //
+        $rows=TotalMerchant::where('review_status',3)->count();
+        $pages=page($rows);
         $data=TotalMerchant::alias('a')
             ->field('a.id,a.name,a.phone,a.address,a.contact,a.channel,a.opening_time,a.status,b.contact_person,b.agent_phone')
             ->join('cloud_total_agent b','a.agent_id=b.id','left')
             ->where('a.review_status=3')
+            ->limit($pages['offset'],$pages['limit'])
             ->select();
+        $data['pages']=$pages;
         return_msg('200','success',$data);
     }
 

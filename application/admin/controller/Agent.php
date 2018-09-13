@@ -17,8 +17,6 @@ class Agent extends Controller
      */
     public function index()
     {
-            //获取页数
-            $page=request()->param('page') ? request()->param('page') : 1;
             //获取总行数
             $rows=TotalAgent::count();
             $pages=page($rows);

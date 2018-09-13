@@ -18,8 +18,12 @@ class Service extends Controller
     {
         //获取上级代理商id
         $id=request()->param('parent_id');
+        //获取所有行数
+        $rows=TotalAgent::where('parent_id',$id)->count();
+        $pages=page($rows);
         //获取当前代理商下的所有子代理
-        $data=TotalAgent::field(['id,agent_name,contact_person,agent_phone,agent_mode,agent_area,create_time,status'])->where('parent_id',$id)->select();
+        $data=TotalAgent::field(['id,agent_name,contact_person,agent_phone,agent_mode,agent_area,create_time,status'])->where('parent_id',$id)->limit($pages['offset'],$pages['limit'])->select();
+        $data['pages']=$pages;
         return_msg(200,'success',$data);
     }
 

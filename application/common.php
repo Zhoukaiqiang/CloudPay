@@ -195,7 +195,7 @@ if(!function_exists('jsonReturn')) {
      */
     if(!function_exists('page')) {
         function page($rows,$limit=5){
-            $page =request()->param('page') ? request()->param('page') : 1;
+            $page=request()->param('page') ? request()->param('page') : 1;
             //获取总页数
             $pageCount=ceil($rows/$limit);
             //偏移量
