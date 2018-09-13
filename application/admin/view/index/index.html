@@ -15,15 +15,16 @@
 <script>
 
     $(function () {
-        var time = [];
-        time['past'] = '2018-5-10';
-        time['prevent'] = '2018-9-12';
+
         $("form").submit(function (e) {
             e.preventDefault();
+            var time = ['2018-6-10', '2018-8-12'];
+            console.log(time);
+
             $.ajax({
                 'url':'http://www.cloudpay.com/admin/index/vendor_search',
                 data:{
-                    'time' : time,
+                    'time' : JSON.stringify(time),
                 },
                 success:function(d) {
                     console.log(d)

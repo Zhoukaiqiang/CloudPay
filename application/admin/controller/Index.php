@@ -3,6 +3,7 @@
 namespace app\admin\controller;
 
 
+use MongoDB\Driver\ReadConcern;
 use think\Controller;
 use think\Db;
 use think\Request;
@@ -26,6 +27,11 @@ class Index extends Controller
             'echarts' => [
                 'pay_type' => 'require',
             ],
+            'search_agent' => [
+                'channel' => 'number',
+                'status' => 'number',
+                'contact_time' => 'number',
+            ],
         ],
     );
 
@@ -39,7 +45,7 @@ class Index extends Controller
 
     public function index(Request $request)
     {
-
+        //return view();
         $start_time = $request->param('start_time') ? $request->param('start_time') : intval((time() - 100000));
         $end_time = $request->param('end_time') ? $request->param('end_time') : null;
         $channel = $request->param('channel') ? $request->param('end_time') : -1;
@@ -62,16 +68,6 @@ class Index extends Controller
             $alipay_num = Db::name('order')->whereTime('create_time', "yesterday")->where(['pay_type' => 'alipay'])->count('id');
             $etc = Db::name('order')->whereTime('create_time', "yesterday")->where(['pay_type' => 'etc'])->sum('order_money');
             $etc_num = Db::name('order')->whereTime('create_time', "yesterday")->where(['pay_type' => 'etc'])->count('id');
-//            $total = Db::name('order')->whereTime('create_time','between', [$start_time, $end_time] )->sum('order_money');
-//            $total_num = Db::name('order')->whereTime('create_time','between', [$start_time, $end_time] )->count('id');
-//            $wxpay = Db::name('order')->whereTime('create_time','between', [$start_time, $end_time] )->where('pay_type', 'wxpay')->sum('order_money');
-//            $wxpay_num = Db::name('order')->whereTime('create_time','between', [$start_time, $end_time] )->where('pay_type', 'wxpay')->count('id');
-//            $alipay = Db::name('order')->whereTime('create_time','between', [$start_time, $end_time] )->where('pay_type', 'alipay')->sum('order_money');
-//            $alipay_num = Db::name('order')->whereTime('create_time','between', [$start_time, $end_time] )->where('pay_type', 'alipay')->count('id');
-//            $etc = Db::name('order')->whereTime('create_time','between', [$start_time, $end_time] )->where('pay_type', 'etc')->sum('order_money');
-//            $etc_num = Db::name('order')->whereTime('create_time','between', [$start_time, $end_time] )->where('pay_type', 'etc')->count('id');
-
-
         } else {
             /* 获取昨天 直联/间联 交易总额 */
             $total = Db::name('order')->whereTime('create_time', "yesterday")->where('channel', $channel)->sum('order_money');
@@ -163,32 +159,217 @@ class Index extends Controller
         }
     }
 
-
-    public function search(Request $request) {
+    /**
+     * 运营后台代理商管理搜索
+     * @param Request $request [array]
+     * @param  name  [string] 模糊关键字
+     * @param contract_time [int]  例： 合同有限期选择为 30天内 传来 现在的时间戳+30天的时间戳
+     * @param channel [int]  如果直联间联都选择，传——3，直联——1，间连——2
+     * @description 联系人/商户名称/联系电话
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function search_agent(Request $request) {
         /* 搜索条件项 */
-        $query['name'] = $request->param('name');
-        $query['channel'] = $request->param('channel');
-        $query['status'] = $request->param('status');
-        $query['agent_area'] = $request->param('agent_area');
-        $query['contract_time'] = $request->param('contract_time');
+        $query['keywords'] = $request->param('keywords') ? $request->param('keywords') : -2;
+        $query['channel'] = $request->param('channel') ? $request->param('channel'): -2;
+        $query['status'] = $request->param('status') ? $request->param('status') : -2;
+        $query['agent_area'] = $request->param('agent_area') ? $request->param('agent_area'): -2;
+        $query['contract_time'] = $request->param('contract_time') ? $request->param('contract_time') : -2;
 
 
-        /* 根据搜索条件读取数据库 */
-        if (!empty($query['name'])) {
-            $result = Db::name('total_agent')
-                ->where('agent_name|contact_person|agent_phone', 'like', $query['name'].'%')
-                ->where([
-                    'status' => $query['status'],
-                    'channel' => $query['channel'],
-                    'agent_area' => $query['agent_area'],
-                    ''
-                ])->whereTime('contract_time' ,'>=', [$query['contract_time'] + 30*24*60*60])
-                ->field(['agent_name','contact_person', 'agent_mode', 'agent_area', 'admin_id','create_time','contract_time','status','id'])
-                ->select();
-            return (json_encode($result));
-        }
+        /* 传入参数并返回数据 */
+        $this->get_search_result($query);
+
     }
 
+
+    /**
+     * @param $db   [string] 要查找的数据表
+     * @param array $param   [搜索参数]
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     * @return [json] 搜索结果
+     */
+    public function get_search_result(Array $param) {
+        /* 判断参数是否为默认，默认则不进入查询 */
+        if ($param['keywords'] < -1) {
+            $param['keywords_flag'] = '<>';
+        }else {
+            $param['keywords_flag'] = 'like';
+        }
+
+        if ($param['status'] < -1) {
+            $param['status_flag'] = '<>';
+        }else {
+            $param['status_flag'] = 'eq';
+        }
+
+        if ($param['channel'] < -1) {
+            $param['channel_flag'] = '<>';
+        }else {
+            $param['channel_flag'] = 'eq';
+        }
+
+        if ($param['agent_area'] < -1) {
+            $param['agent_area_flag'] = '<>';
+        }else {
+            $param['agent_area_flag'] = 'eq';
+        }
+
+        switch ($param['channel']) {
+            case -2:
+                $param['channel_flag'] = '<>';
+                break;
+            default:
+                $param['channel_flag'] = 'eq';
+        }
+
+        switch ($param['contract_time']) {
+            case -2:
+                $param['contract_time_flag'] = '>';
+                break;
+            case 'expired':
+                $param['contract_time_flag'] = '<';
+                $param['contract_time'] = time();
+                break;
+            default:
+                $param['contract_time_flag'] = '>=';
+        }
+
+        $total = Db::name('total_agent')->count('id');
+        //查询有多少条数据
+        $rows = Db::name('total_agent')
+            ->where([
+                'agent_name|contact_person|agent_phone' => [$param['keywords_flag'], $param['keywords']."%"],
+                'status'     => [$param['status_flag'], $param['status']],
+                'agent_mode'     => [$param['channel_flag'], $param['channel']],
+                'agent_area'     => [$param['agent_area_flag'], $param['agent_area']],
+            ])
+            ->whereTime('contract_time', $param['contract_time_flag'], $param['contract_time'])
+            ->count('id');
+
+        $pages = page($rows);
+        /* 根据查询条件获取数据并返回 */
+        $res = Db::name('total_agent')
+            ->where([
+                'agent_name|contact_person|agent_phone' => [$param['keywords_flag'], $param['keywords']."%"],
+                'status'     => [$param['status_flag'], $param['status']],
+                'agent_mode'     => [$param['channel_flag'], $param['channel']],
+                'agent_area'     => [$param['agent_area_flag'], $param['agent_area']],
+            ])
+            ->whereTime('contract_time', $param['contract_time_flag'], $param['contract_time'])
+            ->field(['agent_name','contact_person', 'agent_mode', 'agent_area', 'admin_id','create_time','contract_time','status','id'])
+            ->limit($pages['offset'],$pages['limit'])
+            ->select();
+        $res['pages'] = $pages;
+        $res['pages']['rows'] = $rows;
+        $res['pages']['total_row'] = $total;
+        if ($rows !== 0) {
+            $this->return_msg(200, '搜索结果', $res);
+        }else {
+            $this->return_msg(400, '没有数据');
+        }
+
+    }
+
+
+    /**
+     * 商户搜索 —— 正常营业商户
+     * @param Request $request
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function vendor_search(Request $request) {
+        /* 搜索条件项 */
+        $query['keywords'] = $request->param('keywords') ? $request->param('keywords') : -2;
+        $query['category'] = $request->param('category') ? $request->param('category'): -2;
+        $query['address'] = $request->param('address') ? $request->param('address') : -2;
+        $query['time'] = $request->param('time') ? json_decode($request->param('time')) : -2;
+
+
+        $this->get_vendor_search_res($query);
+
+    }
+
+
+    /**
+     * @param array $param
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function get_vendor_search_res(Array $param) {
+
+        /* 初始化 *_flag */
+
+        if ($param['keywords'] < -1) {
+            $param['keywords_flag'] = '<>';
+        }else {
+            $param['keywords_flag'] = 'like';
+        }
+
+        if ($param['category'] < -1) {
+            $param['category_flag'] = '<>';
+        }else {
+            $param['category_flag'] = 'eq';
+        }
+
+        if ($param['address'] < -1) {
+            $param['address_flag'] = '<>';
+        }else {
+            $param['address_flag'] = 'eq';
+        }
+
+        /* 前端参数 JSON.stringfy([xxx,xxx]) */
+        switch (gettype($param['time'])) {
+            case 'integer':
+                $param['time_flag'] = '>';
+                break;
+            case 'array':
+                $param['time_flag'] = 'between';
+                break;
+            default:
+                $param['time_flag'] = 'between';
+        }
+        $total = Db::name('total_merchant')->count('id');
+        /* 条件搜索查询有N条数据 */
+        $rows = Db::name('total_merchant')->alias('m')
+            ->where([
+                'm.name|m.contact|m.phone|m.agent_name' => [$param['keywords_flag'], $param['keywords']."%"],
+                'category'     => [$param['category_flag'], $param['category']],
+                'address'     => [$param['address_flag'], $param['address']],
+            ])
+            ->whereTime('opening_time', $param['time_flag'], $param['time'])
+            ->field(['m.name','m.contact', 'm.status', 'm.channel', 'm.address','m.opening_time','a.agent_name','m.id', 'a.agent_phone'])
+            ->join('cloud_total_agent a','m.agent_id=a.id', 'left')
+            ->count('m.id');
+
+        $pages = page($rows);
+        /* 根据查询条件获取数据并返回 */
+        $res = Db::name('total_merchant')->alias('m')
+            ->where([
+                'm.name|m.contact|m.phone|m.agent_name' => [$param['keywords_flag'], $param['keywords']."%"],
+                'category'     => [$param['category_flag'], $param['category']],
+                'address'     => [$param['address_flag'], $param['address']],
+            ])
+            ->whereTime('opening_time', $param['time_flag'], $param['time'])
+            ->field(['m.name','m.contact', 'm.status', 'm.channel', 'm.address','m.opening_time','a.agent_name','m.id', 'a.agent_phone'])
+            ->join('cloud_total_agent a','m.agent_id=a.id', 'left')
+            ->limit($pages['offset'],$pages['limit'])
+            ->select();
+        $res['pages'] = $pages;
+        $res['pages']['rows'] = $rows;
+        $res['pages']['total_row'] = $total;
+        if ($rows !== 0) {
+            $this->return_msg(200, '搜索结果', $res);
+        }else {
+            $this->return_msg(400, '没有数据');
+        }
+    }
 
     /**
      * @param Request $request

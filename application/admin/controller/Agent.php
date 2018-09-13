@@ -11,8 +11,9 @@ class Agent extends Controller
 {
     /**
      * 代理商首页
-     *
-     * @return \think\Response
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
      */
     public function index()
     {
@@ -20,7 +21,7 @@ class Agent extends Controller
             $page=request()->param('page') ? request()->param('page') : 1;
             //获取总行数
             $rows=TotalAgent::count();
-            $pages=page($page,$rows);
+            $pages=page($rows);
             //取出数据表中的数据
             $data=TotalAgent::alias('a')
                 ->field('a.id,a.agent_name,a.contact_person,a.agent_mode,a.agent_area,a.create_time,a.contract_time,a.status,b.name')
