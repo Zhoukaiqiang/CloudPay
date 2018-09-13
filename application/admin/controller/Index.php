@@ -49,7 +49,7 @@ class Index extends Controller
         }
         /* 获取所有商户、代理商的数量 */
         $agent = Db::name('total_agent')->count('id');
-        $user = Db::name('user')->count('id');
+        //$user = Db::name('user')->count('id');
 
 
         /* 获取昨日全部的交易总额 */
@@ -87,7 +87,7 @@ class Index extends Controller
 
         /* 组装数据 */
         $data['agent'] = $agent;
-        $data['user'] = $user;
+        //$data['user'] = $user;
         $data['wxpay'] = ['amount' => $wxpay, 'pay_num' => $wxpay_num];
         $data['alipay'] = ['amount' => $alipay, 'pay_num' => $alipay_num];
         $data['etc'] = ['amount' => $etc, 'pay_num' => $etc_num];
