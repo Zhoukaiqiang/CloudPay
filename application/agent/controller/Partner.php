@@ -3,6 +3,8 @@
 namespace app\agent\controller;
 
 use app\agent\model\AgentPartner;
+use app\agent\model\Order;
+use app\agent\model\TotalAgent;
 use app\agent\model\TotalMerchant;
 use think\Controller;
 use think\Request;
@@ -17,7 +19,7 @@ class Partner extends Controller
     public function index()
     {
         //显示当前代理商下面所有员工
-        $id=request()->param('parent_id');
+        $id=session('agent_id');
         $data=AgentPartner::field(['id,partner_name,partner_phone,create_time,model'])
             ->where('agent_id',$id)
             ->select();
@@ -39,6 +41,7 @@ class Partner extends Controller
         if(request()->isPost()){
             //传入当前代理商id
             $data=request()->post();
+            $data['agent_id']=session('agent_id');
             //提交时间
             $data['create_time']=time();
             //验证
@@ -98,26 +101,74 @@ class Partner extends Controller
     }
 
     /**
-     * 显示编辑资源表单页.
+     * 查看商户
      *
      * @param  int  $id
      * @return \think\Response
      */
-    public function edit($id)
+    public function show_merchant()
     {
-        //
+        //获取合伙人id
+        $id=request()->param('id');
+        //取出合伙人下的所有有交易的商户
+        $data=TotalMerchant::alias('a')
+            ->field(['a.id,a.name,a.contact,a.phone,b.partner_name'])
+            ->join('cloud_agent_partner b','a.partner_id=b.id','left')
+            ->join('cloud_order c','a.id=c.merchant_id','left')
+            ->where(['partner_id'=>$id])
+            ->whereTime('pay_time','>=','yesterday')
+            ->select();
+        //取出商户支付宝和微信交易额交易量
+        foreach($data as &$v){
+            $where=[
+                'status'=>1,
+                'pay_type'=>'alipay',
+                'merchant_id'=>$v['id']
+            ];
+            $alipay=Order::where($where)->sum('received_money');
+            $alipay_number=Order::where($where)->count();
+            $where1=[
+                'status'=>1,
+                'pay_type'=>'wxpay',
+                'merchant_id'=>$v['id']
+            ];
+            //取出微信交易额
+            $wxpay=Order::where($where1)->sum('received_money');
+            //取出微信交易量
+            $wxpay_number=Order::where($where1)->count();
+            $v['alipay']=$alipay;
+            $v['alipay_number']=$alipay_number;
+            $v['wxpay']=$wxpay;
+            $v['wxpay_number']=$wxpay_number;
+        }
+        return_msg(200,'success',$data);
     }
 
     /**
-     * 保存更新的资源
+     * 员工报表
      *
      * @param  \think\Request  $request
      * @param  int  $id
      * @return \think\Response
      */
-    public function update(Request $request, $id)
+    public function partner_report(Request $request)
     {
-        //
+        //获取当前合伙人id
+        $id=request()->param('parent_id');
+        $data=AgentPartner::field(['id,partner_name,partner_phone,create_time,model'])
+            ->where('agent_id',$id)
+            ->select();
+        //取出负责商户数
+        foreach($data as &$v){
+            $count=TotalMerchant::where('partner_id',$v['id'])->count();
+            $v['count']=$count;
+            //根据合伙人id取出昨天新增商户数
+            $new_count=TotalMerchant::whereTime('opening_time','yesterday')->where('partner_id',$v['id'])->count();
+            $v['new_count']=$new_count;
+        }
+        //佣金??
+        return_msg(200,'success',$data);
+
     }
 
     /**
@@ -126,8 +177,11 @@ class Partner extends Controller
      * @param  int  $id
      * @return \think\Response
      */
-    public function delete($id)
+    public function test()
     {
-        //
+
+
     }
+
+
 }

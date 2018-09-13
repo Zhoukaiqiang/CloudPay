@@ -4,12 +4,13 @@ namespace app\agent\controller;
 
 use app\agent\model\AgentPartner;
 use app\agent\model\Order;
+use app\agent\model\TotalAgent;
 use app\agent\model\TotalMerchant;
 use think\Controller;
 use think\Db;
 use think\Request;
 
-class Merchant extends Controller
+class Index extends Controller
 {
     /**
      * 显示资源列表
@@ -18,40 +19,51 @@ class Merchant extends Controller
      */
     public function index()
     {
-        //
-        $time=time()-(23*60*60);
-        echo $time;
-
+        echo time()-(23*60*60);
+        echo date('Ymd His',time()-(23*60*60));
     }
 
     /**
      * 显示交易数据
-     *
+     * 默认显示昨天的交易数据
      * @return \think\Response
      */
     public function trad()
     {
-        $where=[
-            'status'=>1,
-            'pay_type'=>'alipay'
-        ];
-        //取出支付宝交易额
-        $alipay=Order::where($where)->sum('seller_money');
-        //取出支付宝交易量
-        $alipay_number=Order::where($where)->count();
-        $where=[
-            'status'=>1,
-            'pay_type'=>'wxpay'
-        ];
-        //取出微信交易额
-        $wxpay=Order::where($where)->sum('seller_money');
-        //取出微信交易量
-        $wxpay_number=Order::where($where)->count();
+        //获取当前代理商id
+        $agent_id=session('agent_id');
+        $agent_id=1;
+        //根据代理商id查询昨日交易商户
         $data=TotalMerchant::alias('a')
-            ->field('a.id,a.name,a.contact,a.phone,b.partner_name')
+            ->field(['a.id,a.name,a.contact,a.phone,b.partner_name'])
             ->join('cloud_agent_partner b','a.partner_id=b.id','left')
-            ->select();
 
+            ->where('a.agent_id',$agent_id)
+            ->select();
+//        dump($data);die;
+        //取出商户支付宝和微信交易额交易量
+        foreach($data as &$v){
+                $where=[
+                    'status'=>1,
+                    'pay_type'=>'alipay',
+                    'merchant_id'=>$v['id']
+                ];
+            $alipay=Order::whereTime('pay_time','yesterday')->where($where)->sum('received_money');
+            $alipay_number=Order::whereTime('pay_time','yesterday')->where($where)->count();
+            $where1=[
+                'status'=>1,
+                'pay_type'=>'wxpay',
+                'merchant_id'=>$v['id']
+            ];
+            //取出微信交易额
+            $wxpay=Order::whereTime('pay_time','yesterday')->where($where1)->sum('received_money');
+            //取出微信交易量
+            $wxpay_number=Order::whereTime('pay_time','yesterday')->where($where1)->count();
+            $v['alipay']=$alipay;
+            $v['alipay_number']=$alipay_number;
+            $v['wxpay']=$wxpay;
+            $v['wxpay_number']=$wxpay_number;
+        }
         return_msg(200,'success',$data);
     }
 
@@ -93,12 +105,37 @@ class Merchant extends Controller
      */
     public function active()
     {
-        //获取昨日活跃商户
+        //获取当前代理商id
+        $agent_id=session('agent_id');
+        //根据代理商id查询所有商户
         $data=TotalMerchant::alias('a')
-            ->field('a.id,a.name,a.address,a.alipay_money,a.alipay_number,a.wechat_money,a.wechat_number,b.partner_name')
+            ->field(['a.id,a.name,a.address,b.partner_name'])
             ->join('cloud_agent_partner b','a.partner_id=b.id','left')
-            ->whereTime('a.create_time','yesterday')
+            ->where('a.agent_id',$agent_id)
             ->select();
+        //取出商户支付宝和微信交易额交易量
+        foreach($data as &$v){
+            $where=[
+                'status'=>1,
+                'pay_type'=>'alipay',
+                'merchant_id'=>$v['id']
+            ];
+            $alipay=Order::whereTime('pay_time','yesterday')->where($where)->sum('received_money');
+            $alipay_number=Order::whereTime('pay_time','yesterday')->where($where)->count();
+            $where1=[
+                'status'=>1,
+                'pay_type'=>'wxpay',
+                'merchant_id'=>$v['id']
+            ];
+            //取出微信交易额
+            $wxpay=Order::whereTime('pay_time','yesterday')->where($where1)->sum('received_money');
+            //取出微信交易量
+            $wxpay_number=Order::whereTime('pay_time','yesterday')->where($where1)->count();
+            $v['alipay']=$alipay;
+            $v['alipay_number']=$alipay_number;
+            $v['wxpay']=$wxpay;
+            $v['wxpay_number']=$wxpay_number;
+        }
         return_msg(200,'success',$data);
     }
 
@@ -110,11 +147,14 @@ class Merchant extends Controller
      */
     public function new_merchant()
     {
+        //获取代理商id
+        $agent_id=session('agent_id');
         //获取昨日新增商户
         $data=TotalMerchant::alias('a')
             ->field('a.id,a.name,a.address,a.alipay_money,a.alipay_number,a.wechat_money,a.wechat_number,b.partner_name')
             ->join('cloud_agent_partner b','a.partner_id=b.id','left')
             ->whereTime('a.opening_time','yesterday')
+            ->where('a.agent_id',$agent_id)
             ->select();
         return_msg(200,'success',$data);
     }
@@ -128,10 +168,12 @@ class Merchant extends Controller
      */
     public function total_merchant(Request $request)
     {
-        //
+        //获取代理商id
+        $agent_id=session('agent_id');
         $data=TotalMerchant::alias('a')
             ->field('a.id,a.name,a.phone,a.address,a.contact,a.channel,a.opening_time,a.status,b.contact_person,b.agent_phone')
             ->join('cloud_total_agent b','a.agent_id=b.id','left')
+            ->where('a.agent_id',$agent_id)
             ->select();
         return_msg(200,'success',$data);
     }
@@ -144,10 +186,13 @@ class Merchant extends Controller
      */
     public function review_merchant()
     {
+        //获取代理商id
+        $agent_id=session('agent_id');
+        //显示当前代理商下审核中的商户
         $data=TotalMerchant::alias('a')
             ->field('a.id,a.name,a.phone,a.address,a.contact,a.channel,a.create_time,a.review_status,b.contact_person,b.agent_phone')
             ->join('cloud_total_agent b','a.agent_id=b.id','left')
-            ->where(['a.review_status'=>['<>',3]])
+            ->where(['a.review_status'=>['<>',3],['a.agent_id'=>['=',$agent_id]]])
             ->select();
         return_msg(200,'success',$data);
     }
@@ -160,10 +205,35 @@ class Merchant extends Controller
      */
     public function reject_merchant()
     {
+        //获取代理商id
+        $agent_id=session('agent_id');
+        //显示当前代理商下已驳回的商户
         $data=TotalMerchant::alias('a')
             ->field('a.id,a.name,a.phone,a.address,a.contact,a.channel,a.create_time,a.rejected,b.contact_person,b.agent_phone')
             ->join('cloud_total_agent b','a.agent_id=b.id','left')
-            ->where(['a.review_status'=>['=',3]])
+            ->where(['a.review_status'=>['=',3],['a.agent_id'=>['=',$agent_id]]])
+            ->select();
+        return_msg(200,'success',$data);
+    }
+
+    /**
+     * 查询7日无交易数据
+     */
+    public function no_trad()
+    {
+        //获取代理商id
+        $agent_id=session('agent_id');
+        $time=time()-(7*24*60*60);//7天前时间
+        //获取代理商下7天无交易商户
+        $join=[
+            ['cloud_agent_partner b','a.partner_id=b.id'],
+            ['cloud_order c','a.id=c.merchant_id']
+        ];
+        $data=TotalMerchant::alias('a')
+            ->field(['a.id,a.name,a.contact,a.phone,b.partner_name'])
+            ->join($join)
+            ->whereTime('pay_time','<=',$time)
+            ->where('a.agent_id',$agent_id)
             ->select();
         return_msg(200,'success',$data);
     }
