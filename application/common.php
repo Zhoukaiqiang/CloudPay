@@ -215,6 +215,7 @@ if(!function_exists('jsonReturn')) {
             $data['pagePrev']=$pagePrev;
             $data['pageNext']=$pageNext;
             $data['limit']=$limit;
+            $data['rows'] = $rows;
             return $data;
         }
     }

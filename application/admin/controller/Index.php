@@ -7,7 +7,7 @@ use think\Db;
 use think\Request;
 use think\Validate;
 use app\admin\model\TotalMerchant as Merchant;
-
+use app\admin\model\Index as indexModel;
 /**
  * Class Index
  * @package app\index\controller
@@ -645,6 +645,81 @@ class Index extends Controller
 
 
     }
+
+    /**
+     * 员工搜索
+     * @param Request $request
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function search_staff(Request $request) {
+
+        $query['keywords'] = $request->param('keywords') ? $request->param('keywords') : -2;
+        $query['status'] =   $request->param('status');
+
+        $this->get_staff_result($query);
+    }
+
+    /**
+     * 员工搜索结果
+     * @param array $param
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    protected function get_staff_result(Array $param) {
+        /* 过滤参数 */
+        $param['status'] = intval($param['status']);
+        /* 设置flag */
+        $param['keywords_flag'] = 'LIKE';
+        $param['status_flag'] = "eq";
+
+        if ($param['keywords'] < -1) {
+            $param['keywords_flag'] = '<>';
+        }
+        if ($param['status'] != 1 && $param['status'] != 0) {
+            $param['status_flag'] = '<>';
+        }
+
+        /**
+         *
+         *
+         * 根据条件SQL搜索
+         *
+         *
+         */
+        /* 总共有N条数据 */
+        $total = indexModel::name('total_admin')->count('id');
+        /* 条件搜索查询有N条数据 */
+        $rows = indexModel::name('total_admin')
+            ->field("name,phone,status,create_time,role_id")
+            ->where([
+                "name|phone" => [$param['keywords_flag'], $param['keywords']."%"],
+                "status" => [$param['status_flag'], $param['status']],
+            ])
+            ->count("id");
+        $pages = page($rows);
+
+        $res = indexModel::name('total_admin')
+            ->field("name,phone,status,create_time,role_id")
+            ->where([
+                "name|phone" => [$param['keywords_flag'], $param['keywords']."%"],
+                "status" => [$param['status_flag'], $param['status']],
+            ])
+            ->limit($pages['offset'],$pages['limit'])
+            ->select();
+
+
+        $res['pages'] = $pages;
+        $res['pages']['total_row'] = $total;
+        if ($rows !== 0) {
+            return_msg(200, '获取搜索结果成功', $res);
+        }else {
+            return_msg(400, '没有找到数据');
+        }
+    }
+
 
     /**
      *  验证参数是否正确
