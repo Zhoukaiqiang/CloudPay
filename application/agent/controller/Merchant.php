@@ -10,15 +10,37 @@ use think\Request;
 class Merchant extends Controller
 {
     /**
-     * 显示正常使用的商户列表
-     *
+     * 显示当前代理商下所有商户列表
+     */
+    public function index()
+    {
+        $agent_id=session('agent_id');
+        //获取总行数
+        $rows=TotalMerchant::where('agent_id',$agent_id)->count();
+        $pages=page($rows);
+        $data=TotalMerchant::alias('a')
+            ->field('a.id,a.name,a.phone,a.address,a.contact,a.channel,a.opening_time,a.status,a.review_status,b.partner_name')
+            ->join('cloud_agent_partner b','a.partner_id=b.id','left')
+            ->where('a.agent_id',$agent_id)
+            ->limit($pages['offset'],$pages['limit'])
+            ->select();
+        $data['pages']=$pages;
+        return_msg(200,'success',$data);
+    }
+    /**
+     * 显示当前代理商下正常使用的商户列表
+     *  review_status 审核状态 0待审核 1开通中 2通过 3未通过
+     *  status  账号状态 0开启 1关闭
      * @return \think\Response
      */
     public function normal_list()
     {
+        //获取代理商id
+        $agent_id=session('agent_id');
         $where=[
             'review_status' =>2,
-            'status'=>0
+            'status'=>0,
+            'agent_id'=>$agent_id
         ];
         //获取总行数
         $rows=TotalMerchant::where($where)->count();
@@ -26,7 +48,7 @@ class Merchant extends Controller
         $data=TotalMerchant::alias('a')
             ->field('a.id,a.name,a.phone,a.address,a.contact,a.channel,a.opening_time,a.status,b.contact_person,b.agent_phone')
             ->join('cloud_total_agent b','a.agent_id=b.id','left')
-            ->where('a.review_status=2 and a.status=0')
+            ->where($where)
             ->limit($pages['offset'],$pages['limit'])
             ->select();
         $data['pages']=$pages;
@@ -40,9 +62,12 @@ class Merchant extends Controller
      */
     public function stop_list()
     {
+        //获取代理商id
+        $agent_id=session('agent_id');
         $where=[
             'review_status' =>2,
-            'status'=>1
+            'status'=>1,
+            'agent_id'=>$agent_id
         ];
         //获取总行数
         $rows=TotalMerchant::where($where)->count();
@@ -50,7 +75,7 @@ class Merchant extends Controller
         $data=TotalMerchant::alias('a')
             ->field('a.id,a.name,a.phone,a.address,a.contact,a.channel,a.opening_time,a.status,b.contact_person,b.agent_phone')
             ->join('cloud_total_agent b','a.agent_id=b.id','left')
-            ->where('a.review_status=2 and a.status=1')
+            ->where($where)
             ->limit($pages['offset'],$pages['limit'])
             ->select();
         return_msg('200','success',$data);
@@ -64,13 +89,18 @@ class Merchant extends Controller
      */
     public function review_list(Request $request)
     {
-        //
-        $rows=TotalMerchant::where(['review_status'=>['<',2]])->count();
+        //获取代理商id
+        $agent_id=session('agent_id');
+        $where=[
+            ['review_status'=>['<',2]],
+            ['agent_id'=>['=',$agent_id]]
+        ];
+        $rows=TotalMerchant::where($where)->count();
         $pages=page($rows);
         $data=TotalMerchant::alias('a')
             ->field('a.id,a.name,a.phone,a.address,a.contact,a.channel,a.opening_time,a.status,b.contact_person,b.agent_phone')
             ->join('cloud_total_agent b','a.agent_id=b.id','left')
-            ->where('a.review_status<2')
+            ->where($where)
             ->limit($pages['offset'],$pages['limit'])
             ->select();
         $data['pages']=$pages;
@@ -83,15 +113,20 @@ class Merchant extends Controller
      * @param  int  $id
      * @return \think\Response
      */
-    public function reject($id)
+    public function reject()
     {
-        //
-        $rows=TotalMerchant::where('review_status',3)->count();
+        //获取代理商id
+        $agent_id=session('agent_id');
+        $where=[
+            'review_status'=>3,
+            'agent_id'=>$agent_id
+        ];
+        $rows=TotalMerchant::where($where)->count();
         $pages=page($rows);
         $data=TotalMerchant::alias('a')
             ->field('a.id,a.name,a.phone,a.address,a.contact,a.channel,a.opening_time,a.status,b.contact_person,b.agent_phone')
             ->join('cloud_total_agent b','a.agent_id=b.id','left')
-            ->where('a.review_status=3')
+            ->where($where)
             ->limit($pages['offset'],$pages['limit'])
             ->select();
         $data['pages']=$pages;
@@ -107,12 +142,14 @@ class Merchant extends Controller
     public function add_middle()
     {
         //
+        $agent_id=session('agent_id');
         if(request()->isPost()){
             $data=request()->post();
             $data['channel']=3;//表示间联
             //验证
             //上传图片
             $data['attachment']=$this->upload_logo();
+            $data['agent_id']=$agent_id;
             $data['attachment']=json_encode($data['attachment']);
             $info=TotalMerchant::create($data,true);
             if($info){
@@ -122,7 +159,7 @@ class Merchant extends Controller
             }
         }else{
             //取出所有合伙人信息
-            $data=AgentPartner::field(['id','partner_name'])->select();
+            $data=AgentPartner::field(['id','partner_name'])->where('agent_id',$agent_id)->select();
             return_msg(200,'success',$data);
         }
     }
@@ -137,10 +174,13 @@ class Merchant extends Controller
     public function add_straight(Request $request)
     {
         //
+        $agent_id=session('agent_id');
         if($request->isPost()){
             $data=request()->post();
             //验证
+
             //上传图片
+            $data['agent_id']=$agent_id;
             $data['attachment']=$this->upload_logo();
             $data['attachment']=json_encode($data['attachment']);
             $info=TotalMerchant::create($data,true);
@@ -151,7 +191,7 @@ class Merchant extends Controller
             }
         }else{
             //取出所有合伙人信息
-            $data=AgentPartner::field(['id','partner_name'])->select();
+            $data=AgentPartner::field(['id','partner_name'])->where('agent_id',$agent_id)->select();
             return_msg(200,'success',$data);
         }
     }
