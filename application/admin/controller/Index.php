@@ -306,6 +306,7 @@ class Index extends Controller
 
         /* 初始化 *_flag */
 
+
         if ($param['keywords'] < -1) {
             $param['keywords_flag'] = '<>';
         }else {
@@ -326,22 +327,19 @@ class Index extends Controller
 
         /* 前端参数 JSON.stringfy([xxx,xxx]) */
         switch (gettype($param['time'])) {
-            case 'integer':
-                $param['time_flag'] = '>';
-                break;
             case 'array':
                 $param['time_flag'] = 'between';
                 break;
             default:
-                $param['time_flag'] = 'between';
+                $param['time_flag'] = '>';
         }
         $total = Db::name('total_merchant')->count('id');
         /* 条件搜索查询有N条数据 */
         $rows = Db::name('total_merchant')->alias('m')
             ->where([
                 'm.name|m.contact|m.phone|m.agent_name' => [$param['keywords_flag'], $param['keywords']."%"],
-                'category'     => [$param['category_flag'], $param['category']],
-                'address'     => [$param['address_flag'], $param['address']],
+                'm.category'     => [$param['category_flag'], $param['category']],
+                'm.address'     => [$param['address_flag'], $param['address']],
             ])
             ->whereTime('opening_time', $param['time_flag'], $param['time'])
             ->field(['m.name','m.contact', 'm.status', 'm.channel', 'm.address','m.opening_time','a.agent_name','m.id', 'a.agent_phone'])
@@ -353,8 +351,8 @@ class Index extends Controller
         $res = Db::name('total_merchant')->alias('m')
             ->where([
                 'm.name|m.contact|m.phone|m.agent_name' => [$param['keywords_flag'], $param['keywords']."%"],
-                'category'     => [$param['category_flag'], $param['category']],
-                'address'     => [$param['address_flag'], $param['address']],
+                'm.category'     => [$param['category_flag'], $param['category']],
+                'm.address'     => [$param['address_flag'], $param['address']],
             ])
             ->whereTime('opening_time', $param['time_flag'], $param['time'])
             ->field(['m.name','m.contact', 'm.status', 'm.channel', 'm.address','m.opening_time','a.agent_name','m.id', 'a.agent_phone'])
@@ -365,12 +363,112 @@ class Index extends Controller
         $res['pages']['rows'] = $rows;
         $res['pages']['total_row'] = $total;
         if ($rows !== 0) {
-            $this->return_msg(200, '搜索结果', $res);
+            $this->return_msg(200, '获取搜索结果成功', $res);
         }else {
-            $this->return_msg(400, '没有数据');
+            $this->return_msg(400, '没有找到数据');
         }
     }
 
+
+
+
+
+    /**
+     * 直联待审核商户搜索
+     * @param Request $request
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function direct_connect_search(Request $request) {
+
+        /* 直联待审核商户搜索项目 */
+        $query['channel'] = [0,1,2];
+        $query['keywords'] = $request->param('keywords') ? $request->param('keywords') : -2;
+        $query['review_status'] = $request->param['review_status']? $request->param['review_status']: -2;
+        $query['status'] = $request->param['status']? $request->param['status']: -2;
+        $query['create_time'] = $request->param['create_time'] ? $request->param['create_time']: -2;
+
+        $this->get_direct_connect_res($query);
+    }
+
+    /**
+     * 直联待审核商户搜索过滤并返回结果
+     * @param array $param
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function get_direct_connect_res(Array $param) {
+        /* 过滤参数 设置flag*/
+
+        $param['channel_flag'] = 'IN';
+        if ($param['keywords'] < -1) {
+            $param['keywords_flag'] = '<>';
+        }else {
+            $param['keywords_flag'] = 'like';
+        }
+        if ($param['review_status'] < -1) {
+            $param['review_status_flag'] = '<>';
+        }else {
+            $param['review_status_flag'] = 'eq';
+        }
+        if ($param['status'] < -1) {
+            $param['status_flag'] = '<>';
+        }else {
+            $param['status_flag'] = 'eq';
+        }
+        if ($param['create_time'] < -1) {
+            $param['create_time_flag'] = '>';
+        }else {
+            $param['create_time_flag'] = 'between';
+        }
+
+        $total = Db::name('total_merchant')->count('id');
+        /* 条件搜索查询有N条数据 */
+        $rows = Db::name('total_merchant')->alias('m')
+            ->where([
+                'm.name|m.contact|m.phone|m.agent_name' => [$param['keywords_flag'], $param['keywords']."%"],
+                'm.review_status'     => [$param['review_status_flag'], $param['review_status']],
+                'm.status'     => [$param['status_flag'], $param['status']],
+                'm.channel'     => [$param['channel_flag'], $param['channel']],
+            ])
+            ->whereTime('m.create_time', $param['create_time_flag'], $param['create_time'])
+            ->field(['m.name','m.contact', 'm.phone','m.review_status', 'm.channel', 'm.address','a.agent_name','m.id', 'a.agent_phone','m.create_time','m.channel'])
+            ->join('cloud_total_agent a','m.agent_id=a.id', 'left')
+            ->count('m.id');
+
+        $pages = page($rows);
+        /* 根据查询条件获取数据并返回 */
+        $res = Db::name('total_merchant')->alias('m')
+            ->where([
+                'm.name|m.contact|m.phone|m.agent_name' => [$param['keywords_flag'], $param['keywords']."%"],
+                'm.review_status'     => [$param['review_status_flag'], $param['review_status']],
+                'm.status'     => [$param['status_flag'], $param['status']],
+                'm.channel'     => [$param['channel_flag'], $param['channel']],
+            ])
+            ->whereTime('m.create_time', $param['create_time_flag'], $param['create_time'])
+            ->field(['m.name','m.contact', 'm.phone','m.review_status', 'm.channel', 'm.address','a.agent_name','m.id', 'a.agent_phone','m.create_time','m.channel'])
+            ->join('cloud_total_agent a','m.agent_id=a.id', 'left')
+            ->limit($pages['offset'],$pages['limit'])
+            ->select();
+        $res['pages'] = $pages;
+        $res['pages']['rows'] = $rows;
+        $res['pages']['total_row'] = $total;
+
+        /* 过滤取出的数据 */
+        foreach($res as $r) {
+            switch ($r['review_status']) {
+                case 1:
+            }
+        }
+        if ($rows !== 0) {
+            $this->return_msg(200, '获取搜索结果成功', $res);
+        }else {
+            $this->return_msg(400, '没有找到数据');
+        }
+
+    }
     /**
      * @param Request $request
      * @param [string]  $pay_type 支付类型
