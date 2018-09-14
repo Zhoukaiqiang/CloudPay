@@ -215,7 +215,11 @@ if(!function_exists('jsonReturn')) {
             $data['pagePrev']=$pagePrev;
             $data['pageNext']=$pageNext;
             $data['limit']=$limit;
+<<<<<<< Updated upstream
             $data['rows'] = $rows;
+=======
+            $data['rows']=$rows;
+>>>>>>> Stashed changes
             return $data;
         }
     }

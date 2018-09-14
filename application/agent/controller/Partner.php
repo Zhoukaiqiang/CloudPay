@@ -117,6 +117,7 @@ class Partner extends Controller
             ->join('cloud_order c','a.id=c.merchant_id','left')
             ->where(['partner_id'=>$id])
             ->whereTime('pay_time','>=','yesterday')
+            ->group('a.id')
             ->select();
         //取出商户支付宝和微信交易额交易量
         foreach($data as &$v){
@@ -151,13 +152,15 @@ class Partner extends Controller
      * @param  int  $id
      * @return \think\Response
      */
-    public function partner_report(Request $request)
+    public function partner_report()
     {
-        //获取当前合伙人id
-        $id=request()->param('parent_id');
-        $data=AgentPartner::field(['id,partner_name,partner_phone,create_time,model'])
+        //获取当前代理商id
+        $id=session('agent_id');
+        $id=1;
+        $data=AgentPartner::field(['id,partner_name,partner_phone,create_time,model,proportion,rate'])
             ->where('agent_id',$id)
             ->select();
+//        dump($data);die;
         //取出负责商户数
         foreach($data as &$v){
             $count=TotalMerchant::where('partner_id',$v['id'])->count();
@@ -165,8 +168,20 @@ class Partner extends Controller
             //根据合伙人id取出昨天新增商户数
             $new_count=TotalMerchant::whereTime('opening_time','yesterday')->where('partner_id',$v['id'])->count();
             $v['new_count']=$new_count;
+            //计算佣金
+            $sum=TotalMerchant::alias('a')
+                ->join('cloud_agent_partner b','a.partner_id=b.id')
+                ->join('cloud_order c','c.merchant_id=a.id')
+                ->where(['a.partner_id'=>$v['id']])
+                ->sum('c.received_money');
+            if($v['model']=="按比例"){
+                //安比例
+                $v['money']=$sum*$v['proportion']/100;
+            }elseif($v['model']=="按费率"){
+                //按费率
+                $v['money']=$sum*$v['rate']/100;
+            }
         }
-        //佣金??
         return_msg(200,'success',$data);
 
     }
