@@ -2,12 +2,11 @@
 
 namespace app\admin\controller;
 
-
-use MongoDB\Driver\ReadConcern;
 use think\Controller;
 use think\Db;
 use think\Request;
 use think\Validate;
+use app\admin\model\TotalMerchant as Merchant;
 
 /**
  * Class Index
@@ -265,7 +264,7 @@ class Index extends Controller
             ->limit($pages['offset'],$pages['limit'])
             ->select();
         $res['pages'] = $pages;
-        $res['pages']['rows'] = $rows;
+
         $res['pages']['total_row'] = $total;
         if ($rows !== 0) {
             $this->return_msg(200, '搜索结果', $res);
@@ -286,7 +285,7 @@ class Index extends Controller
     public function vendor_search(Request $request) {
         /* 搜索条件项 */
         $query['keywords'] = $request->param('keywords') ? $request->param('keywords') : -2;
-        $query['category'] = $request->param('category') ? $request->param('category'): -2;
+        $query['category'] = $request->param('category') ? $request->param('category') : -2;
         $query['address'] = $request->param('address') ? $request->param('address') : -2;
         $query['time'] = $request->param('time') ? json_decode($request->param('time')) : -2;
 
@@ -360,7 +359,7 @@ class Index extends Controller
             ->limit($pages['offset'],$pages['limit'])
             ->select();
         $res['pages'] = $pages;
-        $res['pages']['rows'] = $rows;
+
         $res['pages']['total_row'] = $total;
         if ($rows !== 0) {
             $this->return_msg(200, '获取搜索结果成功', $res);
@@ -374,7 +373,7 @@ class Index extends Controller
 
 
     /**
-     * 直联待审核商户搜索
+     * 直联商户搜索
      * @param Request $request
      * @throws \think\db\exception\DataNotFoundException
      * @throws \think\db\exception\ModelNotFoundException
@@ -385,13 +384,31 @@ class Index extends Controller
         /* 直联待审核商户搜索项目 */
         $query['channel'] = [0,1,2];
         $query['keywords'] = $request->param('keywords') ? $request->param('keywords') : -2;
-        $query['review_status'] = $request->param['review_status']? $request->param['review_status']: -2;
-        $query['status'] = $request->param['status']? $request->param['status']: -2;
-        $query['create_time'] = $request->param['create_time'] ? $request->param['create_time']: -2;
+        $query['review_status'] = $request->param('review_status') ? $request->param('review_status') : -2;
+        $query['status'] = $request->param('status') ? $request->param('status') : -2;
+        $query['create_time'] = $request->param('create_time') ? $request->param[('create_time')] : -2;
 
         $this->get_direct_connect_res($query);
     }
 
+    /**
+     * 间联商户搜索
+     * @param Request $request
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function indirect_connect_search(Request $request) {
+
+        /* 直联待审核商户搜索项目 */
+        $query['channel'] = [3];
+        $query['keywords'] = $request->param('keywords') ? $request->param('keywords') : -2;
+        $query['review_status'] = $request->param('review_status') ? $request->param('review_status') : -2;
+        $query['status'] = $request->param('status') ? $request->param('status') : -2;
+        $query['create_time'] = $request->param('create_time') ? $request->param[('create_time')] : -2;
+
+        $this->get_direct_connect_res($query);
+    }
     /**
      * 直联待审核商户搜索过滤并返回结果
      * @param array $param
@@ -424,9 +441,9 @@ class Index extends Controller
             $param['create_time_flag'] = 'between';
         }
 
-        $total = Db::name('total_merchant')->count('id');
+        $total = Merchant::name('total_merchant')->count('id');
         /* 条件搜索查询有N条数据 */
-        $rows = Db::name('total_merchant')->alias('m')
+        $rows = Merchant::name('total_merchant')->alias('m')
             ->where([
                 'm.name|m.contact|m.phone|m.agent_name' => [$param['keywords_flag'], $param['keywords']."%"],
                 'm.review_status'     => [$param['review_status_flag'], $param['review_status']],
@@ -440,7 +457,7 @@ class Index extends Controller
 
         $pages = page($rows);
         /* 根据查询条件获取数据并返回 */
-        $res = Db::name('total_merchant')->alias('m')
+        $res = Merchant::name('total_merchant')->alias('m')
             ->where([
                 'm.name|m.contact|m.phone|m.agent_name' => [$param['keywords_flag'], $param['keywords']."%"],
                 'm.review_status'     => [$param['review_status_flag'], $param['review_status']],
@@ -453,15 +470,11 @@ class Index extends Controller
             ->limit($pages['offset'],$pages['limit'])
             ->select();
         $res['pages'] = $pages;
-        $res['pages']['rows'] = $rows;
+
         $res['pages']['total_row'] = $total;
 
         /* 过滤取出的数据 */
-        foreach($res as $r) {
-            switch ($r['review_status']) {
-                case 1:
-            }
-        }
+
         if ($rows !== 0) {
             $this->return_msg(200, '获取搜索结果成功', $res);
         }else {
@@ -469,6 +482,7 @@ class Index extends Controller
         }
 
     }
+
     /**
      * @param Request $request
      * @param [string]  $pay_type 支付类型

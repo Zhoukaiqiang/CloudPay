@@ -32,4 +32,11 @@ class TotalMerchant extends Model
         $attr_input_type = ['支付宝', '微信','微信 支付宝','微信 支付宝'];
         return $attr_input_type[$value];
     }
+
+    public function getReviewStatusAttr($value)
+    {
+        //  直联和间联 0待审核 1开通中 2通过 3未通过
+        $attr_input_type = ['待审核 ','开通中','通过','未通过'];
+        return $attr_input_type[$value];
+    }
 }
