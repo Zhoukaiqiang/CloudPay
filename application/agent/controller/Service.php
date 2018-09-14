@@ -17,7 +17,7 @@ class Service extends Controller
     public function service_list()
     {
         //获取上级代理商id
-        $id=request()->param('parent_id');
+        $id=session('agent_id');
         //获取所有行数
         $rows=TotalAgent::where('parent_id',$id)->count();
         $pages=page($rows);
@@ -110,7 +110,7 @@ class Service extends Controller
         if(request()->isPost()){
             $data=request()->post();
             //获取上级代理商id
-            $data['parent_id']=request()->param('parent_id');
+            $data['parent_id']=session('agent_id');
             //验证
             //上传图片
             $data['contract_picture'] = $this->upload_logo();
@@ -137,13 +137,11 @@ class Service extends Controller
     public function service_merchant(Request $request)
     {
         //获取上级代理商id
-        $id=$request->param('parent_id');
-        //获取当前页
-        $page=request()->param('page') ? request()->param('page') : 1;
+        $id=session('agent_id');
         //获取总行数
         $rows=TotalAgent::where('parent_id',$id)->count();
         //分页
-        $pages=page($page,$rows);
+        $pages=page($rows);
         //获取子代中的商户信息
         $data=TotalMerchant::alias('a')
             ->field('a.id,a.name,a.address,a.channel,a.status,b.agent_name,b.agent_phone,a.opening_time')
