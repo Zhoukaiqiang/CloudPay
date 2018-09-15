@@ -237,4 +237,48 @@ class Index extends Controller
             ->select();
         return_msg(200,'success',$data);
     }
+
+    /**
+     * 首页--交易数据搜索查询
+     * @param Request $request
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+   public function search_deal(Request $request)
+   {
+
+    $name=$request->param('abbreviation') ? $request->param('abbreviation') : $request->param('contact');
+    $name=$name ? $name : $request->param('phone');
+    $partner_id=$request->param('partner_id');
+    $deal=$request->param('deal');
+    //如果$deal=1是有交易用户，$deal=2是无交易用户
+    $nodeal='> time';
+    $nodeal2='<= time';
+    if($deal==2){
+        $nodeal='<= time';
+        $nodeal2='> time';
+    }
+    $symbol='<>';
+    if($partner_id >0){
+        $symbol='eq';
+    }
+
+    $data=TotalMerchant::alias('a')
+           ->field('a.abbreviation,a.contact,a.phone,cloud_order.received_money')
+           ->join('cloud_order','a.id=cloud_order.merchant_id','left')
+           ->where('a.abbreviation|a.contact|a.phone','like',"%$name%")
+           ->where(
+               ['cloud_order.pay_time'=>[$nodeal,$request->param('pay_time')],
+               'cloud_order.pay_time'=>[$nodeal2,$request->param('yesterday')],
+                   'a.partner_id'=>[$symbol,$partner_id]
+           ])
+           ->select();
+//          $data=json_decode($data);
+
+           return_msg(200,'success',$data);
+
+   }
+
+
 }
