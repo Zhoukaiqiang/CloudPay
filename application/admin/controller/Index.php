@@ -691,7 +691,7 @@ class Index extends Controller
          */
         /* 总共有N条数据 */
         $total = indexModel::name('total_admin')->count('id');
-        /* 条件搜索查询有N条数据 */
+        /* 查询结果 */
         $rows = indexModel::name('total_admin')
             ->field("name,phone,status,create_time,role_id")
             ->where([
