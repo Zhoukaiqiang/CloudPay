@@ -52,7 +52,6 @@ class Index extends Controller
             ->group('a.id')
             ->limit($pages['offset'],$pages['limit'])
             ->select();
-//        dump($data);die;
         //取出商户支付宝和微信交易额交易量
         foreach($data as &$v){
                 $where=[
@@ -170,7 +169,7 @@ class Index extends Controller
     /**
      * 获取新增商户
      *
-     * @param  int  $id
+     * @param  status 0停用 1启用
      * @return \think\Response
      */
     public function new_merchant()
@@ -206,7 +205,8 @@ class Index extends Controller
     {
         //获取代理商id
         $agent_id=session('agent_id');
-        $rows=TotalMerchant::where('a.agent_id',$agent_id)
+        $agent_id=1;
+        $rows=TotalMerchant::where('agent_id',$agent_id)
             ->count();
         $pages=page($rows);
         $data=TotalMerchant::alias('a')
@@ -229,14 +229,15 @@ class Index extends Controller
     {
         //获取代理商id
         $agent_id=session('agent_id');
-        $rows=TotalMerchant::where(['review_status'=>['<>',3],['agent_id'=>['=',$agent_id]]])
+        $agent_id=1;
+        $rows=TotalMerchant::where(['review_status'=>['<>',3],'agent_id'=>['=',$agent_id]])
             ->count();
         $pages=page($rows);
         //显示当前代理商下审核中的商户
         $data=TotalMerchant::alias('a')
             ->field('a.id,a.name,a.phone,a.address,a.contact,a.channel,a.create_time,a.review_status,b.contact_person,b.agent_phone')
             ->join('cloud_total_agent b','a.agent_id=b.id','left')
-            ->where(['a.review_status'=>['<>',3],['a.agent_id'=>['=',$agent_id]]])
+            ->where(['a.review_status'=>['<>',3],'a.agent_id'=>['=',$agent_id]])
             ->limit($pages['offset'],$pages['limit'])
             ->select();
         $data['pages']=$pages;
@@ -253,14 +254,18 @@ class Index extends Controller
     {
         //获取代理商id
         $agent_id=session('agent_id');
-        $rows=TotalMerchant::where(['review_status'=>['=',3],['agent_id'=>['=',$agent_id]]])
+        $agent_id=1;
+        $rows=TotalMerchant::where(['review_status'=>['=',3],'agent_id'=>['=',$agent_id]])
             ->count();
+        $pages=page($rows);
         //显示当前代理商下已驳回的商户
         $data=TotalMerchant::alias('a')
             ->field('a.id,a.name,a.phone,a.address,a.contact,a.channel,a.create_time,a.rejected,b.contact_person,b.agent_phone')
             ->join('cloud_total_agent b','a.agent_id=b.id','left')
-            ->where(['a.review_status'=>['=',3],['a.agent_id'=>['=',$agent_id]]])
+            ->where(['a.review_status'=>['=',3],'a.agent_id'=>['=',$agent_id]])
+            ->limit($pages['offset'],$pages['limit'])
             ->select();
+        $data['pages']=$pages;
         return_msg(200,'success',$data);
     }
 
@@ -271,13 +276,16 @@ class Index extends Controller
     {
         //获取代理商id
         $agent_id=session('agent_id');
+        $agent_id=1;
         $time=time()-(7*24*60*60);//7天前时间
         //获取代理商下7天无交易商户
         $join=[
             ['cloud_agent_partner b','a.partner_id=b.id'],
             ['cloud_order c','a.id=c.merchant_id']
         ];
-        $rows=TotalMerchant::whereTime('pay_time','<=',$time)
+        $rows=TotalMerchant::alias('a')
+            ->join($join)
+            ->whereTime('pay_time','<=',$time)
             ->where('a.agent_id',$agent_id)
             ->count();
         $pages=page($rows);

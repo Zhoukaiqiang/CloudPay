@@ -3,6 +3,7 @@
 namespace app\agent\controller;
 
 use app\agent\model\AgentPartner;
+use app\agent\model\TotalAgent;
 use app\agent\model\TotalMerchant;
 use think\Controller;
 use think\Request;
@@ -15,6 +16,7 @@ class Merchant extends Controller
     public function index()
     {
         $agent_id=session('agent_id');
+        $agent_id=1;
         //获取总行数
         $rows=TotalMerchant::where('agent_id',$agent_id)->count();
         $pages=page($rows);
@@ -37,13 +39,17 @@ class Merchant extends Controller
     {
         //获取代理商id
         $agent_id=session('agent_id');
+        $agent_id=1;
         $where=[
-            'review_status' =>2,
-            'status'=>0,
-            'agent_id'=>$agent_id
+            'a.review_status' =>2,
+            'a.status'=>0,
+            'a.agent_id'=>$agent_id
         ];
         //获取总行数
-        $rows=TotalMerchant::where($where)->count();
+        $rows=TotalMerchant::alias('a')
+            ->join('cloud_total_agent b','a.agent_id=b.id','left')
+            ->where($where)
+            ->count();
         $pages=page($rows);
         $data=TotalMerchant::alias('a')
             ->field('a.id,a.name,a.phone,a.address,a.contact,a.channel,a.opening_time,a.status,b.contact_person,b.agent_phone')
@@ -64,16 +70,20 @@ class Merchant extends Controller
     {
         //获取代理商id
         $agent_id=session('agent_id');
+        $agent_id=1;
         $where=[
-            'review_status' =>2,
-            'status'=>1,
-            'agent_id'=>$agent_id
+            'a.review_status' =>2,
+            'a.status'=>1,
+            'a.agent_id'=>$agent_id
         ];
         //获取总行数
-        $rows=TotalMerchant::where($where)->count();
+        $rows=TotalMerchant::alias('a')
+            ->join('cloud_total_agent b','a.agent_id=b.id','left')
+            ->where($where)
+            ->count();
         $pages=page($rows);
         $data=TotalMerchant::alias('a')
-            ->field('a.id,a.name,a.phone,a.address,a.contact,a.channel,a.opening_time,a.status,b.contact_person,b.agent_phone')
+            ->field('a.id,a.name,a.phone,a.address,a.contact,a.opening_time,a.status,b.contact_person,b.agent_phone')
             ->join('cloud_total_agent b','a.agent_id=b.id','left')
             ->where($where)
             ->limit($pages['offset'],$pages['limit'])
@@ -87,18 +97,22 @@ class Merchant extends Controller
      * @param  \think\Request  $request
      * @return \think\Response
      */
-    public function review_list(Request $request)
+    public function review_list()
     {
         //获取代理商id
         $agent_id=session('agent_id');
+        $agent_id=1;
         $where=[
-            ['review_status'=>['<',2]],
-            ['agent_id'=>['=',$agent_id]]
+            'a.review_status'=>['<',2],
+            'a.agent_id'=>['=',$agent_id]
         ];
-        $rows=TotalMerchant::where($where)->count();
+        $rows=TotalMerchant::alias('a')
+            ->join('cloud_total_agent b','a.agent_id=b.id','left')
+            ->where($where)
+            ->count();
         $pages=page($rows);
         $data=TotalMerchant::alias('a')
-            ->field('a.id,a.name,a.phone,a.address,a.contact,a.channel,a.opening_time,a.status,b.contact_person,b.agent_phone')
+            ->field('a.id,a.name,a.phone,a.address,a.contact,a.opening_time,a.status,b.contact_person,b.agent_phone')
             ->join('cloud_total_agent b','a.agent_id=b.id','left')
             ->where($where)
             ->limit($pages['offset'],$pages['limit'])
@@ -117,6 +131,7 @@ class Merchant extends Controller
     {
         //获取代理商id
         $agent_id=session('agent_id');
+        $agent_id=1;
         $where=[
             'review_status'=>3,
             'agent_id'=>$agent_id
@@ -124,7 +139,7 @@ class Merchant extends Controller
         $rows=TotalMerchant::where($where)->count();
         $pages=page($rows);
         $data=TotalMerchant::alias('a')
-            ->field('a.id,a.name,a.phone,a.address,a.contact,a.channel,a.opening_time,a.status,b.contact_person,b.agent_phone')
+            ->field('a.id,a.name,a.phone,a.address,a.contact,a.rejected,a.opening_time,a.status,b.contact_person,b.agent_phone')
             ->join('cloud_total_agent b','a.agent_id=b.id','left')
             ->where($where)
             ->limit($pages['offset'],$pages['limit'])
@@ -143,6 +158,7 @@ class Merchant extends Controller
     {
         //
         $agent_id=session('agent_id');
+        $agent_id=1;
         if(request()->isPost()){
             $data=request()->post();
             $data['channel']=3;//表示间联
@@ -151,14 +167,14 @@ class Merchant extends Controller
             $data['attachment']=$this->upload_logo();
             $data['agent_id']=$agent_id;
             $data['attachment']=json_encode($data['attachment']);
-            $info=TotalMerchant::create($data,true);
+            $info=TotalMerchant::insert($data,true);
             if($info){
                 return_msg(200,'添加成功');
             }else{
                 return_msg(400,'添加失败');
             }
         }else{
-            //取出所有合伙人信息
+            //取出当前代理商下所有合伙人
             $data=AgentPartner::field(['id','partner_name'])->where('agent_id',$agent_id)->select();
             return_msg(200,'success',$data);
         }
@@ -183,7 +199,7 @@ class Merchant extends Controller
             $data['agent_id']=$agent_id;
             $data['attachment']=$this->upload_logo();
             $data['attachment']=json_encode($data['attachment']);
-            $info=TotalMerchant::create($data,true);
+            $info=TotalMerchant::insert($data);
             if($info){
                 return_msg(200,'添加成功');
             }else{

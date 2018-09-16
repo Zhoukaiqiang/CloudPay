@@ -18,6 +18,7 @@ class Service extends Controller
     {
         //获取上级代理商id
         $id=session('agent_id');
+        $id=1;
         //获取所有行数
         $rows=TotalAgent::where('parent_id',$id)->count();
         $pages=page($rows);
@@ -36,6 +37,7 @@ class Service extends Controller
     {
         //获取当前代理商id
         $id=request()->param('id');
+        $id=1;
         $result=TotalAgent::where('id',$id)->update(['status'=>1]);
         if($result){
             return_msg(200,'启用成功');
@@ -75,6 +77,7 @@ class Service extends Controller
         if(request()->isPost()){
             //获取上级代理商id
             $data=request()->post();
+            $data['parent_id']=session('agent_id');
             //验证
             //判断是否上传新图片
             $file=request()->file('contract_picture');
@@ -116,7 +119,7 @@ class Service extends Controller
             $data['contract_picture'] = $this->upload_logo();
             $data['contract_picture'] = json_encode($data['contract_picture']);
             //保存
-            $info = TotalAgent::create($data, true);
+            $info = TotalAgent::insert($data);
             if($info){
                 return_msg(200,'添加成功');
             }else{
@@ -134,10 +137,11 @@ class Service extends Controller
      * @param  int  $id
      * @return \think\Response
      */
-    public function service_merchant(Request $request)
+    public function service_merchant()
     {
         //获取上级代理商id
         $id=session('agent_id');
+        $id=1;
         //获取总行数
         $rows=TotalAgent::where('parent_id',$id)->count();
         //分页
