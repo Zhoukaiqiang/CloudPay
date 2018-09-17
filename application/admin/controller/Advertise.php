@@ -61,10 +61,6 @@ class Advertise extends Common
 
                 }
 
-
-                //模板变量赋值
-                // $this->assign('image', $data);
-                // return $this->fetch('index');
             } else {
                 // 上传失败获取错误信息
                 $this->return_msg(400, '上传失败', $file->getError());

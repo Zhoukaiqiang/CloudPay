@@ -81,8 +81,7 @@ class Common extends Controller
     );
 
     protected function _empty() {
-        return '您的操作不合法，请重新输入。';
-        die;
+        return '您的操作不合法，请重新输入。'; die;
     }
     protected function _initialize()
     {

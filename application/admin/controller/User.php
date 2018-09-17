@@ -8,9 +8,8 @@
 
 namespace app\admin\controller;
 
-
-use app\admin\model\TotalAd;
-
+use app\admin\model\TotalAdmin;
+use think\Loaderer;
 use think\Db;
 use think\Request;
 
@@ -34,8 +33,6 @@ class User extends Common
 
     }
 
-
-
     /**
      * 用户登录
      * @param [strin]   user_name 用户名（电话）
@@ -53,12 +50,11 @@ class User extends Common
 
         if ($db_res['password'] !== $data['password']) {
             $this->return_msg(400, '用户密码不正确！');
-        }else {
-            unset($db_res['password']);  //密码不返回
+        } else {
+            unset($db_res['password']); //密码不返回
             $this->return_msg(200, '登录成功！', $db_res);
         }
     }
-
 
     /**
      * 注册
@@ -94,18 +90,13 @@ class User extends Common
         $res = db('total_admin')->insert($d);
         if (!$res) {
             $this->return_msg(400, '用户注册失败!');
-        }else {
+        } else {
             /*注册成功发送密码到用户手机*/
 
             $this->return_msg(200, '用户注册成功！', $res);
 
         }
     }
-
-
-
-
-
 
     public function addStaff()
     {
@@ -163,7 +154,10 @@ class User extends Common
     public function editStaff()
     {
         $id = $this->request->param('id');
-        if (empty($id)) return;
+        if (empty($id)) {
+            return;
+        }
+
         $data['name'] = $this->request->param('name');
 
         $data['phone'] = $this->request->param('phone');
@@ -187,7 +181,8 @@ class User extends Common
      * @param [string]  password 新密码
      * @return [json] 返回消息
      */
-    public function changePwd() {
+    public function changePwd()
+    {
         /* 接受参数 */
         $data = $this->params;
 
@@ -212,12 +207,13 @@ class User extends Common
         $res = db('total_admin')->where($where)->setField('password', $data['password']);
         if ($res !== false) {
             $this->return_msg(200, '密码修改成功！');
-        }else {
+        } else {
             $this->return_msg(400, '密码修改失败！');
         }
     }
 
-    public function findPwd() {
+    public function findPwd()
+    {
         /* 接受参数 */
         $data = $this->params;
 
@@ -240,7 +236,7 @@ class User extends Common
         $res = db('total_admin')->where($where)->setField('password', $data['password']);
         if ($res !== false) {
             $this->return_msg(200, '密码修改成功！');
-        }else {
+        } else {
             $this->return_msg(400, '密码修改失败！');
         }
     }
@@ -251,7 +247,8 @@ class User extends Common
      * @return string
      */
 
-    public function bind_phone() {
+    public function bind_phone()
+    {
         /* 接受参数 */
         $data = $this->params;
         /* 验证验证码 */
@@ -261,7 +258,7 @@ class User extends Common
         $res = db('total_admin')->where('id', $data['user_id'])->setField('phone', $data['phone']);
         if ($res !== false) {
             $this->return_msg(200, '手机号绑定成功！');
-        }else {
+        } else {
             $this->return_msg(400, '手机号绑定失败！');
         }
 
@@ -273,7 +270,8 @@ class User extends Common
      * @param [int] 验证码
      * @retrun [json] 返回验证结果
      */
-    public function bind_email() {
+    public function bind_email()
+    {
         /* 接受参数 */
         $data = $this->params;
         /* 验证验证码 */
@@ -283,14 +281,26 @@ class User extends Common
         $res = db('total_admin')->where('id', $data['user_id'])->setField('email', $data['email']);
         if ($res !== false) {
             $this->return_msg(200, '邮箱绑定成功！');
-        }else {
+        } else {
             $this->return_msg(400, '邮箱绑定失败！');
         }
     }
 
-    public function test() {
-        $this->redirect('http://thinkphp.cn/blog/2',302);
-
+    public function test()
+    {
+        /** 跳转 */
+        // $this->redirect('http://thinkphp.cn/blog/2',302);
+        //  setInc 让某个字段自增 setDec 自减 setField 更新一个字段 update  更新多个字段
+//        $res = TotalAdmin::all(function($query) {
+//            $query->where('id', '<', 5)->order("id DESC");
+//        });
+//        $arr = [];
+//        foreach($res as $val) {
+//            array_push($arr, $val->toArray());
+//        }
+//        dump(json_encode($arr));
+        $res = TotalAdmin::get(5);
+        dump($res->toArray());
     }
 
 }
