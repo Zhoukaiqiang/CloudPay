@@ -41,7 +41,6 @@ class Index extends Controller
      *  @return $data     [json] 筛选后的数据
      * */
 
-
     public function index(Request $request)
     {
         //return view();
@@ -103,7 +102,9 @@ class Index extends Controller
         /* 检验参数合法性 */
         $this->check_params($this->request->except(['time', 'token']));
 
-        $id = $request->param('id');
+//        $id = $request->param('id');
+        /** 从session中获取id */
+        $id = session("id");
         $channel = $request->param('channel');
         /* 检查用户是否有权限查看 */
         $check = $this->is_user_can($id);
