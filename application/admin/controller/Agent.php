@@ -21,7 +21,7 @@ class Agent extends Controller
             $rows=TotalAgent::count();
             $pages=page($rows);
             //取出数据表中的数据
-            $data=TotalAgent::alias('a')
+            $data['data']=TotalAgent::alias('a')
                 ->field('a.id,a.agent_name,a.contact_person,a.agent_mode,a.agent_area,a.create_time,a.contract_time,a.status,b.name')
                 ->join('cloud_total_admin b','a.admin_id=b.id','left')
                 ->limit($pages['offset'],$pages['limit'])
