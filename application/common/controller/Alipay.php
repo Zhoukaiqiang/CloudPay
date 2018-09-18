@@ -14,7 +14,7 @@ class Alipay extends Controller
      */
     public function index()
     {
-        //
+
     }
 
     /**

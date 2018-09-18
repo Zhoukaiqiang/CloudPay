@@ -299,4 +299,356 @@ class Index extends Controller
         $data['pages']=$pages;
         return_msg(200,'success',$data);
     }
+
+    /**
+     * 首页--交易数据搜索查询
+     * @param Request $request
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+   public function search_deal(Request $request)
+   {
+       //获取商户|联系人|联系方式
+    $name=$request->param('keyword');
+    //获取合伙人id
+    $partner_id=$request->param('partner_id');
+    //获取是否交易
+    $deal=$request->param('deal');
+
+    //如果$deal=1是有交易用户，$deal=2是无交易用户
+    $nodeal='between';
+
+    if($deal==2){
+        $nodeal='not between';
+    }
+    $symbol='<>';
+    if($partner_id >0){
+        $symbol='eq';
+    }
+       $total = Db::name('total_merchant')->count('id');
+    $rows=TotalMerchant::alias('a')
+           ->field('a.abbreviation,a.contact,a.phone,cloud_order.received_money,cloud_order.cashier')
+           ->join('cloud_order','a.id=cloud_order.merchant_id','left')
+           ->where('a.abbreviation|a.contact|a.phone','like',"%$name%")
+           ->where('a.partner_id',$symbol,$partner_id)
+        ->whereTime('cloud_order.pay_time',$nodeal,[$request->param('pay_time'),$request->param('yesterday')])
+           ->count('a.id');
+       $pages = page($rows);
+       $data=TotalMerchant::alias('a')
+           ->field('a.abbreviation,a.contact,a.phone,cloud_order.received_money,cloud_order.cashier')
+           ->join('cloud_order','a.id=cloud_order.merchant_id','left')
+           ->where('a.abbreviation|a.contact|a.phone','like',"%$name%")
+           ->where('a.partner_id',$symbol,$partner_id)
+           ->whereTime('cloud_order.pay_time',$nodeal,[$request->param('pay_time'),$request->param('yesterday')])
+           ->limit($pages['offset'],$pages['limit'])
+           ->select();
+       $data['pages'] = $pages;
+       $data['pages']['rows'] = $rows;
+       $data['pages']['total_row'] = $total;
+       if(count($data)!==0){
+           return_msg(200,'success',$data);
+       }else{
+           return_msg(400,'没有数据');
+       }
+   }
+
+    /**
+     * 首页-昨日活跃商户
+     * @param Request $request
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function yesterday_active(Request $request)
+    {
+        $total = Db::name('total_merchant')->count('id');
+
+        $rows=TotalMerchant::alias('a')
+            ->field('a.abbreviation,a.address,cloud_order.received_money,cloud_order.cashier')
+            ->join('cloud_order','a.id=cloud_order.merchant_id','left')
+            ->whereTime('cloud_order.pay_time','between',[$request->param('pay_time'),$request->param('yesterday')])
+            ->count('a.id');
+        $pages = page($rows);
+        $data=TotalMerchant::alias('a')
+            ->field('a.abbreviation,a.address,cloud_order.received_money,cloud_order.cashier')
+            ->join('cloud_order','a.id=cloud_order.merchant_id','left')
+            ->whereTime('cloud_order.pay_time','between',[$request->param('pay_time'),$request->param('yesterday')])
+            ->limit($pages['offset'],$pages['limit'])
+            ->select();
+        $data['pages'] = $pages;
+        $data['pages']['rows'] = $rows;
+        $data['pages']['total_row'] = $total;
+        if(count($data)!==0){
+            return_msg(200,'success',$data);
+        }else{
+            return_msg(400,'没有数据');
+        }
+    }
+
+    /**
+     * 首页-七日无交易-筛选查询
+     * @param Request $request
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function merchant_trade(Request $request)
+    {
+        //获取商户|联系人|联系方式
+        $name=$request->param('keyword');
+        //获取合伙人id
+        $partner_id=$request->param('partner_id');
+        //获取是否交易
+        $deal=$request->param('deal');
+
+        //如果$deal=1是有交易用户，$deal=2是无交易用户
+        $nodeal='between';
+        $total = Db::name('total_merchant')->count('id');
+        if($deal==2){
+            $nodeal='not between';
+        }
+        $symbol='<>';
+        if($partner_id >0){
+            $symbol='eq';
+        }
+
+        $rows=TotalMerchant::alias('a')
+            ->field('a.abbreviation,a.contact,a.phone,cloud_order.received_money,cloud_order.cashier,cloud_agent_partner.partner_name')
+            ->join('cloud_order','a.id=cloud_order.merchant_id')
+            ->join('cloud_agent_partner','a.partner_id=cloud_agent_partner.id')
+            ->where('a.abbreviation|a.contact|a.phone','like',"%$name%")
+            ->where('a.partner_id',$symbol,$partner_id)
+            ->whereTime('cloud_order.pay_time',$nodeal,[$request->param('pay_time'),$request->param('yesterday')])
+            ->count('a.id');
+        $pages = page($rows);
+        $data=TotalMerchant::alias('a')
+            ->field('a.abbreviation,a.contact,a.phone,cloud_order.received_money,cloud_order.cashier,cloud_agent_partner.partner_name')
+            ->join('cloud_order','a.id=cloud_order.merchant_id')
+            ->join('cloud_agent_partner','a.partner_id=cloud_agent_partner.id')
+            ->where('a.abbreviation|a.contact|a.phone','like',"%$name%")
+            ->where('a.partner_id',$symbol,$partner_id)
+            ->whereTime('cloud_order.pay_time',$nodeal,[$request->param('pay_time'),$request->param('yesterday')])
+            ->limit($pages['offset'],$pages['limit'])
+            ->select();
+        $data['pages'] = $pages;
+        $data['pages']['rows'] = $rows;
+        $data['pages']['total_row'] = $total;
+        if(count($data)!==0){
+            return_msg(200,'success',$data);
+        }else{
+            return_msg(400,'没有数据');
+        }
+    }
+
+    /**
+     * 商户列表-筛选查询
+     * @param Request $request
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function merchant_list(Request $request)
+    {
+        //获取商户|联系人|联系方式
+        $name=$request->param('keyword');
+        //获取合伙人id
+        $partner_id=$request->param('partner_id');
+        //获取是否交易
+        $deal=$request->param('deal');
+
+        //如果$deal=1是有交易用户，$deal=2是无交易用户
+        $nodeal='between';
+
+        if($deal==2){
+            $nodeal='not between';
+        }
+        $symbol='<>';
+        if($partner_id >0){
+            $symbol='eq';
+        }
+        $total = Db::name('total_merchant')->count('id');
+        $rows=TotalMerchant::alias('a')
+            ->field('a.contact,a.phone,a.status,a.opening_time,a.review_status,a.abbreviation,a.contact,a.phone,cloud_order.received_money,cloud_order.cashier,cloud_agent_partner.partner_name')
+            ->join('cloud_order','a.id=cloud_order.merchant_id')
+            ->join('cloud_agent_partner','a.partner_id=cloud_agent_partner.id')
+            ->where('a.abbreviation|a.contact|a.phone','like',"%$name%")
+            ->where('a.partner_id',$symbol,$partner_id)
+            ->whereTime('cloud_order.pay_time',$nodeal,[$request->param('pay_time'),$request->param('yesterday')])
+            ->count('a.id');
+        $pages = page($rows);
+
+        $data=TotalMerchant::alias('a')
+            ->field('a.contact,a.phone,a.status,a.opening_time,a.review_status,a.abbreviation,a.contact,a.phone,cloud_order.received_money,cloud_order.cashier,cloud_agent_partner.partner_name')
+            ->join('cloud_order','a.id=cloud_order.merchant_id')
+            ->join('cloud_agent_partner','a.partner_id=cloud_agent_partner.id')
+            ->where('a.abbreviation|a.contact|a.phone','like',"%$name%")
+            ->where('a.partner_id',$symbol,$partner_id)
+            ->whereTime('cloud_order.pay_time',$nodeal,[$request->param('pay_time'),$request->param('yesterday')])
+            ->limit($pages['offset'],$pages['limit'])
+            ->select();
+        $data['pages'] = $pages;
+        $data['pages']['rows'] = $rows;
+        $data['pages']['total_row'] = $total;
+        if(count($data)!==0){
+            return_msg(200,'success',$data);
+        }else{
+            return_msg(400,'没有数据');
+        }
+    }
+
+    /**
+     * 商户交易--筛选搜索
+     * @param Request $request
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function merchant_deal(Request $request)
+    {
+        //获取商户|联系人|联系方式
+        $name=$request->param('keyword');
+        //获取合伙人id
+        $partner_id=$request->param('partner_id');
+        //获取是否交易
+        $deal=$request->param('deal');
+
+        //如果$deal=1是有交易用户，$deal=2是无交易用户
+        $nodeal='between';
+
+        if($deal==2){
+            $nodeal='not between';
+        }
+        $symbol='<>';
+        if($partner_id >0){
+            $symbol='eq';
+        }
+        $total = Db::name('total_merchant')->count('id');
+
+        $rows=TotalMerchant::alias('a')
+            ->field('a.abbreviation,a.contact,a.phone,cloud_order.received_money,cloud_order.cashier')
+            ->join('cloud_order','a.id=cloud_order.merchant_id','left')
+            ->where('a.abbreviation|a.contact|a.phone','like',"%$name%")
+            ->where('a.partner_id',$symbol,$partner_id)
+            ->whereTime('cloud_order.pay_time',$nodeal,[$request->param('pay_time'),$request->param('yesterday')])
+            ->count('a.id');
+        $pages = page($rows);
+
+        $data=TotalMerchant::alias('a')
+            ->field('a.abbreviation,a.contact,a.phone,cloud_order.received_money,cloud_order.cashier')
+            ->join('cloud_order','a.id=cloud_order.merchant_id','left')
+            ->where('a.abbreviation|a.contact|a.phone','like',"%$name%")
+            ->where('a.partner_id',$symbol,$partner_id)
+            ->whereTime('cloud_order.pay_time',$nodeal,[$request->param('pay_time'),$request->param('yesterday')])
+            ->limit($pages['offset'],$pages['limit'])
+            ->select();
+        $data['pages'] = $pages;
+        $data['pages']['rows'] = $rows;
+        $data['pages']['total_row'] = $total;
+        if(count($data)!==0){
+            return_msg(200,'success',$data);
+        }else{
+            return_msg(400,'没有数据');
+        }
+    }
+
+    /**
+     * 服务商列表-筛选搜索
+     * @param Request $request
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function facilitator_list(Request $request)
+    {
+        //服务商名称|联系人|联系方式
+        $name=$request->param('keyword');
+        $status=$request->param('status');
+        $agent_area=$request->param('agent_area');
+        $agent_ateabol='eq';
+        if(empty($agent_area)){
+            $agent_ateabol='<>';
+        }
+        $statusbol='eq';
+        if($status==3){
+            $statusbol='<>';
+        }
+        $parent_id=0;
+        $symbol='<>';
+        if(!empty($name))
+        {
+            $symbol='eq';
+            $parent_id=Db::name('total_agent')->where('agent_name|contact_person|agent_phone','like',"%$name%")
+                ->field(['id'])->find();
+        }
+        $total = Db::name('total_agent')->count('id');
+
+        $rows=Db::name('total_agent')->where([
+            'parent_id'=>[$symbol,$parent_id['id']],
+        'agent_area'=>[$agent_ateabol,$agent_area],
+            'status'=>[$statusbol,$status]
+        ,'create_time'=>['between time',[$request->param('create_time'),$request->param('end_time')]]
+        ])
+            ->count('id');
+        $pages = page($rows);
+        $data=Db::name('total_agent')->where([
+            'parent_id'=>[$symbol,$parent_id['id']],
+            'agent_area'=>[$agent_ateabol,$agent_area],
+            'status'=>[$statusbol,$status]
+            ,'create_time'=>['between time',[$request->param('create_time'),$request->param('end_time')]]
+        ])
+            ->field(['agent_name','contact_person','agent_phone','agent_area','create_time','status'])
+            ->limit($pages['offset'],$pages['limit'])
+            ->select();
+        $data['pages'] = $pages;
+        $data['pages']['rows'] = $rows;
+        $data['pages']['total_row'] = $total;
+        if(count($data)!==0){
+            return_msg(200,'success',$data);
+        }else{
+            return_msg(400,'没有数据');
+        }
+    }
+
+    /**
+     * 服务商商户-筛选搜索
+     * @param Request $request
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+
+    public function facilitator_tenant(Request $request)
+    {
+        $name=$request->param('keyword');
+        $status=$request->param('status');
+        $agent_id=$request->param('agent_id');
+        $status_symbol='eq';
+        if($status==2){
+            $status_symbol='<>';
+        }
+        $total = Db::name('total_agent')->count('id');
+
+        $rows=Db::name('total_merchant')
+            ->where(['abbreviation|contact|phone'=>['like',"%$name%"],
+                'status'=>[$status_symbol,$status],'agent_id'=>['eq',$agent_id]])
+            ->count('id');
+        $pages = page($rows);
+
+        $data=Db::name('total_merchant')
+            ->where(['abbreviation|contact|phone'=>['like',"%$name%"],
+                'status'=>[$status_symbol,$status],'agent_id'=>['eq',$agent_id]])
+            ->field(['id','agent_name','address','status','abbreviation','opening_time'])
+            ->limit($pages['offset'],$pages['limit'])
+            ->select();
+        $data['pages'] = $pages;
+        $data['pages']['rows'] = $rows;
+        $data['pages']['total_row'] = $total;
+        if(count($data)!==0){
+            return_msg(200,'success',$data);
+        }else{
+            return_msg(400,'没有数据');
+        }
+
+    }
 }
