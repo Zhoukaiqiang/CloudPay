@@ -221,6 +221,11 @@ if(!function_exists('jsonReturn')) {
         }
     }
 
-}
+    if(!function_exists('login_timeout')) {
+        function login_timeout($rows,$limit=5){
 
+        }
+    }
+
+}
 

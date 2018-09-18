@@ -90,26 +90,26 @@ class Merchant extends Controller
      * @param  $channel 当前通道 0支付宝 1微信 2支付宝微信直联 3间联
      * @return \think\Response
      */
-    public function review_list()
-    {
-        //显示审核中的直联商户
-        $where=[
-            'review_status'=>['<>',2],
-            'channel'       =>['<','3']
-        ];
-        //获取总行数
-        $row=TotalMerchant::where($where)->count();
-        $pages=page($row);
-        //显示审核中的直联商户
-        $data=TotalMerchant::alias('a')
-            ->field('a.id,a.name,a.phone,a.address,a.contact,a.channel,a.create_time,a.review_status,b.contact_person,b.agent_phone')
-            ->join('cloud_total_agent b','a.agent_id=b.id','left')
-            ->where($where)
-            ->limit($pages['offset'],$pages['limit'])
-            ->select();
-        $data['pages']=$pages;
-        return_msg('200','success',$data);
-    }
+//    public function review_list()
+//    {
+//        //显示审核中的直联商户
+//        $where=[
+//            'review_status'=>['<>',2],
+//            'channel'       =>['<','3']
+//        ];
+//        //获取总行数
+//        $row=TotalMerchant::where($where)->count();
+//        $pages=page($row);
+//        //显示审核中的直联商户
+//        $data=TotalMerchant::alias('a')
+//            ->field('a.id,a.name,a.phone,a.address,a.contact,a.channel,a.create_time,a.review_status,b.contact_person,b.agent_phone')
+//            ->join('cloud_total_agent b','a.agent_id=b.id','left')
+//            ->where($where)
+//            ->limit($pages['offset'],$pages['limit'])
+//            ->select();
+//        $data['pages']=$pages;
+//        return_msg('200','success',$data);
+//    }
 
     /**
      * 显示直联待审详情页
@@ -118,16 +118,16 @@ class Merchant extends Controller
      * @param  int  $id
      * @return \think\Response
      */
-    public function review_detail()
-    {
-        $id=request()->param('id');
-        //显示当前商户数据
-        $data=TotalMerchant::where('id',$id)->find();
-        //获取所有代理商
-        $info=$this->get_agent();
-        $data['agent']=$info;
-        return_msg('200','success',$data);
-    }
+//    public function review_detail()
+//    {
+//        $id=request()->param('id');
+//        //显示当前商户数据
+//        $data=TotalMerchant::where('id',$id)->find();
+//        //获取所有代理商
+//        $info=$this->get_agent();
+//        $data['agent']=$info;
+//        return_msg('200','success',$data);
+//    }
 
     /**
      * 点击提交提交给第三方审核
@@ -178,7 +178,7 @@ class Merchant extends Controller
         //显示未通过并属于间联的商户
         $where=[
             'review_status'=>['=',3],
-            'channel'       =>['=','3']
+//            'channel'       =>['=','3']
         ];
         //获取总行数
         $row=TotalMerchant::where($where)->count();
