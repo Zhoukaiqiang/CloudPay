@@ -291,16 +291,10 @@ class User extends Common
         /** 跳转 */
         // $this->redirect('http://thinkphp.cn/blog/2',302);
         //  setInc 让某个字段自增 setDec 自减 setField 更新一个字段 update  更新多个字段
-//        $res = TotalAdmin::all(function($query) {
-//            $query->where('id', '<', 5)->order("id DESC");
-//        });
-//        $arr = [];
-//        foreach($res as $val) {
-//            array_push($arr, $val->toArray());
-//        }
-//        dump(json_encode($arr));
-        $res = TotalAdmin::get(5);
-        dump($res->toArray());
+        $res = TotalAdmin::insert();
+
+        dump($res->id);
+
     }
 
 }
