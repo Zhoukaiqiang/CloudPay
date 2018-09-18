@@ -92,39 +92,44 @@ class Capital extends Controller
      */
     public function apply_money(Request $request)
     {
-//        $agent_id = session('agent_id');
+        // mark test
+        // $agent_id = session('agent_id');
         $agent_id = $request->param('id');
         /**  agent_id不存在返回 */
         if (!$agent_id) {
-            return_msg(400, '操作异常。');
+            return_msg(400, 'id不存在');
         }
 
         /* 申请前检测是否符合结算规则 */
-        $this->apply_rules(time(), $agent_id);
+        //$this->apply_rules(time(), $agent_id);
 
         /** 检测是否已经申请过 */
-        $this->apply_limit($agent_id);
+        //$this->apply_limit($agent_id);
 
         if (request()->isPost()) {
             /** 申请结算操作 **/
             $data = request()->post();
-            $data['amount'] = request()->post('amount') ? request()->post('amount') : -2;
-            /** 结款时间 **/
-            $data['settlement_time'] = request()->post('time') ? request()->post('time') : -2;
-            /** 检测必需参数 **/
-            $data['agent_id'] = intval($agent_id);
-            /** 查找员工费率 */
+            /** 结算时间范围 **/
+
+            $data['time'] = request()->post('time') ? request()->post('time') : -2;
+            /** 有无发票 */
+
+            $data['invoice'] = request()->post('invoice') ? request()->post('time') : 0;
+
+            /** 可结算金额 */
+
+            $data['amount'] = $this->check_apply_money_by_month($data['time']);
 
             $result = TotalCapital::insert($data);
-            if ($result != false) {
+            if ($result !== false) {
                 /** 填加一次性的限制 */
                 $res = TotalAgent::update(["limit" => 0], ["id" => $agent_id]);
                 if ($res['limit'] == 0) {
                     /** 发送短信提醒 */
-                    $check_send = $this->send_msg_to_phone(18670138762,'申请');
+                    //$check_send = $this->send_msg_to_phone(18670138762,'申请');
 
-                    /** 检查是否发送成功 */
-                    if($check_send) {
+                    /** 检查是否发送成功 *//*$check_send*/
+                    if(0 ) {
                         return_msg(200, '申请成功');
                     }else {
                         return_msg(400 , '短信发送失败');
@@ -147,6 +152,72 @@ class Capital extends Controller
         }
     }
 
+    /**
+     *
+     * 可结算金额
+     * @description下级代理 Func  total =（ 商户a按费率-代理商费率） * 商户总交易额 +...  (商户n按费率-代理商费率） * 商户总交易额
+     * 包含下级代理 Func total =（ 商户a按费率-代理商费率） * 总交易额 +...  (商户n按费率-代理商费率） * 总交易额  +
+     *（二级代理商a - 代理商费率）* 二级代理商A的总交易额 +.. （二级代理商n - 代理商费率）* 二级代理商N的总交易额
+     * @param $time [int] 时间戳 格式 ['1533345935','1538384935']
+     * @throws \think\Exception
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     * @return float 总额
+     */
+    public function check_apply_money_by_month($time) {
+//        $id = session("agent_id");
+//        if (!empty($time)) {
+//            return_msg();
+//        }
+        /** 时间区间 */
+        //mark
+        $id = 3;
+        $res = TotalAgent::get($id)->field('parent_id')->find();
+        $merchant_total = [];
+        /** 代理商费率 $agent_rate */
+        $agent_rate = (float)TotalAgent::get($id)->field('agent_rate')->find()->toArray()['agent_rate'];
+
+        /** 所有下属商户总交易额 $merchant_total */
+        $result = TotalMerchant::field('m.merchant_rate, o.received_money')
+            ->alias('m')->join('cloud_order o','m.id = o.merchant_id')
+            ->where([
+                'm.agent_id'  => $id,
+            ])
+//            ->whereTime('pay_time', 'between', [$time])
+            ->select();
+        foreach($result as $v) {
+            array_push($merchant_total, ( (float)$v['merchant_rate'] - $agent_rate )/100 * (float)$v['received_money'] );
+        }
+        /** 如果存在parent_id为一级代理否则为二级代理 */
+
+        if ($res->parent_id !== 0) {
+
+//            $one_level_total =
+//                TotalMerchant::field('m.merchant_rate, o.received_money')
+//                ->alias('m')
+//                ->join('cloud_order o','m.id = merchant_id')
+//                ->union('cloud_total_agent a',"a.parent_id = ")
+////                ->where([
+////                    'm.agent_id' => 'a.id'
+////                ])
+//                ->select();
+            $data=TotalAgent::alias('a')
+                ->field('a.id,b.id merchant_id')
+                ->join('cloud_total_merchant b','a.id=b.agent_id')
+                ->join('cloud_order c','b.id=c.merchant_id')
+                ->where('a.parent_id',$id)
+                ->select();
+            dump($one_level_total);die;
+            foreach($one_level_total as $v) {
+                array_push($merchant_total, ( (float)$v['merchant_rate'] - $agent_rate )/100 * (float)$v['received_money'] );
+            }
+            return array_sum($merchant_total);
+        }else {
+            dump($merchant_total);die;
+            return array_sum($merchant_total);
+        }
+    }
     /**
      * 检验当前代理商是否已经申请过
      * @param $id 当前代理商id

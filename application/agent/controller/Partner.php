@@ -160,16 +160,21 @@ class Partner extends Controller
 
     /**
      * 员工报表
+     * @param int id 代理商id
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
      *
-     * @param  \think\Request  $request
-     * @param  int  $id
-     * @return \think\Response
      */
     public function partner_report()
     {
         //获取当前代理商id
         $id=session('agent_id');
+        // test mark
         $id=1;
+        /** 代理商费率   */
+        $res = TotalAgent::where('id',$id)->field("agent_rate")->find();
+        $agent_rate = intval($res->agent_rate);
         $data=AgentPartner::field(['id,partner_name,partner_phone,create_time,model,proportion,rate'])
             ->where('agent_id',$id)
             ->select();
@@ -193,7 +198,7 @@ class Partner extends Controller
                 $v['money']=$sum*$v['proportion']/100;
             }elseif($v['model']=="按费率"){
                 //按费率
-                $v['money']=$sum*$v['rate']/100;
+                $v['money']=$sum * abs( $v['rate'] - $agent_rate )/100;
             }
             $flag[]=$v['new_count'];
         }
