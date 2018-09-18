@@ -21,13 +21,13 @@ class Index extends Controller
         "Index" => [
             "get_profit" => [
                 'id' => 'require|number',
-                'channel' => 'require|number'
+
             ],
             'echarts' => [
-                'pay_type' => 'require',
+//                'pay_type' => 'require',
             ],
             'search_agent' => [
-                'channel' => 'number',
+
                 'status' => 'number',
                 'contact_time' => 'number',
             ],
@@ -47,6 +47,8 @@ class Index extends Controller
         $start_time = $request->param('start_time') ? $request->param('start_time') : intval((time() - 100000));
         $end_time = $request->param('end_time') ? $request->param('end_time') : null;
         $channel = $request->param('channel') ? $request->param('end_time') : -1;
+        $start_time=strtotime($start_time);
+        $channel=strtotime($channel);
         /* 可选取区间为最近2个月 */
         if (time() - $start_time > 5604000) {
             $this->return_msg(400, '您选择的时间大于两个月，请重新选择！');
@@ -60,30 +62,24 @@ class Index extends Controller
         if (empty($channel) || $channel == -1) {
             $total = Db::name('order')->whereTime('create_time', "yesterday")->sum('order_money');
             $total_num = Db::name('order')->whereTime('create_time', "yesterday")->count('id');
-            $wxpay = Db::name('order')->whereTime('create_time', "yesterday")->where(['pay_type' => 'wxpay'])->sum('order_money');
-            $wxpay_num = Db::name('order')->whereTime('create_time', "yesterday")->where(['pay_type' => 'wxpay'])->count('id');
-            $alipay = Db::name('order')->whereTime('create_time', "yesterday")->where(['pay_type' => 'alipay',])->sum('order_money');
-            $alipay_num = Db::name('order')->whereTime('create_time', "yesterday")->where(['pay_type' => 'alipay'])->count('id');
+            //$wxpay = Db::name('order')->whereTime('create_time', "yesterday")->where(['pay_type' => 'wxpay'])->sum('order_money');
+           // $wxpay_num = Db::name('order')->whereTime('create_time', "yesterday")->where(['pay_type' => 'wxpay'])->count('id');
+            //$alipay = Db::name('order')->whereTime('create_time', "yesterday")->where(['pay_type' => 'alipay',])->sum('order_money');
+           // $alipay_num = Db::name('order')->whereTime('create_time', "yesterday")->where(['pay_type' => 'alipay'])->count('id');
             $etc = Db::name('order')->whereTime('create_time', "yesterday")->where(['pay_type' => 'etc'])->sum('order_money');
             $etc_num = Db::name('order')->whereTime('create_time', "yesterday")->where(['pay_type' => 'etc'])->count('id');
         } else {
             /* 获取昨天 直联/间联 交易总额 */
-            $total = Db::name('order')->whereTime('create_time', "yesterday")->where('channel', $channel)->sum('order_money');
+            $total = Db::name('order')->whereTime('create_time', "yesterday")->sum('order_money');
             $total_num = Db::name('order')->whereTime('create_time', "yesterday")->where('channel', $channel)->count('id');
-            $wxpay = Db::name('order')->whereTime('create_time', "yesterday")->where(['pay_type' => 'wxpay', 'channel' => $channel])->sum('order_money');
-            $wxpay_num = Db::name('order')->whereTime('create_time', "yesterday")->where(['pay_type' => 'wxpay', "channel" => $channel])->count('id');
-            $alipay = Db::name('order')->whereTime('create_time', "yesterday")->where(['pay_type' => 'alipay', "channel" => $channel])->sum('order_money');
-            $alipay_num = Db::name('order')->whereTime('create_time', "yesterday")->where(['pay_type' => 'alipay', "channel" => $channel])->count('id');
-            $etc = Db::name('order')->whereTime('create_time', "yesterday")->where(['pay_type' => 'etc', "channel" => $channel])->sum('order_money');
-            $etc_num = Db::name('order')->whereTime('create_time', "yesterday")->where(['pay_type' => 'etc', "channel" => $channel])->count('id');
+            $etc = Db::name('order')->whereTime('create_time', "yesterday")->where(['pay_type' => 'etc'])->sum('order_money');
+            $etc_num = Db::name('order')->whereTime('create_time', "yesterday")->where(['pay_type' => 'etc'])->count('id');
 
         }
 
         /* 组装数据 */
         $data['agent'] = $agent;
-        //$data['user'] = $user;
-        $data['wxpay'] = ['amount' => $wxpay, 'pay_num' => $wxpay_num];
-        $data['alipay'] = ['amount' => $alipay, 'pay_num' => $alipay_num];
+
         $data['etc'] = ['amount' => $etc, 'pay_num' => $etc_num];
         $data['total'] = ['amount' => $total, 'pay_num' => $total_num];
 
@@ -94,7 +90,7 @@ class Index extends Controller
     /*
      * 获取平台、代理商、渠道分润数据 根据直联（1），间联（2）， 全部（-1）
      * @param id [int] 当前登录用户id
-     *
+     * mark
      * */
     public function get_profit(Request $request)
     {
@@ -105,22 +101,11 @@ class Index extends Controller
 //        $id = $request->param('id');
         /** 从session中获取id */
         $id = session("id");
-        $channel = $request->param('channel');
+//        $channel = $request->param('channel');
         /* 检查用户是否有权限查看 */
         $check = $this->is_user_can($id);
         if ($check) {
-            switch ($channel) {
-                case -1:
-                    $total = Db::name('order')->whereTime('create_time', 'yesterday')->sum('order_money');
-                    break;
-                case 1:
-                    $total = Db::name('order')->whereTime('create_time', 'yesterday')->where('channel', 1)->sum('order_money');
-                    break;
-                case 2:
-                    $total = Db::name('order')->whereTime('create_time', 'yesterday')->where('channel', 2)->sum('order_money');
-                    break;
-            }
-
+            $total = Db::name('order')->whereTime('create_time', 'yesterday')->sum('order_money');
 
             $agent_rate = 1; //平台对代理商费率
 
@@ -142,7 +127,7 @@ class Index extends Controller
      * @rule  is_super_vip [int] 1:超级管理员 2：运营专员 ...
      * @return    [boolean]  返回true / 结束
      */
-    protected function is_user_can($id)
+    public function is_user_can($id)
     {
         /* 检查用户是否存在数据库 */
         $result = Db::name("total_admin")->where("id", $id)->value(['is_super_vip']);
@@ -173,7 +158,6 @@ class Index extends Controller
     public function search_agent(Request $request) {
         /* 搜索条件项 */
         $query['keywords'] = $request->param('keywords') ? $request->param('keywords') : -2;
-        $query['channel'] = $request->param('channel') ? $request->param('channel'): -2;
         $query['status'] = $request->param('status') ? $request->param('status') : -2;
         $query['agent_area'] = $request->param('agent_area') ? $request->param('agent_area'): -2;
         $query['contract_time'] = $request->param('contract_time') ? $request->param('contract_time') : -2;
@@ -207,11 +191,6 @@ class Index extends Controller
             $param['status_flag'] = 'eq';
         }
 
-        if ($param['channel'] < -1) {
-            $param['channel_flag'] = '<>';
-        }else {
-            $param['channel_flag'] = 'eq';
-        }
 
         if ($param['agent_area'] < -1) {
             $param['agent_area_flag'] = '<>';
@@ -219,13 +198,13 @@ class Index extends Controller
             $param['agent_area_flag'] = 'eq';
         }
 
-        switch ($param['channel']) {
-            case -2:
-                $param['channel_flag'] = '<>';
-                break;
-            default:
-                $param['channel_flag'] = 'eq';
-        }
+//        switch ($param['channel']) {
+//            case -2:
+//                $param['channel_flag'] = '<>';
+//                break;
+//            default:
+//                $param['channel_flag'] = 'eq';
+//        }
 
         switch ($param['contract_time']) {
             case -2:
@@ -245,7 +224,6 @@ class Index extends Controller
             ->where([
                 'agent_name|contact_person|agent_phone' => [$param['keywords_flag'], $param['keywords']."%"],
                 'status'     => [$param['status_flag'], $param['status']],
-                'agent_mode'     => [$param['channel_flag'], $param['channel']],
                 'agent_area'     => [$param['agent_area_flag'], $param['agent_area']],
             ])
             ->whereTime('contract_time', $param['contract_time_flag'], $param['contract_time'])
@@ -257,7 +235,6 @@ class Index extends Controller
             ->where([
                 'agent_name|contact_person|agent_phone' => [$param['keywords_flag'], $param['keywords']."%"],
                 'status'     => [$param['status_flag'], $param['status']],
-                'agent_mode'     => [$param['channel_flag'], $param['channel']],
                 'agent_area'     => [$param['agent_area_flag'], $param['agent_area']],
             ])
             ->whereTime('contract_time', $param['contract_time_flag'], $param['contract_time'])
@@ -337,7 +314,7 @@ class Index extends Controller
         /* 条件搜索查询有N条数据 */
         $rows = Db::name('total_merchant')->alias('m')
             ->where([
-                'm.name|m.contact|m.phone|m.agent_name' => [$param['keywords_flag'], $param['keywords']."%"],
+                'm.name|m.contact|m.phone|m.agent_name' => [$param['keywords_flag'], "%".$param['keywords']."%"],
                 'm.category'     => [$param['category_flag'], $param['category']],
                 'm.address'     => [$param['address_flag'], $param['address']],
             ])
@@ -449,7 +426,7 @@ class Index extends Controller
                 'm.name|m.contact|m.phone|m.agent_name' => [$param['keywords_flag'], $param['keywords']."%"],
                 'm.review_status'     => [$param['review_status_flag'], $param['review_status']],
                 'm.status'     => [$param['status_flag'], $param['status']],
-                'm.channel'     => [$param['channel_flag'], $param['channel']],
+//                'm.channel'     => [$param['channel_flag'], $param['channel']],
             ])
             ->whereTime('m.create_time', $param['create_time_flag'], $param['create_time'])
             ->field(['m.name','m.contact', 'm.phone','m.review_status', 'm.channel', 'm.address','a.agent_name','m.id', 'a.agent_phone','m.create_time','m.channel'])
@@ -463,10 +440,10 @@ class Index extends Controller
                 'm.name|m.contact|m.phone|m.agent_name' => [$param['keywords_flag'], $param['keywords']."%"],
                 'm.review_status'     => [$param['review_status_flag'], $param['review_status']],
                 'm.status'     => [$param['status_flag'], $param['status']],
-                'm.channel'     => [$param['channel_flag'], $param['channel']],
+//                'm.channel'     => [$param['channel_flag'], $param['channel']],
             ])
             ->whereTime('m.create_time', $param['create_time_flag'], $param['create_time'])
-            ->field(['m.name','m.contact', 'm.phone','m.review_status', 'm.channel', 'm.address','a.agent_name','m.id', 'a.agent_phone','m.create_time','m.channel'])
+            ->field(['m.name','m.contact', 'm.phone','m.review_status', 'm.address','a.agent_name','m.id', 'a.agent_phone','m.create_time'])
             ->join('cloud_total_agent a','m.agent_id=a.id', 'left')
             ->limit($pages['offset'],$pages['limit'])
             ->select();
@@ -501,145 +478,20 @@ class Index extends Controller
         $this->check_params($request->param());
 
         /* 接受参数 */
-        $pay_type = $request->param('pay_type');
+        //$pay_type = $request->param('pay_type');
         $past = $request->param('past') ? date('Y-m-d', $request->param('past')) : 'yesterday';
         $present = $request->param('present') ? date('Y-m-d', $request->param('present')) : null;
-        $channel = $request->param('channel') ? $request->param('channel') : -1;
+//        $channel = $request->param('channel') ? $request->param('channel') : -1;
         $data = [];
+        if (!empty($present)) {
 
-        switch ($pay_type) {
-            case 'total_amount':
-                switch ($channel) {
-                    // 全部/直联/间联
-                    case -1:
-                        if (!empty($present)) {
-                            $data['total'] = Db::name('order')->whereTime('create_time', 'between', [$past, $present])
-                                ->field(['id','order_money', 'pay_type','create_time'])->select();
-
-                        } else {
-                            $data['total'] = Db::name('order')->whereTime('create_time', 'yesterday')->field(['order_money', 'create_time', 'id', 'create_time'])->select();
-                        }
-                        break;
-                    case 1:
-                        if (!empty($present)) {
-                            $data['total'] = Db::name('order')
-                                ->whereTime('create_time', 'between', [$past, $present])
-                                ->where('channel', 1)
-                                ->field(['order_money', 'create_time', 'id', 'pay_type'])->select();
-                        } else {
-                            $data['total'] = Db::name('order')
-                                ->whereTime('create_time', 'yesterday')
-                                ->where('channel', 1)
-                                ->field(['order_money', 'create_time', 'id', 'pay_type'])->select();
-
-                        }
-                        break;
-                    case 2:
-                        if (!empty($present)) {
-                            $data['total'] = Db::name('order')
-                                ->whereTime('create_time', 'between', [$past, $present])
-                                ->where('channel', 2)
-                                ->field(['order_money', 'create_time', 'id', 'pay_type'])->select();
-                        } else {
-                            $data['total'] = Db::name('order')
-                                ->whereTime('create_time', 'yesterday')
-                                ->where('channel', 2)
-                                ->field(['order_money', 'create_time', 'id', 'pay_type'])->select();
-                        }
-                        break;
-                }
-                break;
-            case 'total_quality':
-                //
-                break;
-            case 'wxpay_amount':
-                switch ($channel) {
-                    // 全部/直联/间联
-                    case -1:
-                        if (!empty($present)) {
-                            $data['total'] = Db::name('order')->whereTime('create_time', 'between', [$past, $present])
-                                ->where('pay_type' , 'wxpay')
-                                ->field(['id','order_money', 'pay_type','create_time'])->select();
-
-                        } else {
-                            $data['total'] = Db::name('order')->whereTime('create_time', 'yesterday')->field(['order_money', 'create_time', 'id', 'create_time'])->select();
-                        }
-                        break;
-                    case 1:
-                        if (!empty($present)) {
-                            $data['total'] = Db::name('order')
-                                ->whereTime('create_time', 'between', [$past, $present])
-                                ->where(['channel' => 1, 'pay_type' => 'wxpay'])
-                                ->field(['order_money', 'create_time', 'id', 'pay_type'])->select();
-                        } else {
-                            $data['total'] = Db::name('order')
-                                ->whereTime('create_time', 'yesterday')
-                                ->where(['channel' => 1, 'pay_type' => 'wxpay'])
-                                ->field(['order_money', 'create_time', 'id', 'pay_type'])->select();
-                        }
-                        break;
-                    case 2:
-                        if (!empty($present)) {
-                            $data['total'] = Db::name('order')
-                                ->whereTime('create_time', 'between', [$past, $present])
-                                ->where(['channel' => 2, 'pay_type' => 'wxpay'])
-                                ->field(['order_money', 'create_time', 'id', 'pay_type'])->select();
-                        } else {
-                            $data['total'] = Db::name('order')
-                                ->whereTime('create_time', 'yesterday')
-                                ->where(['channel' => 2, 'pay_type' => 'wxpay'])
-                                ->field(['order_money', 'create_time', 'id', 'pay_type'])->select();
-                        }
-                        break;
-                }
-                break;
-            case 'wxpay_quality':
-                //
-                break;
-            case 'alipy_amount':
-                switch ($channel) {
-                    // 全部/直联/间联
-                    case -1:
-                        if (!empty($present)) {
-                            $data['total'] = Db::name('order')->whereTime('create_time', 'between', [$past, $present])
-                                ->where('pay_type' , 'alipay')
-                                ->field(['id','order_money', 'pay_type','create_time'])->select();
-
-                        } else {
-                            $data['total'] = Db::name('order')->whereTime('create_time', 'yesterday')->field(['order_money', 'create_time', 'id', 'create_time'])->select();
-                        }
-                        break;
-                    case 1:
-                        if (!empty($present)) {
-                            $data['total'] = Db::name('order')
-                                ->whereTime('create_time', 'between', [$past, $present])
-                                ->where(['channel' => 1, 'pay_type' => 'alipay'])
-                                ->field(['order_money', 'create_time', 'id', 'pay_type'])->select();
-                        } else {
-                            $data['total'] = Db::name('order')
-                                ->whereTime('create_time', 'yesterday')
-                                ->where(['channel' => 1, 'pay_type' => 'alipay'])
-                                ->field(['order_money', 'create_time', 'id', 'pay_type'])->select();
-                        }
-                        break;
-                    case 2:
-                        if (!empty($present)) {
-                            $data['total'] = Db::name('order')
-                                ->whereTime('create_time', 'between', [$past, $present])
-                                ->where(['channel' => 2, 'pay_type' => 'alipay'])
-                                ->field(['order_money', 'create_time', 'id', 'pay_type'])->select();
-                        } else {
-                            $data['total'] = Db::name('order')
-                                ->whereTime('create_time', 'yesterday')
-                                ->where(['channel' => 2, 'pay_type' => 'alipay'])
-                                ->field(['order_money', 'create_time', 'id', 'pay_type'])->select();
-                        }
-                        break;
-                }
-                break;
-            case 'alipay_quality':
-                //
-                break;
+            $data[ 'total' ] = Db::name('order')
+                ->whereTime('create_time', 'between', [$past, $present])
+                ->field(['order_money', 'create_time', 'id', 'pay_type'])->select();
+        } else {
+            $data[ 'total' ] = Db::name('order')
+                ->whereTime('create_time', 'yesterday')
+                ->field(['order_money', 'create_time', 'id', 'pay_type'])->select();
         }
 
         return json_encode($data);
