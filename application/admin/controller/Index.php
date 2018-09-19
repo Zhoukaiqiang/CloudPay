@@ -2,6 +2,9 @@
 
 namespace app\admin\controller;
 
+use app\admin\model\TotalAgent;
+use app\admin\model\TotalMerchant;
+use app\agent\model\Order;
 use think\Controller;
 use think\Db;
 use think\Request;
@@ -50,9 +53,9 @@ class Index extends Controller
         $start_time=strtotime($start_time);
         $channel=strtotime($channel);
         /* 可选取区间为最近2个月 */
-        if (time() - $start_time > 5604000) {
-            $this->return_msg(400, '您选择的时间大于两个月，请重新选择！');
-        }
+//        if (time() - $start_time > 5604000) {
+//            $this->return_msg(400, '您选择的时间大于两个月，请重新选择！');
+//        }
         /* 获取所有商户、代理商的数量 */
         $agent = Db::name('total_agent')->count('id');
         //$user = Db::name('user')->count('id');
@@ -62,24 +65,42 @@ class Index extends Controller
         if (empty($channel) || $channel == -1) {
             $total = Db::name('order')->whereTime('create_time', "yesterday")->sum('order_money');
             $total_num = Db::name('order')->whereTime('create_time', "yesterday")->count('id');
-            //$wxpay = Db::name('order')->whereTime('create_time', "yesterday")->where(['pay_type' => 'wxpay'])->sum('order_money');
-           // $wxpay_num = Db::name('order')->whereTime('create_time', "yesterday")->where(['pay_type' => 'wxpay'])->count('id');
-            //$alipay = Db::name('order')->whereTime('create_time', "yesterday")->where(['pay_type' => 'alipay',])->sum('order_money');
-           // $alipay_num = Db::name('order')->whereTime('create_time', "yesterday")->where(['pay_type' => 'alipay'])->count('id');
+            $wxpay = Db::name('order')->whereTime('create_time', "yesterday")->where(['pay_type' => 'wxpay'])->sum('order_money');
+            $wxpay_num = Db::name('order')->whereTime('create_time', "yesterday")->where(['pay_type' => 'wxpay'])->count('id');
+            $alipay = Db::name('order')->whereTime('create_time', "yesterday")->where(['pay_type' => 'alipay',])->sum('order_money');
+            $alipay_num = Db::name('order')->whereTime('create_time', "yesterday")->where(['pay_type' => 'alipay'])->count('id');
             $etc = Db::name('order')->whereTime('create_time', "yesterday")->where(['pay_type' => 'etc'])->sum('order_money');
             $etc_num = Db::name('order')->whereTime('create_time', "yesterday")->where(['pay_type' => 'etc'])->count('id');
         } else {
             /* 获取昨天 直联/间联 交易总额 */
-            $total = Db::name('order')->whereTime('create_time', "yesterday")->sum('order_money');
+            $total = Db::name('order')->whereTime('create_time', "yesterday")->where('channel', $channel)->sum('order_money');
             $total_num = Db::name('order')->whereTime('create_time', "yesterday")->where('channel', $channel)->count('id');
-            $etc = Db::name('order')->whereTime('create_time', "yesterday")->where(['pay_type' => 'etc'])->sum('order_money');
-            $etc_num = Db::name('order')->whereTime('create_time', "yesterday")->where(['pay_type' => 'etc'])->count('id');
-
+            $wxpay = Db::name('order')->whereTime('create_time', "yesterday")->where(['pay_type' => 'wxpay', 'channel' => $channel])->sum('order_money');
+            $wxpay_num = Db::name('order')->whereTime('create_time', "yesterday")->where(['pay_type' => 'wxpay', "channel" => $channel])->count('id');
+            $alipay = Db::name('order')->whereTime('create_time', "yesterday")->where(['pay_type' => 'alipay', "channel" => $channel])->sum('order_money');
+            $alipay_num = Db::name('order')->whereTime('create_time', "yesterday")->where(['pay_type' => 'alipay', "channel" => $channel])->count('id');
+            $etc = Db::name('order')->whereTime('create_time', "yesterday")->where(['pay_type' => 'etc', "channel" => $channel])->sum('order_money');
+            $etc_num = Db::name('order')->whereTime('create_time', "yesterday")->where(['pay_type' => 'etc', "channel" => $channel])->count('id');
         }
 
+        /** 返回昨日新增商户/代理商 */
+        $merchant_num = Db::name("total_merchant")->whereTime("opening_time","yesterday")->count("id");
+        $agent_num = Db::name("total_agent")->whereTime("create_time","yesterday")->count("id");
+        /** 活跃商户数 */
+        $active_m = Order::field("merchant_id")->whereTime("pay_time","yesterday")->select();
+        $active_arr= [];
+        foreach($active_m as $v) {
+            array_push($active_arr, $v->merchant_id);
+        }
+        $data["active_merchant"] = count(array_unique($active_arr));
         /* 组装数据 */
+        $data['new_merchant'] = $merchant_num;
+        $data['new_agent'] = $agent_num;
         $data['agent'] = $agent;
-
+        $data['wxpay'] = $wxpay;
+        $data['wxpay_num'] = $wxpay_num;
+        $data['alipay'] = $alipay;
+        $data['alipay_num'] = $alipay_num;
         $data['etc'] = ['amount' => $etc, 'pay_num' => $etc_num];
         $data['total'] = ['amount' => $total, 'pay_num' => $total_num];
 
@@ -88,7 +109,8 @@ class Index extends Controller
 
 
     /*
-     * 获取平台、代理商、渠道分润数据 根据直联（1），间联（2）， 全部（-1）
+     * 获取平台、代理商、渠道分润数据
+     * @param time [int] 时间戳
      * @param id [int] 当前登录用户id
      * mark
      * */
@@ -97,23 +119,67 @@ class Index extends Controller
 
         /* 检验参数合法性 */
         $this->check_params($this->request->except(['time', 'token']));
+        $time = $request->param("time") ? $request->param("time") : -2;
+
+        if ($time < -1 ) {
+            $time = ['yesterday', 'today'];
+        }else {
+            $time = json_decode($time);
+        }
+
 
 //        $id = $request->param('id');
         /** 从session中获取id */
         $id = session("id");
+
 //        $channel = $request->param('channel');
         /* 检查用户是否有权限查看 */
         $check = is_user_can($id);
+
         if ($check) {
-            $total = Db::name('order')->whereTime('create_time', 'yesterday')->sum('order_money');
+            $total = Db::name('order')
+            ->whereTime("pay_time", "between", $time)
+            ->sum('received_money');
 
-            $agent_rate = 1; //平台对代理商费率
+            $bank_rate = 0.000235;   //银行对平台费率
+            /** 渠道分润 */
+            $channel_profit = (float)$total * $bank_rate;
+            /** 平台分润 */
+            $merchant_arr = []; $agent_total = 0;
+            $agent_arr = TotalAgent::column("id,agent_rate");
+            foreach ($agent_arr as $k => $v) {
 
-            $user_rete = 1;    //代理商对商户费率
-            $bank_rate = 0.235;   //银行对平台费率
-            $agent_profit = 1;
-            $channel_profit = $total * $bank_rate;
-            $platform_profit = $total * ($agent_profit) - $channel_profit;
+                $merchant_arr[$k] = TotalMerchant::alias("m")
+                    ->where("agent_id", "eq", $k)
+                    ->join("order o","m.id = o.merchant_id")
+                    ->whereTime("pay_time", "between", $time)
+                    ->sum("received_money");
+            }
+            foreach ($agent_arr as $k => $rate) {
+                $agent_total += $merchant_arr[$k] * $rate/100 ;
+            }
+            $platform_profit = (float)$agent_total - $channel_profit;
+
+            /** 代理商分润 */
+
+            $merchant_rate = TotalMerchant::column("id,merchant_rate");
+            $merchant_total = [];
+            foreach($merchant_rate as $k => $rate) {
+                $merchant_total[] = Order::where("merchant_id = $k")
+                    ->whereTime("pay_time", "between", $time)
+                    ->sum("received_money") * $rate/100;
+
+            }
+
+            $merchant_total = array_sum($merchant_total);
+            $agent_profit = (float)$merchant_total - (float)$agent_total;
+
+            /** 组合数据 */
+
+            $data['platform_profit'] = $platform_profit;
+            $data['channel_profit'] = $channel_profit;
+            $data['agent_profit'] = $agent_profit;
+            return $data;
         } else {
             $this->return_msg(400, '当前用户不可以查看！');
         }

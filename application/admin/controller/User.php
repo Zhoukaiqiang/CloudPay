@@ -181,10 +181,10 @@ class User extends Common
      * @param [string]  password 新密码
      * @return [json] 返回消息
      */
-    public function changePwd()
+    public function changePwd(Request $request)
     {
         /* 接受参数 */
-        $data = $this->params;
+        $data = $request->param();
 
         /* 检测用户名并取出数据库中的密码 */
         $user_name_type = $this->check_username($data['phone']);

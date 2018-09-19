@@ -238,7 +238,8 @@ if(!function_exists('jsonReturn')) {
 function is_user_can($id)
 {
     /* 检查用户是否存在数据库 */
-    $result = Db::name("total_admin")->where("id", $id)->value(['is_super_vip']);
+    $result = Db::name("total_admin")->where("id", "eq", 1)->value('is_super_vip');
+
     switch ($result) {
         case 1:
             return true;
