@@ -19,6 +19,8 @@ class Capital extends Controller
      */
     public function index()
     {
+        $id = \request()->param("id");
+        is_user_can($id);
         //获取总行数
         $rows=TotalCapital::where('status',0)->count();
         $pages=page($rows);

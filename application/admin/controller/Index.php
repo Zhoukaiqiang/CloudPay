@@ -103,7 +103,7 @@ class Index extends Controller
         $id = session("id");
 //        $channel = $request->param('channel');
         /* 检查用户是否有权限查看 */
-        $check = $this->is_user_can($id);
+        $check = is_user_can($id);
         if ($check) {
             $total = Db::name('order')->whereTime('create_time', 'yesterday')->sum('order_money');
 
@@ -121,28 +121,6 @@ class Index extends Controller
 
     }
 
-    /**
-     * 检查用户是否有权限查看
-     * @param id [int] 用户id
-     * @rule  is_super_vip [int] 1:超级管理员 2：运营专员 ...
-     * @return    [boolean]  返回true / 结束
-     */
-    public function is_user_can($id)
-    {
-        /* 检查用户是否存在数据库 */
-        $result = Db::name("total_admin")->where("id", $id)->value(['is_super_vip']);
-        switch ($result) {
-            case 1:
-                return true;
-                break;
-            case 2:
-                return false;
-                break;
-            default:
-                $this->return_msg(400, '当前用户不存在！');
-                break;
-        }
-    }
 
     /**
      * 运营后台代理商管理搜索

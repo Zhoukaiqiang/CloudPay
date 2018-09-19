@@ -8,7 +8,7 @@
 // +----------------------------------------------------------------------
 // | Author: 流年 <liu21st@gmail.com>
 // +----------------------------------------------------------------------
-
+use think\Db;
 // 应用公共文件
 if(!function_exists('encrypt_password')){
     //定义密码加密函数
@@ -268,6 +268,26 @@ if (!function_exists('curl_request')) {
     }
 }
 
-
-
+/**
+ * 检查用户是否有权限查看
+ * @param id [int] 用户id
+ * @rule  is_super_vip [int] 1:超级管理员 2：运营专员 ...
+ * @return    [boolean]  返回true / 结束
+ */
+function is_user_can($id)
+{
+    /* 检查用户是否存在数据库 */
+    $result = Db::name("total_admin")->where("id", $id)->value(['is_super_vip']);
+    switch ($result) {
+        case 1:
+            return true;
+            break;
+        case 0:
+            return false;
+            break;
+        default:
+            return_msg(400, '当前用户不存在！');
+            break;
+    }
+}
 

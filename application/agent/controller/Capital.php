@@ -101,10 +101,10 @@ class Capital extends Controller
         }
 
         /* 申请前检测是否符合结算规则 */
-        //$this->apply_rules(time(), $agent_id);
+        $this->apply_rules(time(), $agent_id);
 
         /** 检测是否已经申请过 */
-        //$this->apply_limit($agent_id);
+        $this->apply_limit($agent_id);
 
         if (request()->isPost()) {
             /** 申请结算操作 **/

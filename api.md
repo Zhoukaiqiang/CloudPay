@@ -579,4 +579,97 @@
 }
 ```
 
-## 
+## 12运营后台-取出一则广告图片
+
+`post`http://www.domain.com/admin/advertise/index
+###无参数
+
+```
+{
+"code": 200,
+"msg" : "success",
+"data" : []
+}
+```
+
+## 13运营后台-取出一则广告图片
+
+`post`http://www.domain.com/admin/advertise/upload
+
+
+<table>
+<tr>
+<th>参数</th><th>类型</th><th>必选/可选</th><th>默认</th><th>描述</th>
+</tr>
+<tr>
+<td>image</td>
+<td>file</td>
+<td>必选</td>
+<td>无</td>
+<td>要上传的图片文件name="image"</td>
+</tr>
+
+
+</table>
+```
+{
+"code": 200,
+"msg" : "success",
+"data" : []
+}
+```
+
+## 14运营后台-删除广告
+
+`post`http://www.domain.com/admin/advertise/upload
+
+
+<table>
+<tr>
+<th>参数</th><th>类型</th><th>必选/可选</th><th>默认</th><th>描述</th>
+</tr>
+<tr>
+<td>id</td>
+<td>int</td>
+<td>必选</td>
+<td>无</td>
+<td>传广告id</td>
+</tr>
+
+
+</table>
+```
+{
+"code": 200,
+"msg" : "success",
+"data" : []
+}
+```
+
+
+## 15运营后台-资金结算-未结算列表
+
+`post`http://www.domain.com/admin/capital/index
+
+
+<table>
+<tr>
+<th>参数</th><th>类型</th><th>必选/可选</th><th>默认</th><th>描述</th>
+</tr>
+<tr>
+<td>id</td>
+<td>int</td>
+<td>必选</td>
+<td>无</td>
+<td>当前登录者id</td>
+</tr>
+
+
+</table>
+```
+{
+"code": 200,
+"msg" : "success",
+"data" : []
+}
+```
