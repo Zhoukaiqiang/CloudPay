@@ -333,11 +333,14 @@ class Partner extends Controller
     /**
      * 返回搜索结果
      */
+
     public function get_search($time,$sort,$param='>')
     {
         //获取当前代理商id
         $id=session('agent_id');
         $id=1;
+        $res = TotalAgent::where('id',$id)->field("agent_rate")->find();
+        $agent_rate = intval($res->agent_rate);
         $data=AgentPartner::field(['id,partner_name,partner_phone,create_time,model,proportion,rate'])
             ->where('agent_id',$id)
             ->select();
@@ -360,7 +363,7 @@ class Partner extends Controller
                 $v['money']=$sum*$v['proportion']/100;
             }elseif($v['model']=="按费率"){
                 //按费率
-                $v['money']=$sum*$v['rate']/100;
+                $v['money']=$sum * abs( $v['rate'] - $agent_rate )/100;
             }
             $flag[]=$v[$sort];
         }

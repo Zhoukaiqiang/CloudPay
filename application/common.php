@@ -8,7 +8,7 @@
 // +----------------------------------------------------------------------
 // | Author: 流年 <liu21st@gmail.com>
 // +----------------------------------------------------------------------
-
+use think\Db;
 // 应用公共文件
 if(!function_exists('encrypt_password')){
     //定义密码加密函数
@@ -168,14 +168,14 @@ if(!function_exists('check_time')) {
  *  app支付宝请求头
  */
 if(!function_exists('jsonReturn')) {
-    function jsonReturn($status=0, $code=0, $data='', $msg='',$type = 1)
+    function jsonReturn($status = 0, $code = 0, $data = '', $msg = '', $type = 1)
     {
 
-        $json_arr = array('status'=>$status,'code'=>$code);
-        if(!empty($msg)){
+        $json_arr = array('status' => $status, 'code' => $code);
+        if (!empty($msg)) {
             $json_arr['msg'] = $msg;
         }
-        if(!empty($data)){
+        if (!empty($data)) {
             $json_arr['data'] = $data;
         }
         header('Content-Type:application/json; charset=utf-8');
@@ -186,46 +186,108 @@ if(!function_exists('jsonReturn')) {
         }
 
     }
+}
 
-    /**
-     * 分页
-     * $page 当前页
-     * $rows 总行数
-     * $limit 每页显示的记录数
-     */
-    if(!function_exists('page')) {
-        function page($rows,$limit=5){
-            $page=request()->param('page') ? request()->param('page') : 1;
-            //获取总页数
-            $pageCount=ceil($rows/$limit);
-            //偏移量
-            $offset=($page-1)*$limit;
-            //上一页
-            $pagePrev=$page-1;
-            if($pagePrev<=1){
-                $pagePrev=1;
-            }
-            //下一页
-            $pageNext=$page+1;
-            if($pageNext>=$pageCount){
-                $pageNext=$pageCount;
-            }
-            $data['pageCount']=$pageCount;
-            $data['offset']=$offset;
-            $data['pagePrev']=$pagePrev;
-            $data['pageNext']=$pageNext;
-            $data['limit']=$limit;
-            $data['rows'] = $rows;
-
-            return $data;
+/**
+ * 分页
+ * $page 当前页
+ * $rows 总行数
+ * $limit 每页显示的记录数
+ */
+if (!function_exists('page')) {
+    function page($rows, $limit = 5)
+    {
+        $page = request()->param('page') ? request()->param('page') : 1;
+        //获取总页数
+        $pageCount = ceil($rows / $limit);
+        //偏移量
+        $offset = ($page - 1) * $limit;
+        //上一页
+        $pagePrev = $page - 1;
+        if ($pagePrev <= 1) {
+            $pagePrev = 1;
         }
-    }
-
-    if(!function_exists('login_timeout')) {
-        function login_timeout($rows,$limit=5){
-
+        //下一页
+        $pageNext = $page + 1;
+        if ($pageNext >= $pageCount) {
+            $pageNext = $pageCount;
         }
-    }
+        $data['pageCount'] = $pageCount;
+        $data['offset'] = $offset;
+        $data['pagePrev'] = $pagePrev;
+        $data['pageNext'] = $pageNext;
+        $data['limit'] = $limit;
+        $data['rows'] = $rows;
 
+        return $data;
+    }
+}
+/**
+ * 获取签名
+ */
+if (!function_exists('get_sign')) {
+    function get_sign($arr)
+    {
+
+        ksort($arr);
+        $str = '';
+        foreach ($arr as $v) {
+            $str .= $v;
+        }
+        return md5($str . KEY);
+    }
+}
+
+/**
+ * 设置curl
+ */
+if (!function_exists('curl_request')) {
+    //使用curl函数库发送请求
+    function curl_request($url, $post = false, $params = [], $https = false)
+    {
+        //①使用curl_init初始化请求会话
+        $ch = curl_init($url);
+        //②使用curl_setopt设置请求一些选项
+        curl_setopt($ch, CURLOPT_HEADER, 0);
+        if ($post) {
+            //设置请求方式、请求参数
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $params);
+        }
+        if ($https) {
+            //https协议，禁止curl从服务器端验证本地证书
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        }
+        //③使用curl_exec执行，发送请求
+        //设置 让curl_exec 直接返回接口的结果数据
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        $res = curl_exec($ch);
+        //④使用curl_close关闭请求会话
+        curl_close($ch);
+        return $res;
+    }
+}
+
+/**
+ * 检查用户是否有权限查看
+ * @param id [int] 用户id
+ * @rule  is_super_vip [int] 1:超级管理员 2：运营专员 ...
+ * @return    [boolean]  返回true / 结束
+ */
+function is_user_can($id)
+{
+    /* 检查用户是否存在数据库 */
+    $result = Db::name("total_admin")->where("id", $id)->value(['is_super_vip']);
+    switch ($result) {
+        case 1:
+            return true;
+            break;
+        case 0:
+            return false;
+            break;
+        default:
+            return_msg(400, '当前用户不存在！');
+            break;
+    }
 }
 
