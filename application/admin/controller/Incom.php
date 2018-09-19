@@ -16,7 +16,15 @@ class Incom extends Controller
      */
     public function merchant_query(Request $request)
     {
-        /*$data=$request->param();
+        //apam:value1, Cpam:value2, bpam:Value3
+        /*$data=[
+            'apam'=>'value1',
+            'cpam'=>'value2',
+            'bpam'=>'Value3'
+        ];
+        $info=get_sign($data);
+        dump($info);die;*/
+       /* $data=$request->param();
         //生成签名
         $signValue=get_sign($data);
         $where=[
@@ -24,9 +32,9 @@ class Incom extends Controller
             'version'=>$data['version'],
             'mercId'=>$data['mercId'],
             'orgNo'=>$data['orgNo']
-        ];
+        ];*/
         $info=MerchantStore::where($where)->find();
-        //发给第三方*/
+        //发给第三方
         $merchant_id=1;
         $data=MerchantStore::where('merchant_id',1)->field('serviceId,version,mercId,orgNo')->find();
     }
@@ -35,19 +43,41 @@ class Incom extends Controller
      * 商户进件
      *
      * @return \think\Response
+     *
      */
     public function merchant_incom(Request $request)
     {
         $data=$request->post();
-        $data['status']=0;
-        $info=MerchantStore::insert($data);
-        $data['signValue']=get_sign($data);
+//        dump($data);
+        //获取商户id
+//        $data['merchant_id']=1;
+//        $data['status']=0;
+        //生成合作商机构号
+//        $data['orgNo']=time().rand(10000,99999);
+//        $info=MerchantStore::insert($data);
+        $data['signValue']=sign_ature(0000,$data,KEY);
+//        dump($data['signValue']);die;
+//        var_dump(json_encode($data));die;
+        $result=curl_request(true,$data,true);
+        $result=iconv('GBK','UTF-8',$result);
+        dump($result);die;
         if($info){
             //发送给新大陆
+            unset($data['merchant_id']);
+            unset($data['status']);
             $url="https://gateway.starpos.com.cn/emercapp";
-            $result=json_decode(curl_request($url,true,$data),true);
+            $result=curl_request($url,true,$data);
+            dump($result);die;
             if($result['msg_cd']=='000000'){
                 //审核通过
+                //跟新数据库
+                $merchant_id=1;
+                $res=MerchantStore::where('merchant_id',$merchant_id)->update($result,true);
+                if($res){
+                    return_msg(200,'success',$result['msg_dat']);
+                }else{
+                    return_msg(400,'failure');
+                }
             }
         }else{
             return_msg(400,'failure');
@@ -63,14 +93,8 @@ class Incom extends Controller
     public function merchant_create(Request $request)
     {
         $merchant_id=1;
-        $where=[
-            'merchant_id'=>$merchant_id,
-        ];
-        $data=MerchantStore::where($where)->column('value_key,value');
-        $str1=$data['serviceId'];
-        $str2=$data['version'];
-        $str3=$data['mercId'];
-        $str4=$data['log_no'];
+        //取出数据表中数据
+        $data=MerchantStore::where('merchant_id',$merchant_id)->field('serviceId,version,mercId,log_no,orgNo')->find();
         $signValue=get_sign($data);
     }
 
@@ -82,15 +106,25 @@ class Incom extends Controller
      */
     public function img_upload(Request $request)
     {
+        $merchant_id=1;
+        //取出当前商户信息
+       /* $data=MerchantStore::where('merchant_id',$merchant_id)->field('serviceId,version,mercId,orgNo,log_no,stoe_id,')->find();*/
         $info=$request->post();
         $img=upload_logo();
-        $img=json_encode($img);
         $info['imgFile']=$img;
-        $data=MerchantStore::insert($info);
+//        $data=MerchantStore::where('merchant_id',$merchant_id)->update($info);
         //获取签名
-        $signValue=get_sign($data);
-        if($data){
-            //发送给新大陆
+        $info['signValue']=get_sign($info);
+        //发送给新大陆
+        $url="https://gateway.starpos.com.cn/emercapp";
+        $result=json_decode(curl_request($url,true,$info),true);
+        if($result['msg_cd']=='000000'){
+            $res=MerchantStore::where('merchant_id',$merchant_id)->update($info);
+            if($res){
+                return_msg(200,'success',$result['msg_dat']);
+            }else{
+                return_msg(400,'failure');
+            }
         }else{
             return_msg(400,'failure');
         }
