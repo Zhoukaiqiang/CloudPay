@@ -48,7 +48,7 @@ class User extends Common
         $db_res = Db('total_admin')->field('id,name,phone,status,password,is_super_vip')
             ->where('phone', $data['phone'])->find();
 
-        if ($db_res['password'] !== $data['password']) {
+        if ($db_res['password'] !== $this->encrypt_password($data['password'], $data["phone"])) {
             $this->return_msg(400, '用户密码不正确！');
         } else {
             unset($db_res['password']); //密码不返回
@@ -86,7 +86,7 @@ class User extends Common
         //unset($data['phone']);
         $d['create_time'] = time();
         $d['name'] = $data['phone'];
-        $d['password'] = $this->encrypt_password($data['password']);
+        $d['password'] = $this->encrypt_password($data['password'], $data['phone']);
         $res = db('total_admin')->insert($d);
         if (!$res) {
             $this->return_msg(400, '用户注册失败!');
@@ -181,10 +181,10 @@ class User extends Common
      * @param [string]  password 新密码
      * @return [json] 返回消息
      */
-    public function changePwd()
+    public function changePwd(Request $request)
     {
         /* 接受参数 */
-        $data = $this->params;
+        $data = $request->param();
 
         /* 检测用户名并取出数据库中的密码 */
         $user_name_type = $this->check_username($data['phone']);

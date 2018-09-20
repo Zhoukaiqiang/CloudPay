@@ -207,7 +207,6 @@ class Capital extends Controller
             }
 
 
-
             $sec_merchant_total = [];
             foreach ($per_sec_agent_merchant_id as $v) {
                 foreach($v as $vv) {

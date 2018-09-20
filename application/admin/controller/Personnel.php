@@ -16,7 +16,7 @@ class Personnel extends Controller
     public function index()
     {
         //查询不是超级管理员的人员
-        $data=TotalAdmin::where('is_super_vip',0)->paginate(5);
+        $data=TotalAdmin::where('is_super_vip',0)->select();
         return_msg(200,'success',$data);
 
     }

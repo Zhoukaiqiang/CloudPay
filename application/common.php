@@ -12,37 +12,10 @@ use think\Db;
 // 应用公共文件
 if(!function_exists('encrypt_password')){
     //定义密码加密函数
-    function encrypt_password($password){
+    function encrypt_password($password, $phone=''){
         //加密方式
-        $salt = 'yunshangfu';//自定义字符串
-        return md5('$lt'. md5($password) . $salt );
-    }
-}
-/**
- *
- */
-if(!function_exists('curl_request')){
-    //使用curl函数库发送请求
-    function curl_request($url, $post = false, $params = [], $https = false){
-        //使用curl_init初始化请求会话
-        $ch = curl_init($url);
-        //使用curl_setopt设置请求一些选项
-        if($post){
-            //设置请求方式、请求参数
-            curl_setopt($ch, CURLOPT_POST, true);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, $params);
-        }
-        if($https){
-            //https协议，禁止curl从服务器端验证本地证书
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        }
-        //使用curl_exec执行，发送请求
-        //设置 让curl_exec 直接返回接口的结果数据
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        $res = curl_exec($ch);
-        //使用curl_close关闭请求会话
-        curl_close($ch);
-        return $res;
+        $left_part = 'yunshangfu';//自定义字符串
+        return md5($left_part . md5($password) . $phone );
     }
 }
 /**
@@ -225,34 +198,74 @@ if (!function_exists('page')) {
 /**
  * 获取签名
  */
-if (!function_exists('get_sign')) {
-    function get_sign($arr)
-    {
-
-        ksort($arr);
-        $str = '';
-        foreach ($arr as $v) {
-            $str .= $v;
-        }
-        return md5($str . KEY);
-    }
-}
+//if (!function_exists('get_sign')) {
+//    function get_sign($arr)
+//    {
+//
+//        /*$a=[];
+//        $a['serviceId']=$arr['serviceId'];
+//        $a['version']=$arr['version'];
+//        $a['incom_type']=$arr['incom_type'];
+//        $a['stl_typ']=$arr['stl_typ'];
+//        $a['stl_sign']=$arr['stl_sign'];
+//        $a['orgNo']=$arr['orgNo'];
+//        $a['stl_oac']=$arr['stl_oac'];
+//        $a['bnk_acnm']=$arr['bnk_acnm'];
+//        $a['wc_lbnk_no']=$arr['wc_lbnk_no'];
+//        $a['bus_lic_no']=$arr['bus_lic_no'];
+//        $a['bse_lice_nm']=$arr['bse_lice_nm'];
+//        $a['crp_nm']=$arr['crp_nm'];
+//        $a['mercAdds']=$arr['mercAdds'];
+//        $a['bus_exp_dt']=$arr['bus_exp_dt'];
+//        $a['crp_id_no']=$arr['crp_id_no'];
+//        $a['crp_exp_dt']=$arr['crp_exp_dt'];
+//        $a['stoe_nm']=$arr['stoe_nm'];
+//        $a['stoe_cnt_nm']=$arr['stoe_cnt_nm'];
+//        $a['stoe_cnt_tel']=$arr['stoe_cnt_tel'];
+//        $a['mcc_cd']=$arr['mcc_cd'];
+//        $a['stoe_area_cod']=$arr['stoe_area_cod'];
+//        $a['stoe_adds']=$arr['stoe_adds'];
+//        $a['trm_rec']=$arr['trm_rec'];
+//        $a['mailbox']=$arr['mailbox'];
+//        $a['alipay_flg']=$arr['alipay_flg'];
+//        $a['yhkpay_flg']=$arr['yhkpay_flg'];*/
+//        ksort($arr,SORT_STRING);
+//        return $arr;
+//        $str = '';
+//        foreach ($arr as $v) {
+//            $str .= $v;
+//        }
+//        return $str;
+//        return md5($str . KEY);
+//
+//
+//    }
+//}
 
 /**
  * 设置curl
  */
 if (!function_exists('curl_request')) {
     //使用curl函数库发送请求
-    function curl_request($url, $post = false, $params = [], $https = false)
+    function curl_request($post = false, $params = [], $https = false)
     {
+        $o="";
+        foreach($params as $k=>$v){
+            $o.="$k=".urlencode($v)."&";
+        }
+        $post_data = substr($o,0,-1);
+        $post_data=json_encode($post_data);
         //①使用curl_init初始化请求会话
-        $ch = curl_init($url);
+        $ch = curl_init();
         //②使用curl_setopt设置请求一些选项
+        curl_setopt($ch,CURLOPT_URL,"https://gateway.starpos.com.cn/emercapp");
         curl_setopt($ch, CURLOPT_HEADER, 0);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         if ($post) {
             //设置请求方式、请求参数
             curl_setopt($ch, CURLOPT_POST, true);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, $params);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $post_data);
+            curl_setopt($ch,CURLOPT_HTTPHEADER,array("application/json;charset=GBK","Content-length:".strlen($post_data)));
         }
         if ($https) {
             //https协议，禁止curl从服务器端验证本地证书
@@ -260,9 +273,9 @@ if (!function_exists('curl_request')) {
         }
         //③使用curl_exec执行，发送请求
         //设置 让curl_exec 直接返回接口的结果数据
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         $res = curl_exec($ch);
         //④使用curl_close关闭请求会话
+        $res=iconv('GBK','UTF-8',$res);
         curl_close($ch);
         return $res;
     }
@@ -277,7 +290,8 @@ if (!function_exists('curl_request')) {
 function is_user_can($id)
 {
     /* 检查用户是否存在数据库 */
-    $result = Db::name("total_admin")->where("id", $id)->value(['is_super_vip']);
+    $result = Db::name("total_admin")->where("id", "eq", 1)->value('is_super_vip');
+
     switch ($result) {
         case 1:
             return true;
@@ -291,3 +305,27 @@ function is_user_can($id)
     }
 }
 
+if (!function_exists('sign_ature')) {
+    function sign_ature($ids, $arr, $key)
+    {
+         ksort($arr);
+        if ($ids == 0000) {
+            $data = ['serviceId', 'stoe_id', 'log_no', 'mercId', 'version', 'stl_sign', 'orgNo', 'stl_oac', 'bnk_acnm', 'wc_lbnk_no', 'bus_lic_no', 'bse_lice_nm', 'crp_nm', 'mercAdds', 'bus_exp_dt', 'crp_id_no', 'crp_exp_dt', 'stoe_nm', 'stoe_cnt_nm', 'stoe_cnt_tel', 'mcc_cd', 'stoe_area_cod', 'stoe_adds', 'trm_rec', 'mailbox', 'alipay_flg', 'yhkpay_flg'];
+            $stra = '';
+            foreach($arr as $k=>$v){
+                if (in_array($k,$data)) {
+                    $stra .= $v;
+                }
+            }
+        } else if ($ids == 1111) {
+            $data = ['check_flag', 'msg_cd', 'msg_dat', 'mercId', 'log_no', 'stoe_id', 'mobile', 'sign_stats', 'deliv_stats'];
+            $stra = '';
+            foreach ($arr as $key1 => $val) {
+                if (in_array($key1, $data)) {
+                    $stra .= $val;
+                }
+            }
+        }
+        return md5($stra . $key);
+    }
+}
