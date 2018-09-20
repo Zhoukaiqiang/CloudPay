@@ -203,49 +203,49 @@ if (!function_exists('page')) {
 /**
  * 获取签名
  */
-//if (!function_exists('get_sign')) {
-//    function get_sign($arr)
-//    {
-//
-//        /*$a=[];
-//        $a['serviceId']=$arr['serviceId'];
-//        $a['version']=$arr['version'];
-//        $a['incom_type']=$arr['incom_type'];
-//        $a['stl_typ']=$arr['stl_typ'];
-//        $a['stl_sign']=$arr['stl_sign'];
-//        $a['orgNo']=$arr['orgNo'];
-//        $a['stl_oac']=$arr['stl_oac'];
-//        $a['bnk_acnm']=$arr['bnk_acnm'];
-//        $a['wc_lbnk_no']=$arr['wc_lbnk_no'];
-//        $a['bus_lic_no']=$arr['bus_lic_no'];
-//        $a['bse_lice_nm']=$arr['bse_lice_nm'];
-//        $a['crp_nm']=$arr['crp_nm'];
-//        $a['mercAdds']=$arr['mercAdds'];
-//        $a['bus_exp_dt']=$arr['bus_exp_dt'];
-//        $a['crp_id_no']=$arr['crp_id_no'];
-//        $a['crp_exp_dt']=$arr['crp_exp_dt'];
-//        $a['stoe_nm']=$arr['stoe_nm'];
-//        $a['stoe_cnt_nm']=$arr['stoe_cnt_nm'];
-//        $a['stoe_cnt_tel']=$arr['stoe_cnt_tel'];
-//        $a['mcc_cd']=$arr['mcc_cd'];
-//        $a['stoe_area_cod']=$arr['stoe_area_cod'];
-//        $a['stoe_adds']=$arr['stoe_adds'];
-//        $a['trm_rec']=$arr['trm_rec'];
-//        $a['mailbox']=$arr['mailbox'];
-//        $a['alipay_flg']=$arr['alipay_flg'];
-//        $a['yhkpay_flg']=$arr['yhkpay_flg'];*/
-//        ksort($arr,SORT_STRING);
+if (!function_exists('get_sign')) {
+    function get_sign($arr)
+    {
+
+        $a=[];
+        $a['serviceId']=$arr['serviceId'];
+        $a['version']=$arr['version'];
+        $a['incom_type']=$arr['incom_type'];
+        $a['stl_typ']=$arr['stl_typ'];
+        $a['stl_sign']=$arr['stl_sign'];
+        $a['orgNo']=$arr['orgNo'];
+        $a['stl_oac']=$arr['stl_oac'];
+        $a['bnk_acnm']=$arr['bnk_acnm'];
+        $a['wc_lbnk_no']=$arr['wc_lbnk_no'];
+        $a['bus_lic_no']=$arr['bus_lic_no'];
+        $a['bse_lice_nm']=$arr['bse_lice_nm'];
+        $a['crp_nm']=$arr['crp_nm'];
+        $a['mercAdds']=$arr['mercAdds'];
+        $a['bus_exp_dt']=$arr['bus_exp_dt'];
+        $a['crp_id_no']=$arr['crp_id_no'];
+        $a['crp_exp_dt']=$arr['crp_exp_dt'];
+        $a['stoe_nm']=$arr['stoe_nm'];
+        $a['stoe_cnt_nm']=$arr['stoe_cnt_nm'];
+        $a['stoe_cnt_tel']=$arr['stoe_cnt_tel'];
+        $a['mcc_cd']=$arr['mcc_cd'];
+        $a['stoe_area_cod']=$arr['stoe_area_cod'];
+        $a['stoe_adds']=$arr['stoe_adds'];
+        $a['trm_rec']=$arr['trm_rec'];
+        $a['mailbox']=$arr['mailbox'];
+        $a['alipay_flg']=$arr['alipay_flg'];
+        $a['yhkpay_flg']=$arr['yhkpay_flg'];
+        ksort($a);
 //        return $arr;
-//        $str = '';
-//        foreach ($arr as $v) {
-//            $str .= $v;
-//        }
+        $str = '';
+        foreach ($a as $v) {
+            $str .= $v;
+        }
 //        return $str;
-//        return md5($str . KEY);
-//
-//
-//    }
-//}
+        return md5($str . KEY);
+
+
+    }
+}
 
 /**
  * 设置curl
@@ -254,12 +254,6 @@ if (!function_exists('curl_request')) {
     //使用curl函数库发送请求
     function curl_request($url,$post = false, $params = [], $https = false)
     {
-        $o="";
-        foreach($params as $k=>$v){
-            $o.="$k=".urlencode($v)."&";
-        }
-        $post_data = substr($o,0,-1);
-        $post_data=json_encode($post_data);
         //①使用curl_init初始化请求会话
         $ch = curl_init();
         //②使用curl_setopt设置请求一些选项
@@ -269,8 +263,8 @@ if (!function_exists('curl_request')) {
         if ($post) {
             //设置请求方式、请求参数
             curl_setopt($ch, CURLOPT_POST, true);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, $post_data);
-            curl_setopt($ch,CURLOPT_HTTPHEADER,array("application/json;charset=GBK","Content-length:".strlen($post_data)));
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $params);
+            curl_setopt($ch,CURLOPT_HTTPHEADER,array("application/json;charset=GBK","Content-length:".strlen($params)));
         }
         if ($https) {
             //https协议，禁止curl从服务器端验证本地证书
@@ -314,8 +308,9 @@ if (!function_exists('sign_ature')) {
     function sign_ature($ids, $arr)
     {
          ksort($arr);
+//         return $arr;
         if ($ids == 0000) {
-            $data = ['serviceId', 'stoe_id', 'log_no', 'mercId', 'version', 'stl_sign', 'orgNo', 'stl_oac', 'bnk_acnm', 'wc_lbnk_no', 'bus_lic_no', 'bse_lice_nm', 'crp_nm', 'mercAdds', 'bus_exp_dt', 'crp_id_no', 'crp_exp_dt', 'stoe_nm', 'stoe_cnt_nm', 'stoe_cnt_tel', 'mcc_cd', 'stoe_area_cod', 'stoe_adds', 'trm_rec', 'mailbox', 'alipay_flg', 'yhkpay_flg','log_no'];
+            $data = ['serviceId', 'stoe_id', 'log_no', 'mercId', 'version', 'stl_sign', 'orgNo', 'stl_oac', 'bnk_acnm', 'wc_lbnk_no', 'bus_lic_no', 'bse_lice_nm', 'crp_nm', 'mercAdds', 'bus_exp_dt', 'crp_id_no', 'crp_exp_dt', 'stoe_nm', 'stoe_cnt_nm', 'stoe_cnt_tel', 'mcc_cd', 'stoe_area_cod', 'stoe_adds', 'trm_rec', 'mailbox', 'alipay_flg', 'yhkpay_flg','log_no','incom_type','stl_typ','bnk_acnm','bus_lice_nm'];
             $stra = '';
             foreach($arr as $k=>$v){
                 if (in_array($k,$data)) {

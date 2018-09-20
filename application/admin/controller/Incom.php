@@ -10,7 +10,7 @@ use think\Request;
 
 class Incom extends Controller
 {
-    public $url='http://sandbox.starpos.com.cn/emercapp';
+    public $url='https://gateway.starpos.com.cn/emercapp';
     /**
      * 商户查询
      *
@@ -91,10 +91,15 @@ class Incom extends Controller
         $data=$request->post();
         $data['serviceId']=6060601;
         $data['version']='V1.0.3';
-        $data['signValue']=sign_ature(0000,$data);
+//        dump($data);die;
+        $data['signValue']=get_sign($data);
+//        dump($data['signValue']);die;
+        $data=json_encode($data);
+//        echo $data;die;
 //        unset($data['merchant_id']);
 //        var_dump(json_encode($data));die;
-        $result=curl_request($this->url,true,$data,true);
+        $result=curl_request('http://sandbox.starpos.com.cn/emercapp',true,$data,true);
+//        echo $result;die;
         $result=json_decode($result);
         dump($result);die;
         //判断签名
