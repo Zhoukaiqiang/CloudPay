@@ -247,7 +247,7 @@ if (!function_exists('page')) {
  */
 if (!function_exists('curl_request')) {
     //使用curl函数库发送请求
-    function curl_request($post = false, $params = [], $https = false)
+    function curl_request($url,$post = false, $params = [], $https = false)
     {
         $o="";
         foreach($params as $k=>$v){
@@ -258,7 +258,7 @@ if (!function_exists('curl_request')) {
         //①使用curl_init初始化请求会话
         $ch = curl_init();
         //②使用curl_setopt设置请求一些选项
-        curl_setopt($ch,CURLOPT_URL,"https://gateway.starpos.com.cn/emercapp");
+        curl_setopt($ch,CURLOPT_URL,$url);
         curl_setopt($ch, CURLOPT_HEADER, 0);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         if ($post) {

@@ -9,35 +9,36 @@ use think\Request;
 
 class Incom extends Controller
 {
+    public $url='http://sandbox.starpos.com.cn/emercapp';
     /**
      * 商户查询
      *
      * @return \think\Response
      */
-    public function merchant_query(Request $request)
-    {
-        //apam:value1, Cpam:value2, bpam:Value3
-        /*$data=[
-            'apam'=>'value1',
-            'cpam'=>'value2',
-            'bpam'=>'Value3'
-        ];
-        $info=get_sign($data);
-        dump($info);die;*/
-       /* $data=$request->param();
-        //生成签名
-        $signValue=get_sign($data);
-        $where=[
-            'serviceId'=>$data['serviceId'],
-            'version'=>$data['version'],
-            'mercId'=>$data['mercId'],
-            'orgNo'=>$data['orgNo']
-        ];*/
-        $info=MerchantStore::where($where)->find();
-        //发给第三方
-        $merchant_id=1;
-        $data=MerchantStore::where('merchant_id',1)->field('serviceId,version,mercId,orgNo')->find();
-    }
+//    public function merchant_query(Request $request)
+//    {
+//        //apam:value1, Cpam:value2, bpam:Value3
+//        /*$data=[
+//            'apam'=>'value1',
+//            'cpam'=>'value2',
+//            'bpam'=>'Value3'
+//        ];
+//        $info=get_sign($data);
+//        dump($info);die;*/
+//       /* $data=$request->param();
+//        //生成签名
+//        $signValue=get_sign($data);
+//        $where=[
+//            'serviceId'=>$data['serviceId'],
+//            'version'=>$data['version'],
+//            'mercId'=>$data['mercId'],
+//            'orgNo'=>$data['orgNo']
+//        ];*/
+//        $info=MerchantStore::where($where)->find();
+//        //发给第三方
+//        $merchant_id=1;
+//        $data=MerchantStore::where('merchant_id',1)->field('serviceId,version,mercId,orgNo')->find();
+//    }
 
     /**
      * 商户进件
@@ -57,7 +58,7 @@ class Incom extends Controller
         if($info){
             //发送给新大陆
             unset($data['merchant_id']);
-            $result=curl_request(true,$data,true);
+            $result=curl_request($this->url,true,$data,true);
             $result=json_decode($result);
             $signValue=sign_ature(1111,$result);
             if($result['msg_cd']=='000000' && $result['signValue']==$signValue){
@@ -87,10 +88,12 @@ class Incom extends Controller
     {
         //获取商户id
         $data=$request->post();
+        $data['serviceId']=6060601;
+        $data['version']='V1.0.3';
         $data['signValue']=sign_ature(0000,$data);
 //        unset($data['merchant_id']);
 //        var_dump(json_encode($data));die;
-        $result=curl_request(true,$data,true);
+        $result=curl_request($this->url,true,$data,true);
         $result=json_decode($result);
         dump($result);die;
         //判断签名
@@ -121,7 +124,7 @@ class Incom extends Controller
         //取出数据表中数据
         $data=MerchantStore::where('merchant_id',$merchant_id)->field('serviceId,version,mercId,log_no,orgNo')->find();
         $data['signValue']=sign_ature(0000,$data);
-        $result=curl_request(true,$data,true);
+        $result=curl_request($this->url,true,$data,true);
         $result=json_decode($result,true);
         if($result['msg_cd']==000000){
             //修改数据表状态
@@ -149,12 +152,13 @@ class Incom extends Controller
         $data['imgTyp']=$info['imgTyp'];
         $data['imgNm']=$info['imgNm'];
         $img=$this->upload_logo();
+        $img=json_encode($img);
         $data['imgFile']=$img;
 //        $data=MerchantStore::where('merchant_id',$merchant_id)->update($info);
         //获取签名
         $data['signValue']=sign_ature(0000,$data);
         //发送给新大陆
-        $result=json_decode(curl_request(true,$data,true),true);
+        $result=json_decode(curl_request($this->url,true,$data,true),true);
         if($result['msg_cd']=='000000'){
             $res=MerchantStore::where('merchant_id',$merchant_id)->update($data);
             if($res){
@@ -234,7 +238,7 @@ class Incom extends Controller
         $resul=['serviceId'=>$serviceId,'version'=>$version,'mercId'=>$data[0]['mercId'],'orgNo'=>$data[0]['orgNo']];
         $resul_age=sign_ature(0000,$resul);
         $arr['signValue']=$resul_age;
-        $par= curl_request('http://sandbox.starpos.com.cn/emercapp',true,json_encode($arr),true);
+        $par= curl_request($this->url,true,json_encode($arr),true);
 
         $bbntu=json_decode($par);
         if($bbntu['msg_cd']===000000 && $data[0]['mercId']==$bbntu['mercId']){
@@ -267,7 +271,7 @@ class Incom extends Controller
         $sign_ature=sign_ature(0000,$dells);
         $del['signValue']=$sign_ature;
         //向新大陆接口发送信息验证
-        $par= curl_request('http://sandbox.starpos.com.cn/emercapp',true,$del,true);
+        $par= curl_request($this->url,true,$del,true);
 
         $par=json_decode($par);
         //返回数据的签名域
@@ -298,7 +302,7 @@ class Incom extends Controller
         //签名域
         $signValue=sign_ature(0000,$data);
         $data['signValue']=$signValue;
-        $par= curl_request('http://sandbox.starpos.com.cn/emercapp',true,$data,true);
+        $par= curl_request($this->url,true,$data,true);
         $par=json_decode($par);
         $return_sign=sign_ature(1111,$par);
         if ($par['msg_cd']==000000 && $par['signValue']==$return_sign){
