@@ -26,7 +26,7 @@ class Payment extends Controller
 
         $arr=['serviceId'=>$serviceId,'version'=>$version,'mercId'=>$data[0]['mercId'],'orgNo'=>$data[0]['orgNo'],'signValue'=>$resul];
 
-       $par= curl_request('zhdj.zhonghetc.com/api/mercha',true,json_encode($arr),true);
+       $par= curl_request('http://sandbox.starpos.com.cn/emercapp',true,json_encode($arr),true);
 
        $bbntu=json_decode($par);
        if($bbntu['msg_cd']===000000 && $data[0]['mercId']==$bbntu['mercId']){
@@ -56,7 +56,7 @@ class Payment extends Controller
 //        $sign_ature=$this->sign_ature(0000,$dells,$key);
 //        $del['signValue']=$sign_ature;
         //向新大陆接口发送信息验证
-        $par= curl_request('zhdj.zhonghetc.com/api/ecit',true,$key,true);
+        $par= curl_request('http://sandbox.starpos.com.cn/emercapp',true,$key,true);
 
         $par=json_decode($par);
         dump($par);

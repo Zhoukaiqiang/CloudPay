@@ -9,7 +9,6 @@ use think\Request;
 
 class Incom extends Controller
 {
-    protected $key='9773BCF5BAC01078C9479E67919157B8';
     /**
      * 商户查询
      *
@@ -208,11 +207,11 @@ class Incom extends Controller
         $serviceId=6060605;
         $version='v1.0.1';
         $data=Db::name('merchant_store')->where('merchant_id',$id)->field('mercId,orgNo')->select();
-        $resul=md5($serviceId.$version.$data[0]['mercId'].$data[0]['orgNo'].'AFDFAASDASDAS');
-        $resul=sign_ature(0000,)
-        $arr=['serviceId'=>$serviceId,'version'=>$version,'mercId'=>$data[0]['mercId'],'orgNo'=>$data[0]['orgNo'],'signValue'=>$resul];
 
-        $par= curl_request('zhdj.zhonghetc.com/api/mercha',true,json_encode($arr),true);
+        $resul=['serviceId'=>$serviceId,'version'=>$version,'mercId'=>$data[0]['mercId'],'orgNo'=>$data[0]['orgNo']];
+        $resul_age=sign_ature(0000,$resul);
+        $arr['signValue']=$resul_age;
+        $par= curl_request('http://sandbox.starpos.com.cn/emercapp',true,json_encode($arr),true);
 
         $bbntu=json_decode($par);
         if($bbntu['msg_cd']===000000 && $data[0]['mercId']==$bbntu['mercId']){
@@ -241,17 +240,15 @@ class Incom extends Controller
             $aa=$v;
         }
         $dells=$del+$aa;
-        $key='AFDFAASDASDAS';
 //        //获取加密的签名域
-        $sign_ature=$this->sign_ature(0000,$dells,$key);
+        $sign_ature=sign_ature(0000,$dells);
         $del['signValue']=$sign_ature;
         //向新大陆接口发送信息验证
-        $par= curl_request('zhdj.zhonghetc.com/api/ecit',true,$key,true);
+        $par= curl_request('http://sandbox.starpos.com.cn/emercapp',true,$del,true);
 
         $par=json_decode($par);
-        dump($par);
         //返回数据的签名域
-        $signreturn=$this->sign_ature(1111,$par['data'],$key);
+        $signreturn=sign_ature(1111,$par['data']);
         //&& $par['signValue']==$signreturn
         if($par['msg_cd']==000000){
 //            $rebul=Db::table('think_user')->where('merchant_id',$del['merchant_id'])->update($del);
@@ -266,36 +263,26 @@ class Incom extends Controller
     }
 
     /**
-     * 签名域
-     * @param $ids
-     * @param $arr
-     * @param $key
-     * @return string
+     * 商户状态查询
+     * @param Request $request
      */
-    public function sign_ature($ids,$arr,$key)
+
+    public function mercachant_inquire(Request $request)
     {
-        ksort($arr);
-        if($ids==0000){
-            $data=['serviceId','stoe_id','log_no','mercId','version','stl_sign','orgNo','stl_oac','bnk_acnm','wc_lbnk_no',
-                'bus_lic_no','bse_lice_nm','crp_nm','mercAdds','bus_exp_dt','crp_id_no','crp_exp_dt','stoe_nm','stoe_cnt_nm'
-                ,'stoe_cnt_tel','mcc_cd','stoe_area_cod','stoe_adds','trm_rec','mailbox','alipay_flg','yhkpay_flg'];
-            $stra='';
-            foreach ($arr as $key=>$val)
-            {
-                if(in_array($key,$data)){
-                    $stra.=$val;
-                }
-            }
-        }else if($ids==1111){
-            $data=['check_flag','msg_cd','msg_dat','mercId','log_no','stoe_id','mobile','sign_stats','deliv_stats'];
-            $stra='';
-            foreach ($arr as $key=>$val)
-            {
-                if(in_array($key,$data)){
-                    $stra.=$val;
-                }
-            }
+        $id=$request->param('id');
+        $arr=Db::name('merchant_store')->where('merchant_id',$id)->field('mercId，orgNo')->select();
+        $data=['serviceId'=>6060300,'version'=>'V1.0.1','mercId'=>$arr[0]['mercId'],'orgNo'=>$arr[0]['orgNo']];
+        //签名域
+        $signValue=sign_ature(0000,$data);
+        $data['signValue']=$signValue;
+        $par= curl_request('http://sandbox.starpos.com.cn/emercapp',true,$data,true);
+        $par=json_decode($par);
+        $return_sign=sign_ature(1111,$par);
+        if ($par['msg_cd']==000000 && $par['signValue']==$return_sign){
+            return_msg('200','审核成功');
+        }else{
+            return_msg('400','非法报文');
         }
-        return md5($stra.$key);
+
     }
 }
