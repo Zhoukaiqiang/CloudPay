@@ -50,16 +50,12 @@ class Incom extends Controller
         $data=$request->post();
 //        dump($data);
         //获取商户id
-//        $data['merchant_id']=1;
-//        $data['status']=0;
-        //生成合作商机构号
-//        $data['orgNo']=time().rand(10000,99999);
-//        $info=MerchantStore::insert($data);
+        /*$data['merchant_id']=1;
+        $data['status']=0;
+        $info=MerchantStore::insert($data);*/
         $data['signValue']=sign_ature(0000,$data,KEY);
-//        dump($data['signValue']);die;
 //        var_dump(json_encode($data));die;
         $result=curl_request(true,$data,true);
-        $result=iconv('GBK','UTF-8',$result);
         dump($result);die;
         if($info){
             //发送给新大陆
@@ -84,6 +80,19 @@ class Incom extends Controller
         }
     }
 
+    public function merchant_incoms(Request $request)
+    {
+        $data=$request->post();
+        $data['signValue']=sign_ature(0000,$data,KEY);
+//        var_dump(json_encode($data));die;
+        $result=curl_request(true,$data,true);
+        $result=json_decode($result);
+        $signValue=sign_ature(1111,$result,KEY);
+        if($result['msg_cd']==000000 || $result['signValue']==$signValue){
+
+        }
+    }
+
     /**
      * 商户提交
      *
@@ -95,7 +104,13 @@ class Incom extends Controller
         $merchant_id=1;
         //取出数据表中数据
         $data=MerchantStore::where('merchant_id',$merchant_id)->field('serviceId,version,mercId,log_no,orgNo')->find();
-        $signValue=get_sign($data);
+        $data['signValue']=sign_ature(0000,$data,KEY);
+        $data['signValue']=get_sign($data);
+        $result=curl_request(true,$data,true);
+        $result=json_decode($result,true);
+        if($result['msg_cd']==0000){
+
+        }
     }
 
     /**
@@ -116,8 +131,7 @@ class Incom extends Controller
         //获取签名
         $info['signValue']=get_sign($info);
         //发送给新大陆
-        $url="https://gateway.starpos.com.cn/emercapp";
-        $result=json_decode(curl_request($url,true,$info),true);
+        $result=json_decode(curl_request(true,$info,true),true);
         if($result['msg_cd']=='000000'){
             $res=MerchantStore::where('merchant_id',$merchant_id)->update($info);
             if($res){

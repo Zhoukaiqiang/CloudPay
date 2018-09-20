@@ -275,6 +275,7 @@ if (!function_exists('curl_request')) {
         //设置 让curl_exec 直接返回接口的结果数据
         $res = curl_exec($ch);
         //④使用curl_close关闭请求会话
+        $res=iconv('GBK','UTF-8',$res);
         curl_close($ch);
         return $res;
     }
