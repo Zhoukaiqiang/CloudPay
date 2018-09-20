@@ -1,14 +1,10 @@
 <?php
-/**
- * Created by KaiQiang-use by PhpStorm.
- * User: fennu
- * Date: 2018/9/4
- * Time: 16:35
- */
-
 namespace app\admin\controller;
 
+use app\admin\model\TotalAd;
+use app\admin\controller\Common;
 use app\admin\model\TotalAdmin;
+use think\Controller;
 use think\Loaderer;
 use think\Db;
 use think\Request;
@@ -41,7 +37,6 @@ class User extends Common
      */
     public function login()
     {
-
         $data = $this->params;
         $user_name_type = 'phone';
         $this->check_exist($data['phone'], 'phone', 1);
@@ -57,7 +52,7 @@ class User extends Common
     }
 
     /**
-     * 注册
+     * 用户注册
      * @param [string]  user_name 用户名
      * @param [string]  code      验证码
      * @return [json]   msg      返回消息
@@ -98,20 +93,31 @@ class User extends Common
         }
     }
 
+    /**
+     * 添加员工
+     * @param [string] name  用户名称
+     * @param  [int]   phone 用户手机号
+     * @param  []
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
     public function addStaff()
     {
 
-        $data['name'] = $this->request->param('name');
         $this->check_phone($this->request->param('phone'));
+        $data['name'] = $this->request->param('name');
         $data['phone'] = $this->request->param('phone');
         $data['status'] = $this->request->param('status');
-        $data['create_time'] = date('Y-m-d H:m:s');
-        $data['password'] = $this->request->param('password');
 
-        $result = Db::table('cloud_total_admin')->insertGetId($data);
+        $data['password'] = $this->request->param('password') ? $this->encrypt_password($this->request->param('password'), $data['phone']) : "cloudpay";
+
+        $result = TotalAdmin::create($data);
+
         if (!$result) {
             $this->return_msg(400, '插入新成员失败!');
         } else {
+            unset($result['password']);
             $this->return_msg(200, '插入新成员成功！', $result);
         }
 
@@ -134,9 +140,10 @@ class User extends Common
         }
     }
 
-    public function delStaff($id)
+    public function delStaff(Request $request)
     {
-        if (empty($id)) {
+        $id =  $request->param("id");
+        if ( !$id) {
             return;
         }
         $result = Db::table('cloud_total_admin')->delete($id);

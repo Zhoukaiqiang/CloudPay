@@ -11,11 +11,16 @@
 use think\Db;
 // 应用公共文件
 if(!function_exists('encrypt_password')){
-    //定义密码加密函数
+    /**
+     * 密码加密
+     * @param [sting] $password [加密前的密码]
+     * @param [string] $val 用户手机号
+     * @return [string] [加密后的密码]
+     *
+     */
     function encrypt_password($password, $phone=''){
-        //加密方式
-        $left_part = 'yunshangfu';//自定义字符串
-        return md5($left_part . md5($password) . $phone );
+
+        return md5('$ysf' . md5($password). $phone );
     }
 }
 /**
@@ -310,7 +315,7 @@ if (!function_exists('sign_ature')) {
     {
          ksort($arr);
         if ($ids == 0000) {
-            $data = ['serviceId', 'stoe_id', 'log_no', 'mercId', 'version', 'stl_sign', 'orgNo', 'stl_oac', 'bnk_acnm', 'wc_lbnk_no', 'bus_lic_no', 'bse_lice_nm', 'crp_nm', 'mercAdds', 'bus_exp_dt', 'crp_id_no', 'crp_exp_dt', 'stoe_nm', 'stoe_cnt_nm', 'stoe_cnt_tel', 'mcc_cd', 'stoe_area_cod', 'stoe_adds', 'trm_rec', 'mailbox', 'alipay_flg', 'yhkpay_flg'];
+            $data = ['serviceId', 'stoe_id', 'log_no', 'mercId', 'version', 'stl_sign', 'orgNo', 'stl_oac', 'bnk_acnm', 'wc_lbnk_no', 'bus_lic_no', 'bse_lice_nm', 'crp_nm', 'mercAdds', 'bus_exp_dt', 'crp_id_no', 'crp_exp_dt', 'stoe_nm', 'stoe_cnt_nm', 'stoe_cnt_tel', 'mcc_cd', 'stoe_area_cod', 'stoe_adds', 'trm_rec', 'mailbox', 'alipay_flg', 'yhkpay_flg','log_no'];
             $stra = '';
             foreach($arr as $k=>$v){
                 if (in_array($k,$data)) {
