@@ -311,7 +311,7 @@ function is_user_can($id)
 }
 
 if (!function_exists('sign_ature')) {
-    function sign_ature($ids, $arr, $key)
+    function sign_ature($ids, $arr)
     {
          ksort($arr);
         if ($ids == 0000) {
@@ -331,6 +331,6 @@ if (!function_exists('sign_ature')) {
                 }
             }
         }
-        return md5($stra . $key);
+        return md5($stra . KEY);
     }
 }
