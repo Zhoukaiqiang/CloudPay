@@ -522,19 +522,27 @@ class Index extends Controller
         $this->check_params($request->param());
 
         /* 接受参数 */
-        //$pay_type = $request->param('pay_type');
-        $past = $request->param('past') ? date('Y-m-d', $request->param('past')) : 'yesterday';
-        $present = $request->param('present') ? date('Y-m-d', $request->param('present')) : null;
+        $pay_type = $request->param('pay_type') ? $request->param('pay_type') : -2;
+        $past = $request->param('past') ? $request->param('past') : 'yesterday';
+        $present = $request->param('present') ? $request->param('present') : time();
 //        $channel = $request->param('channel') ? $request->param('channel') : -1;
+        $present = intval($present);
+        if ($pay_type == -2) {
+            $pay_type_flag = "<>";
+        }else {
+            $pay_type_flag = "eq";
+        }
         $data = [];
         if (!empty($present)) {
 
             $data[ 'total' ] = Db::name('order')
                 ->whereTime('create_time', 'between', [$past, $present])
+                ->where("pay_type", $pay_type_flag, $pay_type)
                 ->field(['order_money', 'create_time', 'id', 'pay_type'])->select();
         } else {
             $data[ 'total' ] = Db::name('order')
                 ->whereTime('create_time', 'yesterday')
+                ->where("pay_type", $pay_type_flag, $pay_type)
                 ->field(['order_money', 'create_time', 'id', 'pay_type'])->select();
         }
 

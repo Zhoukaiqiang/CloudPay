@@ -289,14 +289,14 @@ class Common extends Controller
     /**
      * 密码加密
      * @param [sting] $password [加密前的密码]
+     * @param [string] $val 用户手机号
      * @return [string] [加密后的密码]
      *
      */
-    public function encrypt_password($password)
+    public function encrypt_password($password, $val= 'yunshangfu')
     {
-        //加密方式
-        $salt = 'yunshangfu';//自定义字符串
-        return md5('$lt' . md5($password) . $salt);
+
+        return md5('$ysf' . md5($password). $val );
     }
 
 }
