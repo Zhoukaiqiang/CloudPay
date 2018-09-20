@@ -11,11 +11,16 @@
 use think\Db;
 // 应用公共文件
 if(!function_exists('encrypt_password')){
-    //定义密码加密函数
+    /**
+     * 密码加密
+     * @param [sting] $password [加密前的密码]
+     * @param [string] $val 用户手机号
+     * @return [string] [加密后的密码]
+     *
+     */
     function encrypt_password($password, $phone=''){
-        //加密方式
-        $left_part = 'yunshangfu';//自定义字符串
-        return md5($left_part . md5($password) . $phone );
+
+        return md5('$ysf' . md5($password). $phone );
     }
 }
 /**

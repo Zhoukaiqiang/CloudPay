@@ -80,9 +80,7 @@ class Common extends Controller
 
     );
 
-    protected function _empty() {
-        return '您的操作不合法，请重新输入。'; die;
-    }
+
     protected function _initialize()
     {
         parent::_initialize();
@@ -293,10 +291,10 @@ class Common extends Controller
      * @return [string] [加密后的密码]
      *
      */
-    public function encrypt_password($password, $val= 'yunshangfu')
+    public function encrypt_password($password, $phone= '')
     {
 
-        return md5('$ysf' . md5($password). $val );
+        return md5('$ysf' . md5($password). $phone );
     }
 
 }
