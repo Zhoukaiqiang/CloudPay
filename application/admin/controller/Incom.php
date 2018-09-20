@@ -219,4 +219,93 @@ class Incom extends Controller
         }
         return $goods_pics;
     }
+
+    /**
+     * 商户申请修改
+     * @param Request $request
+     */
+    public function mermachant_edit(Request $request)
+    {
+        $id=$request->param('id');
+        $serviceId=6060605;
+        $version='v1.0.1';
+        $data=Db::name('merchant_store')->where('merchant_id',$id)->field('mercId,orgNo')->select();
+
+        $resul=['serviceId'=>$serviceId,'version'=>$version,'mercId'=>$data[0]['mercId'],'orgNo'=>$data[0]['orgNo']];
+        $resul_age=sign_ature(0000,$resul);
+        $arr['signValue']=$resul_age;
+        $par= curl_request('http://sandbox.starpos.com.cn/emercapp',true,json_encode($arr),true);
+
+        $bbntu=json_decode($par);
+        if($bbntu['msg_cd']===000000 && $data[0]['mercId']==$bbntu['mercId']){
+            $statu=Db::table('merchant_store')->where('merchant_id',$id)->update(['store_sn'=>$bbntu['stoe_id'],'log_no'=>$bbntu['log_no'],'status'=>1]);
+            return_msg(200,'商户修改申请成功');
+        }else{
+            return_msg(400,'商户修改申请失败');
+        }
+
+    }
+
+    /**
+     * 商户资料修改
+     * @param Request $request
+     */
+    public function commercial_edit(Request $request)
+    {
+        $del=$request->post();
+
+        $aa['serviceId']=6060604;
+        $aa['version']='V1.0.1';
+        $data=Db::name('merchant_store')->where('merchant_id',$del['merchant_id'])->field('log_no,mercId,store_sn')->select();
+        $aa=[];
+        foreach ($data as $k=>$v)
+        {
+            $aa=$v;
+        }
+        $dells=$del+$aa;
+//        //获取加密的签名域
+        $sign_ature=sign_ature(0000,$dells);
+        $del['signValue']=$sign_ature;
+        //向新大陆接口发送信息验证
+        $par= curl_request('http://sandbox.starpos.com.cn/emercapp',true,$del,true);
+
+        $par=json_decode($par);
+        //返回数据的签名域
+        $signreturn=sign_ature(1111,$par['data']);
+        //&& $par['signValue']==$signreturn
+        if($par['msg_cd']==000000){
+//            $rebul=Db::table('think_user')->where('merchant_id',$del['merchant_id'])->update($del);
+           return_msg(200,修改成功);
+        }else{
+            return_msg(400,'修改失败');
+        }
+
+
+
+
+    }
+
+    /**
+     * 商户状态查询
+     * @param Request $request
+     */
+
+    public function mercachant_inquire(Request $request)
+    {
+        $id=$request->param('id');
+        $arr=Db::name('merchant_store')->where('merchant_id',$id)->field('mercId，orgNo')->select();
+        $data=['serviceId'=>6060300,'version'=>'V1.0.1','mercId'=>$arr[0]['mercId'],'orgNo'=>$arr[0]['orgNo']];
+        //签名域
+        $signValue=sign_ature(0000,$data);
+        $data['signValue']=$signValue;
+        $par= curl_request('http://sandbox.starpos.com.cn/emercapp',true,$data,true);
+        $par=json_decode($par);
+        $return_sign=sign_ature(1111,$par);
+        if ($par['msg_cd']==000000 && $par['signValue']==$return_sign){
+            return_msg('200','审核成功');
+        }else{
+            return_msg('400','非法报文');
+        }
+
+    }
 }
