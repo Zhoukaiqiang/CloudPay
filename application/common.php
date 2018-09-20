@@ -306,11 +306,11 @@ function is_user_can($id)
 }
 
 if (!function_exists('sign_ature')) {
-    function sign_ature($ids, $arr, $key)
+    function sign_ature($ids, $arr)
     {
          ksort($arr);
         if ($ids == 0000) {
-            $data = ['serviceId', 'stoe_id', 'log_no', 'mercId', 'version', 'stl_sign', 'orgNo', 'stl_oac', 'bnk_acnm', 'wc_lbnk_no', 'bus_lic_no', 'bse_lice_nm', 'crp_nm', 'mercAdds', 'bus_exp_dt', 'crp_id_no', 'crp_exp_dt', 'stoe_nm', 'stoe_cnt_nm', 'stoe_cnt_tel', 'mcc_cd', 'stoe_area_cod', 'stoe_adds', 'trm_rec', 'mailbox', 'alipay_flg', 'yhkpay_flg'];
+            $data = ['serviceId', 'stoe_id', 'log_no', 'mercId', 'version', 'stl_sign', 'orgNo', 'stl_oac', 'bnk_acnm', 'wc_lbnk_no', 'bus_lic_no', 'bse_lice_nm', 'crp_nm', 'mercAdds', 'bus_exp_dt', 'crp_id_no', 'crp_exp_dt', 'stoe_nm', 'stoe_cnt_nm', 'stoe_cnt_tel', 'mcc_cd', 'stoe_area_cod', 'stoe_adds', 'trm_rec', 'mailbox', 'alipay_flg', 'yhkpay_flg','log_no'];
             $stra = '';
             foreach($arr as $k=>$v){
                 if (in_array($k,$data)) {
@@ -326,6 +326,6 @@ if (!function_exists('sign_ature')) {
                 }
             }
         }
-        return md5($stra . $key);
+        return md5($stra . KEY);
     }
 }

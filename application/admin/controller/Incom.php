@@ -50,25 +50,24 @@ class Incom extends Controller
         $data=$request->post();
 //        dump($data);
         //获取商户id
-        /*$data['merchant_id']=1;
-        $data['status']=0;
-        $info=MerchantStore::insert($data);*/
-        $data['signValue']=sign_ature(0000,$data,KEY);
+        $data['merchant_id']=1;
+        $info=MerchantStore::insert($data);
+        $data['signValue']=sign_ature(0000,$data);
 //        var_dump(json_encode($data));die;
-        $result=curl_request(true,$data,true);
-        dump($result);die;
         if($info){
             //发送给新大陆
             unset($data['merchant_id']);
-            unset($data['status']);
-            $url="https://gateway.starpos.com.cn/emercapp";
-            $result=curl_request($url,true,$data);
-            dump($result);die;
-            if($result['msg_cd']=='000000'){
+            $result=curl_request(true,$data,true);
+            $result=json_decode($result);
+            $signValue=sign_ature(1111,$result);
+            if($result['msg_cd']=='000000' && $result['signValue']==$signValue){
                 //审核通过
                 //跟新数据库
                 $merchant_id=1;
-                $res=MerchantStore::where('merchant_id',$merchant_id)->update($result,true);
+                $arr['log_no']=$result['log_no'];
+                $arr['mercId']=$result['mercId'];
+                $arr['stoe_id']=$result['stoe_id'];
+                $res=MerchantStore::where('merchant_id',$merchant_id)->update($arr,true);
                 if($res){
                     return_msg(200,'success',$result['msg_dat']);
                 }else{
@@ -80,16 +79,33 @@ class Incom extends Controller
         }
     }
 
+    /**
+     * 商户进件
+     * @param Request $request
+     */
     public function merchant_incoms(Request $request)
     {
+        //获取商户id
         $data=$request->post();
-        $data['signValue']=sign_ature(0000,$data,KEY);
+        $data['signValue']=sign_ature(0000,$data);
+//        unset($data['merchant_id']);
 //        var_dump(json_encode($data));die;
         $result=curl_request(true,$data,true);
         $result=json_decode($result);
-        $signValue=sign_ature(1111,$result,KEY);
-        if($result['msg_cd']==000000 || $result['signValue']==$signValue){
-
+        dump($result);die;
+        //判断签名
+        $signValue=sign_ature(1111,$result);
+        if($result['msg_cd']==000000 && $result['signValue']==$signValue){
+            $data['merchant_id']=$request->post('merchant_id');
+            $data['log_no']=$result['log_no'];
+            $data['mercId']=$result['mercId'];
+            $data['stoe_id']=$result['stoe_id'];
+            $info=MerchantStore::insert($data);
+            if($info){
+                return_msg(200,'success',$result['msg_dat']);
+            }else{
+                return_msg(400,'failure');
+            }
         }
     }
 
@@ -104,12 +120,17 @@ class Incom extends Controller
         $merchant_id=1;
         //取出数据表中数据
         $data=MerchantStore::where('merchant_id',$merchant_id)->field('serviceId,version,mercId,log_no,orgNo')->find();
-        $data['signValue']=sign_ature(0000,$data,KEY);
-        $data['signValue']=get_sign($data);
+        $data['signValue']=sign_ature(0000,$data);
         $result=curl_request(true,$data,true);
         $result=json_decode($result,true);
-        if($result['msg_cd']==0000){
-
+        if($result['msg_cd']==000000){
+            //修改数据表状态
+            $res=MerchantStore::where('merchant_id',$merchant_id)->update(['check_flag'=>$result['check_flag']]);
+            if($res){
+                return_msg(200,'success',$result['msg_dat']);
+            }else{
+                return_msg(400,'failure');
+            }
         }
     }
 
@@ -122,18 +143,20 @@ class Incom extends Controller
     public function img_upload(Request $request)
     {
         $merchant_id=1;
-        //取出当前商户信息
-       /* $data=MerchantStore::where('merchant_id',$merchant_id)->field('serviceId,version,mercId,orgNo,log_no,stoe_id,')->find();*/
         $info=$request->post();
-        $img=upload_logo();
-        $info['imgFile']=$img;
+        //取出当前商户信息
+        $data=MerchantStore::where('merchant_id',$merchant_id)->field('serviceId,version,mercId,orgNo,log_no,stoe_id')->find();
+        $data['imgTyp']=$info['imgTyp'];
+        $data['imgNm']=$info['imgNm'];
+        $img=$this->upload_logo();
+        $data['imgFile']=$img;
 //        $data=MerchantStore::where('merchant_id',$merchant_id)->update($info);
         //获取签名
-        $info['signValue']=get_sign($info);
+        $data['signValue']=sign_ature(0000,$data);
         //发送给新大陆
-        $result=json_decode(curl_request(true,$info,true),true);
+        $result=json_decode(curl_request(true,$data,true),true);
         if($result['msg_cd']=='000000'){
-            $res=MerchantStore::where('merchant_id',$merchant_id)->update($info);
+            $res=MerchantStore::where('merchant_id',$merchant_id)->update($data);
             if($res){
                 return_msg(200,'success',$result['msg_dat']);
             }else{
@@ -183,7 +206,7 @@ class Incom extends Controller
         $files=request()->file('imgFile');
         $goods_pics=[];
         foreach($files as $file){
-            $info=$file->validate(['size'=>5*1024*1024,'ext'=>'jpg,jpeg,gif,png'])->move(ROOT_PATH.'public'.DS.'uploads');
+            $info=$file->validate(['size'=>500*1024,'ext'=>'jpg,jpeg,gif,png'])->move(ROOT_PATH.'public'.DS.'uploads');
             if($info){
                 //图片上传成功
                 $goods_logo=DS.'uploads'.DS.$info->getSaveName();
