@@ -13,6 +13,7 @@
 
 // 定义应用目录
 define('APP_PATH', __DIR__ . '/../application/');
+define('KEY','9773BCF5BAC01078C9479E67919157B8');
 //定义支付目录
 //define("PAY_PATH", __DIR__ . '/../extend/pay/');
 // 加载框架引导文件
