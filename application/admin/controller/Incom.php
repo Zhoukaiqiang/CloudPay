@@ -11,6 +11,7 @@ use think\Request;
 class Incom extends Controller
 {
     public $url='http://sandbox.starpos.com.cn/emercapp';
+
     /**
      * 商户查询
      *
@@ -233,22 +234,30 @@ class Incom extends Controller
     {
         $id=$request->param('id');
         $serviceId=6060605;
-        $version='v1.0.1';
+        $version='V1.0.1';
         $data=Db::name('merchant_store')->where('merchant_id',$id)->field('mercId,orgNo')->select();
 
         $resul=['serviceId'=>$serviceId,'version'=>$version,'mercId'=>$data[0]['mercId'],'orgNo'=>$data[0]['orgNo']];
         $resul_age=sign_ature(0000,$resul);
-        $arr['signValue']=$resul_age;
-        $par= curl_request($this->url,true,json_encode($arr),true);
+        $resul['signValue']=$resul_age;
+        dump($resul);die;
+        $par= curl_request($this->url,true,$resul,true);
 
         $bbntu=json_decode($par);
         $return_sign=sign_ature(1111,$resul);
-        if($bbntu['msg_cd']===000000 && $return_sign==$bbntu['signValue']){
-            $statu=Db::table('merchant_store')->where('merchant_id',$id)->update(['store_sn'=>$bbntu['stoe_id'],'log_no'=>$bbntu['log_no'],'alter'=>1]);
-            return_msg(200,'商户修改申请成功');
-        }else{
-            return_msg(400,'商户修改申请失败');
+        dump($bbntu);die;
+        if($bbntu['msg_cd']===000000){
+            if($return_sign==$bbntu['signValue']){
+                $statu=Db::table('merchant_store')->where('merchant_id',$id)->update(['store_sn'=>$bbntu['stoe_id'],'log_no'=>$bbntu['log_no'],'alter'=>1]);
+
+                return_msg(200,'商户修改申请成功');
+            }else{
+                return_msg(400,'签名域错误');
+            }
+            }else{
+            return_msg(300,'商户修改申请失败');
         }
+
 
     }
 
@@ -262,13 +271,14 @@ class Incom extends Controller
 
         $aa['serviceId']=6060604;
         $aa['version']='V1.0.1';
-        $data=Db::name('merchant_store')->where('merchant_id',$del['merchant_id'])->field('log_no,mercId,store_sn')->select();
-        $aa=[];
+        $data=Db::name('merchant_store')->where('merchant_id',$del['merchant_id'])->field('log_no,mercId,stoe_id,mcc_cd')->select();
+        $$del=[];
         foreach ($data as $k=>$v)
         {
-            $aa=$v;
+            $del=$v;
         }
         $dells=$del+$aa;
+        dump($dells);die;
 //        //获取加密的签名域
         $sign_ature=sign_ature(0000,$dells);
         $del['signValue']=$sign_ature;
@@ -280,11 +290,17 @@ class Incom extends Controller
 
 
         $return_sign=sign_ature(1111,$par);
-        if ($par['msg_cd']==000000 && $par['signValue']==$return_sign){
-//            $rebul=Db::table('think_user')->where('merchant_id',$del['merchant_id'])->update($del);
-           return_msg(200,修改成功);
+        if ($par['msg_cd']==000000){
+            if($par['signValue']==$return_sign){
+ //            $rebul=Db::table('think_user')->where('merchant_id',$del['merchant_id'])->update($del);
+
+                return_msg(200,'修改成功');
+            }else{
+                return_msg(400,'签名域错误');
+            }
+
         }else{
-            return_msg(400,'修改失败');
+            return_msg(500,'修改失败');
         }
 
 
@@ -308,11 +324,15 @@ class Incom extends Controller
         $par= curl_request($this->url,true,$data,true);
         $par=json_decode($par);
         $return_sign=sign_ature(1111,$par);
-        if ($par['msg_cd']==000000 && $par['signValue']==$return_sign){
+        if ($par['msg_cd']==000000){
+            if($par['signValue']==$return_sign){
+                return_msg('200','审核成功');
+            }else{
+                return_msg('400','签名域错误');
+            }
 
-            return_msg('200','审核成功');
         }else{
-            return_msg('400','非法报文');
+            return_msg(400,'审核失败');
         }
 
     }
@@ -328,40 +348,46 @@ class Incom extends Controller
      */
     public function shop_add(Request $request)
     {
-        $data=$request->post();
+        $data = $request->post();
         //查询商户的流水号、识别号
-        $log_no=Db::name('merchant_store')->where('merchant_id',$data['merchant_id'])->field('mercId,log_no')->select();
-        $data['mercId']=$log_no[0]['mercId'];
-        $data['log_no']=$log_no[0]['log_no'];
+        $log_no = Db::name('merchant_store')->where('merchant_id', $data[ 'merchant_id' ])->field('mercId,log_no')->select();
+        $data[ 'mercId' ] = $log_no[ 0 ][ 'mercId' ];
+        $data[ 'log_no' ] = $log_no[ 0 ][ 'log_no' ];
         //存入门店数据
-        $create_id=Db::name('merchant_shop')->insertGetId($data);
-        if(!$create_id){
-            return_msg(400,'数据不正确');
+        $create_id = Db::name('merchant_shop')->insertGetId($data);
+        if (!$create_id) {
+            return_msg(400, '数据不正确');
         }
-        $sign_value=sign_ature(0000,$data);
-        $data['signValue']=$sign_value;
-        $data['serviceId']=6060602;
-        $data['version']='V1.0.1';
-        $data['mercId']=$log_no[0]['mercId'];
-        $data['log_no']=$log_no[0]['log_no'];
-        $shop_api=curl_request($this->url,true,$data,true);
+        $sign_value = sign_ature(0000, $data);
+        $data[ 'signValue' ] = $sign_value;
+        $data[ 'serviceId' ] = 6060602;
+        $data[ 'version' ] = 'V1.0.1';
+        $data[ 'mercId' ] = $log_no[ 0 ][ 'mercId' ];
+        $data[ 'log_no' ] = $log_no[ 0 ][ 'log_no' ];
+        $shop_api = curl_request($this->url, true, $data, true);
 //
-        $shop_api=json_decode($shop_api);
-        $array=[];
-        foreach ($shop_api as $k=>$v){
-            $array[$k]=$v;
+        $shop_api = json_decode($shop_api);
+        $array = [];
+        foreach ($shop_api as $k => $v) {
+            $array[ $k ] = $v;
         }
-//        dump($array);
-        $return_sign=sign_ature(1111,$array);
-        if($array['msg_cd']==000000 && $array['signValue']==$return_sign)
-        {
-            $datle=['id'=>$create_id,'stoe_id'=>$array['stoe_id']];
-            //返回成功
-            Db::name('merchant_shop')->update($datle);
-            return_msg(200,'操作成功');
+
+        $return_sign = sign_ature(1111, $array);
+        if ($array[ 'msg_cd' ] == 000000) {
+            if ($array[ 'signValue' ] == $return_sign) {
+
+                $datle = ['id' => $create_id, 'stoe_id' => $array[ 'stoe_id' ]];
+                //返回成功
+                Db::name('merchant_shop')->update($datle);
+                return_msg(200, '操作成功');
+
+
         }else{
+                return_msg(200, '签名域错误');
 
-    }
-
+            }
+    }else{
+            return_msg('400','审核失败');
+        }
     }
 }

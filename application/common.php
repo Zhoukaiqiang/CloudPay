@@ -252,7 +252,7 @@ if (!function_exists('page')) {
  */
 if (!function_exists('curl_request')) {
     //使用curl函数库发送请求
-    function curl_request($url,$post = false, $params = [], $https = false)
+    function curl_request($url,$post = false, Array $params = [], $https = false)
     {
         $o="";
         foreach($params as $k=>$v){

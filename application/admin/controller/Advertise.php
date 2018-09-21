@@ -18,6 +18,7 @@ class Advertise extends Common
     {
         /* 获取最新的一则广告  */
         $res = Db('total_ad')->order('id', 'DESC')->find();
+
         if ($res) {
             $this->return_msg(200, '取出图片成功！', $res);
         }else {
@@ -43,6 +44,7 @@ class Advertise extends Common
         } else {
             // 移动到框架应用根目录/public/uploads/ 目录下
             $info = $file->move(ROOT_PATH . 'public' . DS . 'uploads');
+            dump($info->getSaveName());
             if ($info) {
                 // 成功上传后 获取上传信息
                 //存入相对路径/upload/日期/文件名
