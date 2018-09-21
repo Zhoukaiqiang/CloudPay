@@ -220,7 +220,7 @@ function get_sign ($arr, $key='') {
  */
 if (!function_exists('curl_request')) {
     //使用curl函数库发送请求
-    function curl_request($url,$post = false, Array $params = [], $https = false)
+    function curl_request($url,$post = false,$params = [], $https = false)
     {
         $params=json_encode($params);
         //①使用curl_init初始化请求会话
@@ -280,6 +280,7 @@ function is_user_can($id)
 if (!function_exists('sign_ature')) {
     function sign_ature($ids, $arr)
     {
+//        dump($arr);die;
          ksort($arr);
         if ($ids == 0000) {
             $data = ['serviceId', 'version', 'incom_type', 'stl_typ', 'stl_sign', 'orgNo', 'stl_oac', 'bnk_acnm', 'wc_lbnk_no', 'bus_lic_no', 'bse_lice_nm', 'crp_nm', 'mercAdds', 'bus_exp_dt', 'crp_id_no', 'crp_exp_dt', 'stoe_nm', 'stoe_cnt_nm', 'stoe_cnt_tel', 'mcc_cd', 'stoe_area_cod', 'stoe_adds', 'trm_rec', 'mailbox', 'alipay_flg', 'yhkpay_flg','mercId','orgNo'];
