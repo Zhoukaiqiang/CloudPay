@@ -218,7 +218,12 @@ class Merchant extends Controller
      */
     public function middle_submit()
     {
-        $id=request()->param('id');
+        $data=request()->post();
+        $validate=Loader::validate('Adminvalidate');
+        if(!$validate->scene('middle_submit')->check($data)){
+            $error=$validate->getError();
+            return_msg(400,'failure',$error);
+        }
         //修改审核状态
         $result=TotalMerchant::where('id',$id)->update(['review_status'=>1]);
         if($result){

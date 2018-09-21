@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Created by KaiQiang-use by PhpStorm.
  * User: fennu
@@ -6,11 +7,13 @@
  * Time: 16:35
  */
 
+
 namespace app\admin\controller;
 
 use app\admin\model\TotalAd;
 use app\admin\controller\Common;
 use app\admin\model\TotalAdmin;
+use think\Controller;
 use think\Loaderer;
 use think\Db;
 use think\Request;
@@ -43,7 +46,6 @@ class User extends Common
      */
     public function login()
     {
-
         $data = $this->params;
         $user_name_type = 'phone';
         $this->check_exist($data['phone'], 'phone', 1);

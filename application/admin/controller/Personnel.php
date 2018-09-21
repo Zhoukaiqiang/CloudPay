@@ -30,6 +30,11 @@ class Personnel extends Controller
     {
         if(request()->isPost()){
             $data=request()->post();
+            $validate=Loader::validate('Adminvalidate');
+            if(!$validate->scene('user')->check($data)){
+                $error=$validate->getError();
+                return_msg(400,'failure',$error);
+            }
             //查询用户名是否存在
             $user=TotalAdmin::where('name',$data['name'])->find();
             if($user){
