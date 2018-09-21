@@ -203,10 +203,6 @@ if (!function_exists('page')) {
         return $data;
     }
 }
-/**
- * 获取签名
- */
-
 
 function get_sign(Array $arr, $key = '')
 {
@@ -224,9 +220,9 @@ function get_sign(Array $arr, $key = '')
  */
 if (!function_exists('curl_request')) {
     //使用curl函数库发送请求
-    function curl_request($url, $post = false, $params = [], $https = false)
+    function curl_request($url,$post = false,$params = [], $https = false)
     {
-        $params = json_encode($params);
+        $params=json_encode($params);
         //①使用curl_init初始化请求会话
         $ch = curl_init();
         //②使用curl_setopt设置请求一些选项
@@ -285,13 +281,10 @@ function is_user_can($id)
 if (!function_exists('sign_ature')) {
     function sign_ature($ids,Array $arr)
     {
-        ksort($arr);
+//        dump($arr);die;
+         ksort($arr);
         if ($ids == 0000) {
-            $data = ['serviceId', 'version', 'incom_type',
-                'stl_typ', 'stl_sign', 'orgNo', 'stl_oac', 'bnk_acnm', 'wc_lbnk_no',
-                'bus_lic_no', 'bse_lice_nm', 'crp_nm', 'mercAdds', 'bus_exp_dt', 'crp_id_no',
-                'crp_exp_dt', 'stoe_nm', 'stoe_cnt_nm', 'stoe_cnt_tel', 'mcc_cd', 'stoe_area_cod',
-                'stoe_adds', 'trm_rec', 'mailbox', 'alipay_flg', 'yhkpay_flg','mercId','orgNo'];
+            $data = ['serviceId', 'version', 'incom_type', 'stl_typ', 'stl_sign', 'orgNo', 'stl_oac', 'bnk_acnm', 'wc_lbnk_no', 'bus_lic_no', 'bse_lice_nm', 'crp_nm', 'mercAdds', 'bus_exp_dt', 'crp_id_no', 'crp_exp_dt', 'stoe_nm', 'stoe_cnt_nm', 'stoe_cnt_tel', 'mcc_cd', 'stoe_area_cod', 'stoe_adds', 'trm_rec', 'mailbox', 'alipay_flg', 'yhkpay_flg','mercId','orgNo'];
             $stra = '';
             foreach($arr as $k=>$v){
                 if (in_array($k,$data)) {
