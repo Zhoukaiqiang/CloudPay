@@ -11,6 +11,7 @@ use think\Request;
 class Incom extends Controller
 {
     public $url='http://sandbox.starpos.com.cn/emercapp';
+<<<<<<< HEAD
 
     /**
      * 商户查询
@@ -41,6 +42,8 @@ class Incom extends Controller
 //        $merchant_id=1;
 //        $data=MerchantStore::where('merchant_id',1)->field('serviceId,version,mercId,orgNo')->find();
 //    }
+=======
+>>>>>>> 6730cbe2ad4b235d5ca8392eae1d992645e9388c
 
     /**
      * 商户进件
@@ -51,7 +54,8 @@ class Incom extends Controller
     public function merchant_incom(Request $request)
     {
         $data=$request->post();
-//        dump($data);
+        $data['serviceId']=6060601;
+        $data['version']='V1.0.3';
         //获取商户id
         $data['merchant_id']=1;
         $info=MerchantStore::insert($data);
@@ -59,18 +63,16 @@ class Incom extends Controller
 //        var_dump(json_encode($data));die;
         if($info){
             //发送给新大陆
-            unset($data['merchant_id']);
             $result=curl_request($this->url,true,$data,true);
-            $result=json_decode($result);
+            $result=json_decode($result,true);
             $signValue=sign_ature(1111,$result);
             if($result['msg_cd']=='000000' && $result['signValue']==$signValue){
                 //审核通过
                 //跟新数据库
-                $merchant_id=1;
                 $arr['log_no']=$result['log_no'];
                 $arr['mercId']=$result['mercId'];
                 $arr['stoe_id']=$result['stoe_id'];
-                $res=MerchantStore::where('merchant_id',$merchant_id)->update($arr,true);
+                $res=MerchantStore::where('merchant_id',$data['merchant_id'])->update($arr,true);
                 if($res){
                     return_msg(200,'success',$result['msg_dat']);
                 }else{
@@ -79,38 +81,6 @@ class Incom extends Controller
             }
         }else{
             return_msg(400,'failure');
-        }
-    }
-
-    /**
-     * 商户进件
-     * @param Request $request
-     */
-    public function merchant_incoms(Request $request)
-    {
-        //获取商户id
-        $data=$request->post();
-        $data['serviceId']=6060601;
-        $data['version']='V1.0.3';
-        $data['signValue']=sign_ature(0000,$data);
-//        unset($data['merchant_id']);
-//        var_dump(json_encode($data));die;
-        $result=curl_request($this->url,true,$data,true);
-        $result=json_decode($result);
-        dump($result);die;
-        //判断签名
-        $signValue=sign_ature(1111,$result);
-        if($result['msg_cd']==000000 && $result['signValue']==$signValue){
-            $data['merchant_id']=$request->post('merchant_id');
-            $data['log_no']=$result['log_no'];
-            $data['mercId']=$result['mercId'];
-            $data['stoe_id']=$result['stoe_id'];
-            $info=MerchantStore::insert($data);
-            if($info){
-                return_msg(200,'success',$result['msg_dat']);
-            }else{
-                return_msg(400,'failure');
-            }
         }
     }
 
@@ -149,6 +119,7 @@ class Incom extends Controller
     {
         $merchant_id=1;
         $info=$request->post();
+        dump($info);die;
         //取出当前商户信息
         $data=MerchantStore::where('merchant_id',$merchant_id)->field('serviceId,version,mercId,orgNo,log_no,stoe_id')->find();
         $data['imgTyp']=$info['imgTyp'];
@@ -290,6 +261,7 @@ class Incom extends Controller
 
 
         $return_sign=sign_ature(1111,$par);
+<<<<<<< HEAD
         if ($par['msg_cd']==000000){
             if($par['signValue']==$return_sign){
  //            $rebul=Db::table('think_user')->where('merchant_id',$del['merchant_id'])->update($del);
@@ -299,6 +271,11 @@ class Incom extends Controller
                 return_msg(400,'签名域错误');
             }
 
+=======
+        if ($par['msg_cd']==000000 && $par['signValue']==$return_sign){
+//            $rebul=Db::table('think_user')->where('merchant_id',$del['merchant_id'])->update($del);
+           return_msg(200,'修改成功');
+>>>>>>> 6730cbe2ad4b235d5ca8392eae1d992645e9388c
         }else{
             return_msg(500,'修改失败');
         }

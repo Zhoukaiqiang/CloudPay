@@ -5,7 +5,9 @@ namespace app\admin\controller;
 use app\admin\model\TotalAdmin;
 use app\admin\model\TotalAgent;
 use think\Controller;
+use think\Loader;
 use think\Request;
+use think\Validate;
 
 class Agent extends Controller
 {
@@ -40,31 +42,31 @@ class Agent extends Controller
     {
         if(request()->isPost()) {
             $data = request()->post();
-
-            $validate=new Validate($rule,$msg);
-            if($validate->check($data)){
-            //上传图片
-            $data['contract_picture'] = $this->upload_logo();
-            $data['contract_picture'] = json_encode($data['contract_picture']);
-//            $data['contract_time']=strtotime($data['contract_time']);
-            //保存到数据表
-            $info = TotalAgent::create($data, true);
-            if ($info) {
-                //保存成功
-                return_msg('200', '保存成功', $info);
-            } else {
-                //保存失败
-                return_msg('400', '保存失败');
-            }
+            //验证
+            $validate=Loader::validate('Adminvalidate');
+            if($validate->scene('add')->check($data)){
+                //上传图片
+                $data['contract_picture'] = $this->upload_logo();
+                $data['contract_picture'] = json_encode($data['contract_picture']);
+    //            $data['contract_time']=strtotime($data['contract_time']);
+                //保存到数据表
+                $info = TotalAgent::create($data, true);
+                if ($info) {
+                    //保存成功
+                    return_msg('200', '保存成功', $info);
+                } else {
+                    //保存失败
+                    return_msg('400', '保存失败');
+                }
             }else{
                  $error=$validate->getError();
-                 $this->error($error);
+                 return_msg(400,'failure',$error);
              }
         }else{
             //取出所有人员信息
-            $data=TotalAdmin::field(['id','name','role_id'])->select();
+            $data['data']=TotalAdmin::field(['id','name','role_id'])->select();
             //取出所有一级代理商名称
-            $info=TotalAgent::where('superior_level',0)->field('agent_name')->select();
+            $info=TotalAgent::where('parent_id',0)->field('agent_name')->select();
             $data['agent']=$info;
             return_msg(200,'success',$data);
         }
@@ -83,6 +85,12 @@ class Agent extends Controller
         //
         if(request()->isPost()){
             $data=$request->post();
+            //验证
+            $validate=Loader::validate('Adminvalidate');
+            if(!$validate->scene('detail')->check($data)){
+                $error=$validate->getError();
+                return_msg(400,'failure',$error);
+            }
             //上传图片
             //如果没有上传图片用原来的图片
             $file=$request->file('contract_picture');
