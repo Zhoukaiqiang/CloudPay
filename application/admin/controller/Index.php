@@ -535,17 +535,17 @@ class Index extends Controller
         $data = [];
         if (!empty($present)) {
 
-            $data[ 'total' ] = Db::name('order')
-                ->whereTime('create_time', 'between', [$past, $present])
+            $data[ 'chartData' ]['rows'] = Db::name('order')
+                ->whereTime('pay_time', 'between', [$past, $present])
                 ->where("pay_type", $pay_type_flag, $pay_type)
-                ->field(['order_money', 'create_time', 'id', 'pay_type'])->select();
+                ->field(['order_money as 订单金额', 'create_time as 支付时间', 'id', 'pay_type 支付类型'])->select();
         } else {
-            $data[ 'total' ] = Db::name('order')
-                ->whereTime('create_time', 'yesterday')
+            $data[ 'chartData' ]['row'] = Db::name('order')
+                ->whereTime('pay_time', 'yesterday')
                 ->where("pay_type", $pay_type_flag, $pay_type)
-                ->field(['order_money', 'create_time', 'id', 'pay_type'])->select();
+                ->field(['order_money as 订单金额', 'create_time as 支付时间', 'id', 'pay_type 支付类型'])->select();
         }
-
+        $data['chartData']['columns'] = ['日期','金额'];
         return json_encode($data);
 
 

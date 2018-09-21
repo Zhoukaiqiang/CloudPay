@@ -9,8 +9,9 @@
 // | Author: 流年 <liu21st@gmail.com>
 // +----------------------------------------------------------------------
 use think\Db;
+
 // 应用公共文件
-if(!function_exists('encrypt_password')){
+if (!function_exists('encrypt_password')) {
     /**
      * 密码加密
      * @param [sting] $password [加密前的密码]
@@ -18,9 +19,10 @@ if(!function_exists('encrypt_password')){
      * @return [string] [加密后的密码]
      *
      */
-    function encrypt_password($password, $phone=''){
+    function encrypt_password($password, $phone = '')
+    {
 
-        return md5('$ysf' . md5($password). $phone );
+        return md5('$ysf' . md5($password) . $phone);
     }
 }
 /**
@@ -28,7 +30,7 @@ if(!function_exists('encrypt_password')){
  * $phone 电话
  * $msg 验证内容
  */
-if(!function_exists('sendmsg')){
+if (!function_exists('sendmsg')) {
     //发送短信
     function sendmsg($phone, $msg)
     {
@@ -40,14 +42,14 @@ if(!function_exists('sendmsg')){
         //发送请求
         $res = curl_request($url, false, [], true);
         //解析返回结果
-        if(!$res){
+        if (!$res) {
             return '服务器异常，请求发送失败';
         }
         $arr = json_decode($res, true);
-        if(isset($arr['code']) && $arr['code'] == 10000){
+        if (isset($arr['code']) && $arr['code'] == 10000) {
             //短信发送成功
             return true;
-        }else{
+        } else {
             return $arr['msg'];
 //            return '短信发送失败';
         }
@@ -56,7 +58,7 @@ if(!function_exists('sendmsg')){
 /**
  * 邮箱注册
  */
-if(!function_exists('send_mail')){
+if (!function_exists('send_mail')) {
     //使用PHPMailer发送邮件
     function send_mail($email, $subject, $body)
     {
@@ -74,10 +76,10 @@ if(!function_exists('send_mail')){
         $mail->addAddress($email);                      // 收件人，第二个参数可选，表示昵称
         $mail->isHTML(true);                                  // 邮件内容是html格式
         $mail->Subject = $subject;                             //邮件主题
-        $mail->Body    = $body;                             //邮件内容
+        $mail->Body = $body;                             //邮件内容
 //        $mail->AltBody = 'This is the body in plain text for non-HTML mail clients';//纯文本内容
 
-        if(!$mail->send()){
+        if (!$mail->send()) {
             //发送失败
             return $mail->ErrorInfo;
         }
@@ -93,7 +95,7 @@ if(!function_exists('send_mail')){
  *
  *
  */
-if(!function_exists('make_code')){
+if (!function_exists('make_code')) {
     function make_code($num)
     {
         $max = pow(10, $num) - 1;
@@ -109,7 +111,7 @@ if(!function_exists('make_code')){
  * @param [array] $data [接口要返回的数据]
  *
  */
-if(!function_exists('return_msg')){
+if (!function_exists('return_msg')) {
     function return_msg($code, $msg = '', $data = [])
     {
         /* 组合数据 */
@@ -118,7 +120,8 @@ if(!function_exists('return_msg')){
         $return_data['data'] = $data;
         /* ---------返回信息并终止脚本---------- */
 
-        echo json_encode($return_data);die;
+        echo json_encode($return_data);
+        die;
     }
 }
 
@@ -129,14 +132,14 @@ if(!function_exists('return_msg')){
  * @param [array] $data [接口要返回的数据]
  *
  */
-if(!function_exists('check_time')) {
+if (!function_exists('check_time')) {
     function check_time()
     {
-        $time=time();
-        session('check_time',$time);
-        if((time()-session('check_time')) < 0.0001){
+        $time = time();
+        session('check_time', $time);
+        if ((time() - session('check_time')) < 0.0001) {
             return true;
-        }else{
+        } else {
             return false;
         }
     }
@@ -145,7 +148,7 @@ if(!function_exists('check_time')) {
 /**
  *  app支付宝请求头
  */
-if(!function_exists('jsonReturn')) {
+if (!function_exists('jsonReturn')) {
     function jsonReturn($status = 0, $code = 0, $data = '', $msg = '', $type = 1)
     {
 
@@ -205,16 +208,13 @@ if (!function_exists('page')) {
  */
 
 
-function get_sign ($arr, $key='') {
-    if ( !is_array($arr) ) {
-        return false;
-    }
+function get_sign(Array $arr, $key = '')
+{
+    $str = '';
     ksort($arr);
-    $str= '';
     foreach ($arr as $k => $v) {
         $str .= $v;
     }
-
     return md5($str . $key);
 }
 
@@ -224,15 +224,16 @@ function get_sign ($arr, $key='') {
  */
 if (!function_exists('curl_request')) {
     //使用curl函数库发送请求
-    function curl_request($url,$post = false, $params = [], $https = false)
+    function curl_request($url, $post = false, $params = [], $https = false)
     {
+        $params = json_encode($params);
         //①使用curl_init初始化请求会话
         $ch = curl_init();
         //②使用curl_setopt设置请求一些选项
 
         //测试地址 http://sandbox.starpos.com.cn/emercapp
         //正式地址 https://gateway.starpos.com.cn/emercapp
-        curl_setopt($ch,CURLOPT_URL,"http://sandbox.starpos.com.cn/emercapp");
+        curl_setopt($ch, CURLOPT_URL, $url);
 
         curl_setopt($ch, CURLOPT_HEADER, 0);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -240,7 +241,8 @@ if (!function_exists('curl_request')) {
             //设置请求方式、请求参数
             curl_setopt($ch, CURLOPT_POST, true);
             curl_setopt($ch, CURLOPT_POSTFIELDS, $params);
-            curl_setopt($ch,CURLOPT_HTTPHEADER,array("application/json;charset=GBK","Content-length:".strlen($params)));
+
+            curl_setopt($ch, CURLOPT_HTTPHEADER, array("application/json;charset=GBK", "Content-length:" . strlen($params)));
         }
         if ($https) {
             //https协议，禁止curl从服务器端验证本地证书
@@ -250,7 +252,7 @@ if (!function_exists('curl_request')) {
         //设置 让curl_exec 直接返回接口的结果数据
         $res = curl_exec($ch);
         //④使用curl_close关闭请求会话
-        $res=iconv('GBK','UTF-8',$res);
+        $res = iconv('GBK', 'UTF-8', $res);
         curl_close($ch);
         return $res;
     }
@@ -281,14 +283,15 @@ function is_user_can($id)
 }
 
 if (!function_exists('sign_ature')) {
-    function sign_ature($ids, $arr)
+    function sign_ature($ids,Array $arr)
     {
-         ksort($arr);
-
-//         return $arr;
+        ksort($arr);
         if ($ids == 0000) {
-            $data = ['serviceId', 'stoe_id', 'log_no', 'mercId', 'version', 'stl_sign', 'orgNo', 'stl_oac', 'bnk_acnm', 'wc_lbnk_no', 'bus_lic_no', 'bse_lice_nm', 'crp_nm', 'mercAdds', 'bus_exp_dt', 'crp_id_no', 'crp_exp_dt', 'stoe_nm', 'stoe_cnt_nm', 'stoe_cnt_tel', 'mcc_cd', 'stoe_area_cod', 'stoe_adds', 'trm_rec', 'mailbox', 'alipay_flg', 'yhkpay_flg','log_no','incom_type','stl_typ','bnk_acnm','bus_lice_nm'];
-
+            $data = ['serviceId', 'version', 'incom_type',
+                'stl_typ', 'stl_sign', 'orgNo', 'stl_oac', 'bnk_acnm', 'wc_lbnk_no',
+                'bus_lic_no', 'bse_lice_nm', 'crp_nm', 'mercAdds', 'bus_exp_dt', 'crp_id_no',
+                'crp_exp_dt', 'stoe_nm', 'stoe_cnt_nm', 'stoe_cnt_tel', 'mcc_cd', 'stoe_area_cod',
+                'stoe_adds', 'trm_rec', 'mailbox', 'alipay_flg', 'yhkpay_flg','mercId','orgNo'];
             $stra = '';
             foreach($arr as $k=>$v){
                 if (in_array($k,$data)) {
@@ -303,7 +306,9 @@ if (!function_exists('sign_ature')) {
                     $stra .= $val;
                 }
             }
+
         }
+//        return $stra;
         return md5($stra . KEY);
     }
 }
