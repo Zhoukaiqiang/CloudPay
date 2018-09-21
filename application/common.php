@@ -203,6 +203,20 @@ if (!function_exists('page')) {
 /**
  * 获取签名
  */
+
+function get_sign ($arr, $key='') {
+    if ( !is_array($arr) ) {
+        return false;
+    }
+    ksort($arr);
+    $str= '';
+    foreach ($arr as $k => $v) {
+        $str .= $v;
+    }
+
+    return md5($str . $key);
+}
+
 //if (!function_exists('get_sign')) {
 //    function get_sign($arr)
 //    {
@@ -263,7 +277,9 @@ if (!function_exists('curl_request')) {
         //①使用curl_init初始化请求会话
         $ch = curl_init();
         //②使用curl_setopt设置请求一些选项
-        curl_setopt($ch,CURLOPT_URL,"https://gateway.starpos.com.cn/emercapp");
+        //测试地址 http://sandbox.starpos.com.cn/emercapp
+        //正式地址 https://gateway.starpos.com.cn/emercapp
+        curl_setopt($ch,CURLOPT_URL,"http://sandbox.starpos.com.cn/emercapp");
         curl_setopt($ch, CURLOPT_HEADER, 0);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         if ($post) {
@@ -311,10 +327,11 @@ function is_user_can($id)
 }
 
 if (!function_exists('sign_ature')) {
-    function sign_ature($ids, $arr)
+    function sign_ature($ids, $arr, $key)
     {
          ksort($arr);
-        if ($ids == 0000) {
+
+        if ($ids == 518) {
             $data = ['serviceId', 'stoe_id', 'log_no', 'mercId', 'version', 'stl_sign', 'orgNo', 'stl_oac', 'bnk_acnm', 'wc_lbnk_no', 'bus_lic_no', 'bse_lice_nm', 'crp_nm', 'mercAdds', 'bus_exp_dt', 'crp_id_no', 'crp_exp_dt', 'stoe_nm', 'stoe_cnt_nm', 'stoe_cnt_tel', 'mcc_cd', 'stoe_area_cod', 'stoe_adds', 'trm_rec', 'mailbox', 'alipay_flg', 'yhkpay_flg'];
             $stra = '';
             foreach($arr as $k=>$v){
@@ -331,6 +348,6 @@ if (!function_exists('sign_ature')) {
                 }
             }
         }
-        return md5($stra . KEY);
+        return md5($stra . $key);
     }
 }

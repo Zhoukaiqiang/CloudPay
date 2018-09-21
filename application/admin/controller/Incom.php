@@ -16,23 +16,27 @@ class Incom extends Controller
      */
     public function merchant_query(Request $request)
     {
+
         //apam:value1, Cpam:value2, bpam:Value3
-        /*$data=[
-            'apam'=>'value1',
-            'cpam'=>'value2',
-            'bpam'=>'Value3'
+        $data=[
+            'serviceId'=>'6060300', //交易码
+            'version'=>'V1.0.1',
+            'mercId'=>"9111010506281144XW" ,//商户识别号（15 位数字）
+            'orgNo'  => 518, //机构号
+
         ];
-        $info=get_sign($data);
-        dump($info);die;*/
-       /* $data=$request->param();
+        $key = "9773BCF5BAC01078C9479E67919157B8"; //
+        $signValue = get_sign($data, $key);
+
+        $data = $request->param();
         //生成签名
-        $signValue=get_sign($data);
+
         $where=[
             'serviceId'=>$data['serviceId'],
             'version'=>$data['version'],
             'mercId'=>$data['mercId'],
             'orgNo'=>$data['orgNo']
-        ];*/
+        ];
         $info=MerchantStore::where($where)->find();
         //发给第三方
         $merchant_id=1;
@@ -48,12 +52,43 @@ class Incom extends Controller
     public function merchant_incom(Request $request)
     {
         $data=$request->post();
+
+        $signValue = sign_ature(518,$data,"9773BCF5BAC01078C9479E67919157B8");
+
+        $data = [
+            'serviceId'  => 6060601,
+            'version'  => 'V1.0.1',
+            'stl_sign'  => 1,
+            'orgNo'  => 518,
+            'stl_oac'  => 6230582000005972594,
+            'bnk_acnm'  => '蜡笔小新',
+            'wc_lbnk_no'  => 783290000010,
+            'bus_lic_no'  => "9111010506281144" ,
+            'bse_lice_nm'  => '北京城南春贸有限公司',
+            'crp_nm'  => '蜡笔小新',
+            'mercAdds'  => '北京市朝阳区西大望路甲12号（国家广告产业园区）2号楼2层20182',
+            'bus_exp_dt'  => '2033-02-21',
+            'crp_id_no'  => 230221197907042813,
+            'crp_exp_dt'  => '2027-05-16',
+            'stoe_nm'  => '北京城南春贸有限公司',
+            'stoe_cnt_nm'  => '蜡笔小新',
+            'stoe_cnt_tel'  => 18811198886,
+            'mcc_cd'  => 5039,
+            'stoe_area_cod'  => 110105,
+            'stoe_adds'  => '北京市朝阳区西大望路甲12号（国家广告产业园区）2号楼2层20182',
+            'trm_rec'  => 1,
+            'mailbox'  => 'yunshangfu@163.com',
+            'alipay_flg'  => 'Y',
+            'yhkpay_flg'  => 'N',
+            'signValue'  => $signValue,
+        ];
 //        dump($data);
         //获取商户id
         /*$data['merchant_id']=1;
         $data['status']=0;
         $info=MerchantStore::insert($data);*/
-        $data['signValue']=sign_ature(0000,$data,KEY);
+
+
 //        var_dump(json_encode($data));die;
         $result=curl_request(true,$data,true);
         dump($result);die;

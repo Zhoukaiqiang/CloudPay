@@ -108,7 +108,7 @@ class Agent extends Controller
              }*/
         }else{
             //取出所有人员信息
-            $data=TotalAdmin::field(['id','name','role_id'])->select();
+            $data['data']=TotalAdmin::field(['id','name','role_id'])->select();
             //取出所有一级代理商名称
             $info=TotalAgent::where('superior_level',0)->field('agent_name')->select();
             $data['agent']=$info;
