@@ -11,44 +11,6 @@ use think\Request;
 class Incom extends Controller
 {
     public $url='http://sandbox.starpos.com.cn/emercapp';
-    /**
-     * 商户查询
-     *
-     * @return \think\Response
-     */
-    public function merchant_query(Request $request)
-    {
-        //apam:value1, Cpam:value2, bpam:Value3
-        /*$data=[
-            'apam'=>'value1',
-            'cpam'=>'value2',
-            'bpam'=>'Value3'
-        ];
-        $info=get_sign($data);
-        dump($info);die;*/
-       /* $data=$request->param();
-        //生成签名
-        $signValue=get_sign($data);
-        $where=[
-            'serviceId'=>$data['serviceId'],
-            'version'=>$data['version'],
-            'mercId'=>$data['mercId'],
-            'orgNo'=>$data['orgNo']
-        ];*/
-       $data=[
-           'serviceId'=>'6060300',
-           'version'=>'V1.0.1',
-           'mercId'=>'800332000000027',
-           'orgNo'=>'518'
-       ];
-       $data['signValue']=sign_ature(0000,$data);
-        $result=curl_request($this->url,true,$data,true);
-        dump($result);die;
-//        $info=MerchantStore::where($where)->find();
-        //发给第三方
-        $merchant_id=1;
-        $data=MerchantStore::where('merchant_id',1)->field('serviceId,version,mercId,orgNo')->find();
-    }
 
     /**
      * 商户进件
@@ -259,7 +221,7 @@ class Incom extends Controller
         $return_sign=sign_ature(1111,$par);
         if ($par['msg_cd']==000000 && $par['signValue']==$return_sign){
 //            $rebul=Db::table('think_user')->where('merchant_id',$del['merchant_id'])->update($del);
-           return_msg(200,修改成功);
+           return_msg(200,'修改成功');
         }else{
             return_msg(400,'修改失败');
         }

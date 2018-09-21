@@ -200,52 +200,20 @@ if (!function_exists('page')) {
         return $data;
     }
 }
-/**
- * 获取签名
- */
-if (!function_exists('get_sign')) {
-    function get_sign($arr)
-    {
 
-//        $a=[];
-//        $a['serviceId']=$arr['serviceId'];
-//        $a['version']=$arr['version'];
-//        $a['incom_type']=$arr['incom_type'];
-//        $a['stl_typ']=$arr['stl_typ'];
-//        $a['stl_sign']=$arr['stl_sign'];
-//        $a['orgNo']=$arr['orgNo'];
-//        $a['stl_oac']=$arr['stl_oac'];
-//        $a['bnk_acnm']=$arr['bnk_acnm'];
-//        $a['wc_lbnk_no']=$arr['wc_lbnk_no'];
-//        $a['bus_lic_no']=$arr['bus_lic_no'];
-//        $a['bse_lice_nm']=$arr['bse_lice_nm'];
-//        $a['crp_nm']=$arr['crp_nm'];
-//        $a['mercAdds']=$arr['mercAdds'];
-//        $a['bus_exp_dt']=$arr['bus_exp_dt'];
-//        $a['crp_id_no']=$arr['crp_id_no'];
-//        $a['crp_exp_dt']=$arr['crp_exp_dt'];
-//        $a['stoe_nm']=$arr['stoe_nm'];
-//        $a['stoe_cnt_nm']=$arr['stoe_cnt_nm'];
-//        $a['stoe_cnt_tel']=$arr['stoe_cnt_tel'];
-//        $a['mcc_cd']=$arr['mcc_cd'];
-//        $a['stoe_area_cod']=$arr['stoe_area_cod'];
-//        $a['stoe_adds']=$arr['stoe_adds'];
-//        $a['trm_rec']=$arr['trm_rec'];
-//        $a['mailbox']=$arr['mailbox'];
-//        $a['alipay_flg']=$arr['alipay_flg'];
-//        $a['yhkpay_flg']=$arr['yhkpay_flg'];
-        ksort($arr);
-//        return $arr;
-        $str = '';
-        foreach ($arr as $v) {
-            $str .= $v;
-        }
-//        return $str;
-        return md5($str . KEY);
-
-
+function get_sign ($arr, $key='') {
+    if ( !is_array($arr) ) {
+        return false;
     }
+    ksort($arr);
+    $str= '';
+    foreach ($arr as $k => $v) {
+        $str .= $v;
+    }
+
+    return md5($str . $key);
 }
+
 
 /**
  * 设置curl
@@ -258,7 +226,11 @@ if (!function_exists('curl_request')) {
         //①使用curl_init初始化请求会话
         $ch = curl_init();
         //②使用curl_setopt设置请求一些选项
-        curl_setopt($ch,CURLOPT_URL,$url);
+
+        //测试地址 http://sandbox.starpos.com.cn/emercapp
+        //正式地址 https://gateway.starpos.com.cn/emercapp
+        curl_setopt($ch,CURLOPT_URL,"http://sandbox.starpos.com.cn/emercapp");
+
         curl_setopt($ch, CURLOPT_HEADER, 0);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         if ($post) {
@@ -309,13 +281,11 @@ if (!function_exists('sign_ature')) {
     function sign_ature($ids, $arr)
     {
          ksort($arr);
-//         return $arr;
         if ($ids == 0000) {
             $data = ['serviceId', 'version', 'incom_type', 'stl_typ', 'stl_sign', 'orgNo', 'stl_oac', 'bnk_acnm', 'wc_lbnk_no', 'bus_lic_no', 'bse_lice_nm', 'crp_nm', 'mercAdds', 'bus_exp_dt', 'crp_id_no', 'crp_exp_dt', 'stoe_nm', 'stoe_cnt_nm', 'stoe_cnt_tel', 'mcc_cd', 'stoe_area_cod', 'stoe_adds', 'trm_rec', 'mailbox', 'alipay_flg', 'yhkpay_flg','mercId','orgNo'];
             $stra = '';
             foreach($arr as $k=>$v){
                 if (in_array($k,$data)) {
-//                    echo $k."<br/>";
                     $stra .= $v;
                 }
             }

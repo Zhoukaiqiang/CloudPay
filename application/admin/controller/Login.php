@@ -51,6 +51,9 @@ class Login extends Controller
             //return view();
         }
     }
+    public function aaa() {
+        return 'aaa';
+    }
 
     /**
      * 注册
