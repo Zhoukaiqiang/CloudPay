@@ -147,7 +147,7 @@ class Merchant extends Controller
             return_msg(400,"提交审核失败");
         }
     }
-    
+
 
     /**
      * 驳回
