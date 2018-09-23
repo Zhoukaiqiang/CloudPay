@@ -20,8 +20,8 @@ class Merchant extends Controller
         //获取总行数
         $row=TotalMerchant::where('review_status',2)->count();
         $pages=page($row);
-        $data=TotalMerchant::alias('a')
-            ->field('a.id,a.name,a.phone,a.address,a.contact,a.channel,a.opening_time,a.status,b.contact_person,b.agent_phone')
+        $data['data']=TotalMerchant::alias('a')
+            ->field('a.id,a.merchant_name,a.phone,a.address,a.contact,a.channel,a.opening_time,a.status,b.contact_person,b.agent_phone')
             ->join('cloud_total_agent b','a.agent_id=b.id','left')
             ->where('a.review_status=2')
             ->limit($pages['offset'],$pages['limit'])
@@ -38,7 +38,7 @@ class Merchant extends Controller
     public function normal_detail()
     {
         $id=request()->param('id');
-        $data=TotalMerchant::where('id',$id)->find();
+        $data['data']=TotalMerchant::where('id',$id)->find();
         //获取所有代理商
         $info=$this->get_agent();
         $data['agent']=$info;
@@ -147,6 +147,7 @@ class Merchant extends Controller
             return_msg(400,"提交审核失败");
         }
     }
+    
 
     /**
      * 驳回
