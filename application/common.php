@@ -223,14 +223,15 @@ if (!function_exists('curl_request')) {
     function curl_request($url,$post = false,$params = [], $https = false)
     {
         $params=json_encode($params);
+        /*$params=json_encode($params);
+        return $params;*/
         //①使用curl_init初始化请求会话
         $ch = curl_init();
         //②使用curl_setopt设置请求一些选项
 
         //测试地址 http://sandbox.starpos.com.cn/emercapp
         //正式地址 https://gateway.starpos.com.cn/emercapp
-        curl_setopt($ch, CURLOPT_URL, $url);
-
+        curl_setopt($ch,CURLOPT_URL,$url);
         curl_setopt($ch, CURLOPT_HEADER, 0);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         if ($post) {
@@ -284,10 +285,11 @@ if (!function_exists('sign_ature')) {
 //        dump($arr);die;
          ksort($arr);
         if ($ids == 0000) {
-            $data = ['serviceId', 'version', 'incom_type', 'stl_typ', 'stl_sign', 'orgNo', 'stl_oac', 'bnk_acnm', 'wc_lbnk_no', 'bus_lic_no', 'bse_lice_nm', 'crp_nm', 'mercAdds', 'bus_exp_dt', 'crp_id_no', 'crp_exp_dt', 'stoe_nm', 'stoe_cnt_nm', 'stoe_cnt_tel', 'mcc_cd', 'stoe_area_cod', 'stoe_adds', 'trm_rec', 'mailbox', 'alipay_flg', 'yhkpay_flg','mercId','orgNo'];
+            $data = ['serviceId', 'version', 'incom_type', 'stl_typ', 'stl_sign', 'stl_oac', 'bnk_acnm', 'wc_lbnk_no', 'bus_lic_no', 'bse_lice_nm', 'crp_nm', 'mercAdds', 'bus_exp_dt', 'crp_id_no', 'crp_exp_dt', 'stoe_nm', 'stoe_cnt_nm', 'stoe_cnt_tel', 'mcc_cd', 'stoe_area_cod', 'stoe_adds', 'trm_rec', 'mailbox', 'alipay_flg', 'yhkpay_flg','mercId','orgNo','imgTyp','imgNm','log_no','stoe_id'];
             $stra = '';
             foreach($arr as $k=>$v){
                 if (in_array($k,$data)) {
+//                    echo $k."<br/>";
                     $stra .= $v;
                 }
             }
@@ -305,3 +307,44 @@ if (!function_exists('sign_ature')) {
         return md5($stra . KEY);
     }
 }
+
+//批量上传图片
+if (!function_exists('upload_logo')) {
+    function upload_logo($files){
+        $goods_pics=[];
+        foreach($files as $file){
+            $info=$file->validate(['size'=>500*1024*1024,'ext'=>'jpg,jpeg,gif,png'])->move(ROOT_PATH.'public'.DS.'uploads');
+            if($info){
+                //图片上传成功
+                $goods_logo=DS.'uploads'.DS.$info->getSaveName();
+                $goods_logo=str_replace('\\','/',$goods_logo);
+                $goods_pics[]=$goods_logo;
+            }else{
+                $error=$info->getError();
+                return_msg(400,$error);
+            }
+        }
+        return $goods_pics;
+    }
+}
+
+//图片上传
+if (!function_exists('upload_pics')) {
+    function upload_pics($file){
+        //移动图片
+        $info=$file->validate(['size'=>5*1024*1024,'ext'=>'jpg,png,gif,jpeg'])->move(ROOT_PATH.'public'.DS.'uploads');
+        if($info){
+            //文件上传成功,生成缩略图
+            //获取文件路径
+            $goods_logo=DS.'uploads'.DS.$info->getSaveName();
+            $goods_logo=str_replace('\\','/',$goods_logo);
+            return $goods_logo;
+        }else{
+            $error=$file->getError();
+            $this->error($error);
+        }
+    }
+}
+
+
+
