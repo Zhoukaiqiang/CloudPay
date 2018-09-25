@@ -12,12 +12,11 @@
 // [ 应用入口文件 ]
 
 // 定义应用目录
-<<<<<<< Updated upstream
+
 define("KEY", "9773BCF5BAC01078C9479E67919157B8");
-=======
->>>>>>> Stashed changes
+
 define('APP_PATH', __DIR__ . '/../application/');
-//定义支付目录
-//define("PAY_PATH", __DIR__ . '/../extend/pay/');
+
+
 // 加载框架引导文件
 require __DIR__ . '/../thinkphp/start.php';

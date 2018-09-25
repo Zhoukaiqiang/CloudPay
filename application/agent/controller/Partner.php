@@ -7,6 +7,7 @@ use app\agent\model\Order;
 use app\agent\model\TotalAgent;
 use app\agent\model\TotalMerchant;
 use think\Controller;
+use think\Exception;
 use think\Request;
 
 class Partner extends Controller
@@ -107,6 +108,7 @@ class Partner extends Controller
      *
      * @param  int  $id
      * @return \think\Response
+     * @throws Exception
      */
     public function show_merchant()
     {
@@ -122,7 +124,7 @@ class Partner extends Controller
             ->group('a.id')
             ->count();
         $pages=page($rows);
-        $data=TotalMerchant::alias('a')
+        $data['list']=TotalMerchant::alias('a')
             ->field(['a.id,a.name,a.contact,a.phone,b.partner_name'])
             ->join('cloud_agent_partner b','a.partner_id=b.id','left')
             ->join('cloud_order c','a.id=c.merchant_id','left')
@@ -132,7 +134,7 @@ class Partner extends Controller
             ->limit($pages['offset'],$pages['limit'])
             ->select();
         //取出商户支付宝和微信交易额交易量
-        foreach($data as &$v){
+        foreach($data['list'] as &$v){
             $where=[
                 'status'=>1,
                 'pay_type'=>'alipay',
@@ -175,13 +177,13 @@ class Partner extends Controller
         /** 代理商费率   */
         $res = TotalAgent::where('id',$id)->field("agent_rate")->find();
         $agent_rate = intval($res->agent_rate);
-        $data=AgentPartner::field(['id,partner_name,partner_phone,create_time,model,proportion,rate'])
+        $data['list']=AgentPartner::field(['id,partner_name,partner_phone,create_time,model,proportion,rate'])
             ->where('agent_id',$id)
             ->select();
 //        dump($data);die;
         //取出负责商户数
         $flag=array();
-        foreach($data as &$v){
+        foreach($data['list'] as &$v){
             $count=TotalMerchant::where('partner_id',$v['id'])->count();
             $v['count']=$count;
             //根据合伙人id取出昨天新增商户数

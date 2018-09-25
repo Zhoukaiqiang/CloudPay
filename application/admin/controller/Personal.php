@@ -6,7 +6,7 @@ use app\admin\model\TotalAdmin;
 use think\Controller;
 use think\Request;
 
-class Personnel extends Controller
+class Personal extends Controller
 {
     /**
      * 显示人员列表
@@ -16,8 +16,23 @@ class Personnel extends Controller
     public function index()
     {
         //查询不是超级管理员的人员
-        $data=TotalAdmin::where('is_super_vip',0)->select();
-        return_msg(200,'success',$data);
+
+        $rows = TotalAdmin::count("id");
+
+        $pages = page($rows);
+
+        $data['list']=TotalAdmin::limit($pages['offset'], $pages['limit'])->select();
+
+        $res = collection($data)->toArray();
+
+        if (count($res) > 0) {
+            $data['pages'] = $pages;
+            $data['rows'] = $rows;
+            return_msg(200,'success',$data);
+        }else {
+            return_msg(400, '没有数据');
+    }
+
 
     }
 
@@ -30,7 +45,7 @@ class Personnel extends Controller
     {
         if(request()->isPost()){
             $data=request()->post();
-            $validate=Loader::validate('Adminvalidate');
+            $validate = Loader::validate('Adminvalidate');
             if(!$validate->scene('user')->check($data)){
                 $error=$validate->getError();
                 return_msg(400,'failure',$error);
@@ -47,15 +62,15 @@ class Personnel extends Controller
             }
             //获取创建时间
             $data['create_time']=time();
-            $data['password']=encrypt_password(addslashes($data['password']));
-            $info=TotalAdmin::create($data,true);
+            $data['password']=encrypt_password(addslashes($data['password'], $data['phone']));
+            $info=TotalAdmin::insert($data,true);
             if($info){
                 return_msg(200,'保存成功',$info);
             }else{
                 return_msg(400,'保存失败');
             }
         }else{
-            return view();
+            return_msg(400, "请用POST方法");
         }
     }
 

@@ -28,7 +28,6 @@ class Index extends Controller
     ];
 
 
-
     /**
      * 用户登录
      * @param [strin]   user_name 用户名（电话）
@@ -87,7 +86,7 @@ class Index extends Controller
         //分页
         $pages=page($rows);
         //根据代理商id查询昨日交易商户
-        $data=TotalMerchant::alias('a')
+        $data['list']=TotalMerchant::alias('a')
             ->field(['a.id,a.name,a.contact,a.phone,b.partner_name'])
             ->join('cloud_agent_partner b','a.partner_id=b.id','left')
             ->join('cloud_order c','c.merchant_id=a.id','left')
@@ -97,7 +96,7 @@ class Index extends Controller
             ->limit($pages['offset'],$pages['limit'])
             ->select();
         //取出商户支付宝和微信交易额交易量
-        foreach($data as &$v){
+        foreach($data['list'] as &$v){
                 $where=[
                     'status'=>1,
                     'pay_type'=>'alipay',
@@ -175,7 +174,7 @@ class Index extends Controller
         //分页
         $pages=page($rows);
         //根据代理商id查询昨日交易商户
-        $data=TotalMerchant::alias('a')
+        $data['list']=TotalMerchant::alias('a')
             ->field(['a.id,a.name,a.contact,a.phone,b.partner_name'])
             ->join('cloud_agent_partner b','a.partner_id=b.id','left')
             ->join('cloud_order c','c.merchant_id=a.id','left')
@@ -186,7 +185,7 @@ class Index extends Controller
             ->select();
 //        dump($data);die;
         //取出商户支付宝和微信交易额交易量
-        foreach($data as &$v){
+        foreach($data['list'] as &$v){
             $where=[
                 'status'=>1,
                 'pay_type'=>'alipay',
@@ -229,7 +228,7 @@ class Index extends Controller
             ->where(['agent_id'=>$agent_id,'status'=>1])
             ->count();
         $pages=page($rows);
-        $data=TotalMerchant::alias('a')
+        $data['list']=TotalMerchant::alias('a')
             ->field('a.id,a.name,a.address,a.phone,b.partner_name')
             ->join('cloud_agent_partner b','a.partner_id=b.id','left')
             ->whereTime('a.opening_time','>=','yesterday')
@@ -255,7 +254,7 @@ class Index extends Controller
         $rows=TotalMerchant::where('agent_id',$agent_id)
             ->count();
         $pages=page($rows);
-        $data=TotalMerchant::alias('a')
+        $data['list']=TotalMerchant::alias('a')
             ->field('a.id,a.name,a.phone,a.address,a.contact,a.channel,a.opening_time,a.status,b.contact_person,b.agent_phone')
             ->join('cloud_total_agent b','a.agent_id=b.id','left')
             ->where('a.agent_id',$agent_id)
@@ -280,7 +279,7 @@ class Index extends Controller
             ->count();
         $pages=page($rows);
         //显示当前代理商下审核中的商户
-        $data=TotalMerchant::alias('a')
+        $data['list']=TotalMerchant::alias('a')
             ->field('a.id,a.name,a.phone,a.address,a.contact,a.channel,a.create_time,a.review_status,b.contact_person,b.agent_phone')
             ->join('cloud_total_agent b','a.agent_id=b.id','left')
             ->where(['a.review_status'=>['<>',3],'a.agent_id'=>['=',$agent_id]])
@@ -305,7 +304,7 @@ class Index extends Controller
             ->count();
         $pages=page($rows);
         //显示当前代理商下已驳回的商户
-        $data=TotalMerchant::alias('a')
+        $data['list']=TotalMerchant::alias('a')
             ->field('a.id,a.name,a.phone,a.address,a.contact,a.channel,a.create_time,a.rejected,b.contact_person,b.agent_phone')
             ->join('cloud_total_agent b','a.agent_id=b.id','left')
             ->where(['a.review_status'=>['=',3],'a.agent_id'=>['=',$agent_id]])
@@ -335,7 +334,7 @@ class Index extends Controller
             ->where('a.agent_id',$agent_id)
             ->count();
         $pages=page($rows);
-        $data=TotalMerchant::alias('a')
+        $data['list']=TotalMerchant::alias('a')
             ->field(['a.id,a.name,a.contact,a.phone,b.partner_name'])
             ->join($join)
             ->whereTime('pay_time','<=',$time)
@@ -385,7 +384,7 @@ class Index extends Controller
            ->count('a.id');
 
        $pages = page($rows);
-       $data=TotalMerchant::alias('a')
+       $data['list']=TotalMerchant::alias('a')
            ->field('a.name,a.abbreviation,a.contact,a.phone,cloud_order.received_money,cloud_order.cashier')
            ->join('cloud_order','a.id=cloud_order.merchant_id','left')
            ->where('a.abbreviation|a.contact|a.phone','like',"%$name%")
@@ -423,7 +422,7 @@ class Index extends Controller
             ->group('a.id')
             ->count('a.id');
         $pages = page($rows);
-        $data=TotalMerchant::alias('a')
+        $data['list']=TotalMerchant::alias('a')
             ->field('a.abbreviation,a.address,cloud_order.received_money,cloud_order.cashier')
             ->join('cloud_order','a.id=cloud_order.merchant_id','left')
             ->whereTime('cloud_order.pay_time','between',[$request->param('pay_time'),$request->param('yesterday')])
@@ -477,7 +476,7 @@ class Index extends Controller
             ->group('a.id')
             ->count('a.id');
         $pages = page($rows);
-        $data=TotalMerchant::alias('a')
+        $data['list']=TotalMerchant::alias('a')
             ->field('a.abbreviation,a.contact,a.phone,cloud_order.received_money,cloud_order.cashier,cloud_agent_partner.partner_name')
             ->join('cloud_order','a.id=cloud_order.merchant_id')
             ->join('cloud_agent_partner','a.partner_id=cloud_agent_partner.id')
@@ -535,7 +534,7 @@ class Index extends Controller
             ->count('a.id');
         $pages = page($rows);
 
-        $data=TotalMerchant::alias('a')
+        $data['list']=TotalMerchant::alias('a')
             ->field('a.contact,a.phone,a.status,a.opening_time,a.review_status,a.abbreviation,a.contact,a.phone,cloud_order.received_money,cloud_order.cashier,cloud_agent_partner.partner_name')
             ->join('cloud_order','a.id=cloud_order.merchant_id')
             ->join('cloud_agent_partner','a.partner_id=cloud_agent_partner.id')
@@ -593,7 +592,7 @@ class Index extends Controller
             ->count('a.id');
         $pages = page($rows);
 
-        $data=TotalMerchant::alias('a')
+        $data['list']=TotalMerchant::alias('a')
             ->field('a.abbreviation,a.contact,a.phone,cloud_order.received_money,cloud_order.cashier')
             ->join('cloud_order','a.id=cloud_order.merchant_id','left')
             ->where('a.abbreviation|a.contact|a.phone','like',"%$name%")
@@ -654,7 +653,7 @@ class Index extends Controller
         ])
             ->count('id');
         $pages = page($rows);
-        $data=Db::name('total_agent')->where([
+        $data['list']=Db::name('total_agent')->where([
             'parent_id'=>[$symbol,$parent_id],
             'agent_area'=>[$agent_ateabol,$agent_area],
             'status'=>[$statusbol,$status]
@@ -698,7 +697,7 @@ class Index extends Controller
             ->count('id');
         $pages = page($rows);
 
-        $data=Db::name('total_merchant')
+        $data['list']=Db::name('total_merchant')
             ->where(['abbreviation|contact|phone'=>['like',"%$name%"],
                 'status'=>[$status_symbol,$status],'agent_id'=>['eq',$agent_id]])
             ->field(['id','agent_name','address','status','abbreviation','opening_time'])

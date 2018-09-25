@@ -22,13 +22,13 @@ class Merchant extends Incom
         //获取总行数
         $rows=TotalMerchant::where('agent_id',$agent_id)->count();
         $pages=page($rows);
-        $data=TotalMerchant::alias('a')
+        $data['list'] = TotalMerchant::alias('a')
             ->field('a.id,a.name,a.phone,a.address,a.contact,a.channel,a.opening_time,a.status,a.review_status,b.partner_name')
             ->join('cloud_agent_partner b','a.partner_id=b.id','left')
             ->where('a.agent_id',$agent_id)
             ->limit($pages['offset'],$pages['limit'])
             ->select();
-        $data['pages']=$pages;
+        $data['pages'] = $pages;
         return_msg(200,'success',$data);
     }
     /**
@@ -53,7 +53,7 @@ class Merchant extends Incom
             ->where($where)
             ->count();
         $pages=page($rows);
-        $data=TotalMerchant::alias('a')
+        $data['list']=TotalMerchant::alias('a')
             ->field('a.id,a.name,a.phone,a.address,a.contact,a.channel,a.opening_time,a.status,b.contact_person,b.agent_phone')
             ->join('cloud_total_agent b','a.agent_id=b.id','left')
             ->where($where)
@@ -84,7 +84,7 @@ class Merchant extends Incom
             ->where($where)
             ->count();
         $pages=page($rows);
-        $data=TotalMerchant::alias('a')
+        $data['list']=TotalMerchant::alias('a')
             ->field('a.id,a.name,a.phone,a.address,a.contact,a.opening_time,a.status,b.contact_person,b.agent_phone')
             ->join('cloud_total_agent b','a.agent_id=b.id','left')
             ->where($where)
@@ -113,7 +113,7 @@ class Merchant extends Incom
             ->where($where)
             ->count();
         $pages=page($rows);
-        $data=TotalMerchant::alias('a')
+        $data['list']=TotalMerchant::alias('a')
             ->field('a.id,a.name,a.phone,a.address,a.contact,a.opening_time,a.status,b.contact_person,b.agent_phone')
             ->join('cloud_total_agent b','a.agent_id=b.id','left')
             ->where($where)
@@ -140,7 +140,7 @@ class Merchant extends Incom
         ];
         $rows=TotalMerchant::where($where)->count();
         $pages=page($rows);
-        $data=TotalMerchant::alias('a')
+        $data['list']=TotalMerchant::alias('a')
             ->field('a.id,a.name,a.phone,a.address,a.contact,a.rejected,a.opening_time,a.status,b.contact_person,b.agent_phone')
             ->join('cloud_total_agent b','a.agent_id=b.id','left')
             ->where($where)

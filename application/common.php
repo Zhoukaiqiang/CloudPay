@@ -346,5 +346,39 @@ if (!function_exists('upload_pics')) {
     }
 }
 
+/**
+ * 发送短信到手机
+ * @param $phone
+ * @param $msg
+ */
+function send_msg_to_phone($phone, $msg)
+{
+    $curl = curl_init();
+
+    curl_setopt($curl, CURLOPT_URL, 'https://api.mysubmail.com/message/xsend.json');
+    //curl_setopt($curl, CURLOPT_HEADER, 0);
+    curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
+    //post数据
+    curl_setopt($curl, CURLOPT_POST, 1);
+    //配置submail
+    $data = [
+        'appid' => '27075', //应用id
+        'to'  => $phone,     //要接受短信的电话
+        'project' => 'Jaayb', //模板标识
+        'vars'  => "{'code': '".$msg."'}",
+        'signature' => '5ac305ef38fb126d2a0ec5304040ab7d', //应用签名
+    ];
+
+    curl_setopt($curl, CURLOPT_POSTFIELDS, $data);
+    $res = curl_exec($curl);
+    curl_close($curl);
+    $res = json_decode($res);
+    if($res->status !== 'success') {
+        return false;
+    }else {
+        return true;
+    }
+
+}
 
 

@@ -210,7 +210,7 @@ class Capital extends Controller
             ->count("c.id");
         $pages = page($rows);
 
-        $res = Db::name('total_capital')->alias("c")
+        $res['list'] = Db::name('total_capital')->alias("c")
             ->join("cloud_total_agent a", "c.agent_id = a.id")
             ->field("a.agent_name,a.contact_person,a.agent_phone,a.agent_area,c.date,c.settlement_money,c.settlement_start,c.settlement_end,c.description,c.account,c.invoice")
             ->where([
