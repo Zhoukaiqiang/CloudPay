@@ -307,10 +307,22 @@ class User extends Common
         /** 跳转 */
         // $this->redirect('http://thinkphp.cn/blog/2',302);
         //  setInc 让某个字段自增 setDec 自减 setField 更新一个字段 update  更新多个字段
-        $res = TotalAdmin::insert();
+//        $res = TotalAdmin::insert(1);
+//
+//        dump($res->id);
 
-        dump($res->id);
-
+    }
+    public function insert_data($db,$data) {
+        $d = [];
+        $i = 1;
+        while ($i < 20) {
+            $d[$i] = [
+                $data
+            ];
+            $i++;
+        }
+        $result = Db::table($db)->insertAll($d);
+        dump($result);
     }
 
 }

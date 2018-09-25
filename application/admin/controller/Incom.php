@@ -6,104 +6,344 @@ use app\admin\model\MerchantIncom;
 use app\admin\model\TotalMerchant;
 use think\Controller;
 use think\Db;
+use think\Exception;
 use think\Request;
 
 class Incom extends Controller
 {
+
     public $url='https://gateway.starpos.com.cn/emercapp';
 
 
+
     /**
-     * 商户查询
-     *
-     * @return \think\Response
+     * 验证签名域是否正确
+     * @param $old_sign
+     * @param $res
+     * @return bool
+     * @return string
      */
-//    public function merchant_query(Request $request)
-//    {
-//        //apam:value1, Cpam:value2, bpam:Value3
-//        /*$data=[
-//            'apam'=>'value1',
-//            'cpam'=>'value2',
-//            'bpam'=>'Value3'
-//        ];
-//        $info=get_sign($data);
-//        dump($info);die;*/
-//       /* $data=$request->param();
-//        //生成签名
-//        $signValue=get_sign($data);
-//        $where=[
-//            'serviceId'=>$data['serviceId'],
-//            'version'=>$data['version'],
-//            'mercId'=>$data['mercId'],
-//            'orgNo'=>$data['orgNo']
-//        ];*/
-//        $info=MerchantIncom::where($where)->find();
-//        //发给第三方
-//        $merchant_id=1;
-//        $data=MerchantIncom::where('merchant_id',1)->field('serviceId,version,mercId,orgNo')->find();
-//    }
+    protected function check_sign_value($query_sign, Array $res)
+    {
+        if ($query_sign !== sign_ature(1111, $res)) {
+            return_msg(400, "签名域不正确");
+
+        } elseif ($res['msg_cd'] !== "000000") {
+            return_msg(400, "操作失败!");
+        } else {
+            return true;
+        }
+    }
+
+    /**
+     * 验证成功更新数据库
+     * @param $where
+     * @param $data
+     * @return string msg
+     */
+    protected function insert_to_incom_table($table,$where, $data)
+    {
+
+        $result = Db::table($table)->where($where)->save($data);
+        if ($result) {
+            /** 返回消息 */
+            return_msg(200, "操作成功", $result);
+        } else {
+            return_msg(400, "操作失败");
+        }
+    }
+
+    /**
+     * 商户查询 2.1
+     *
+     * @param array    [    *参数名            *类型     *描述
+     *                     'merchant_id'  =>  int      商户ID
+     *                     'mercId'   =>   string      商户识别号（15位数字）
+     *                     'orgNo'   =>   string       机构号
+     *                 ]
+     * @description array  {
+     *                      "check_flag"  : "string"          审核结果 1-通过 2-驳回 3-转人工
+     *                      "msg_cd"      : "string"          返回码   000000 成功
+     *                      "msg_dat"     : "string"          返回信息
+     *                      "mercId"      : "string"          商户识别号
+     *                      "signValue"   : "string"          签名域
+     *                      "key"         : "string"          商户密钥
+     *                      **如果check_flag=1
+     *                      "trmNo"       : "string"          设备号
+     *                      "stoe_id"     : "string"          门店号
+     *                }
+     * @throws Exception
+     * @return NULL
+     */
+    public function merchant_query(Request $request)
+    {
+        $merchant_id = $request->param('merchant_id');
+        if (empty($merchant_id)) {
+            return false;
+        }
+        $arr = MerchantIncom::where("merchant_id = $merchant_id")->field(["mercId", "orgNo"])->select();
+        //mark
+        /**  查询参数 */
+        $query = [
+            'serviceId' => "6060300", //交易码
+            'version' => "V1.0.1",
+            'mercId' => $arr['mercId'], //商户识别号（15 位数字）
+            'orgNo' => $arr['orgNo'], //机构号
+        ];
+
+        /** 得到当前请求的签名，用于和返回参数验证 */
+        $query['signValue'] = sign_ature(0000, $query);
+
+        /** 获取返回结果 */
+        $res = curl_request($this->url, true, $query, true);
+        /** json转成数组 */
+        $res = json_decode($res, true);
+
+        $check = $this->check_sign_value($query['signValue'], $res);
+
+        if ($check == true) {
+            /** 条件验证成功 更新数据库 */
+            $where = [
+                'merchant_id' => $merchant_id,
+                "mercId" => $res['mercId'],
+            ];
+            $prev_update_data = [
+                "trmNo" => $res['trmNo'],
+                "stoe_id" => $res['stoeNo'],
+            ];
+            $this->insert_to_incom_table('cloud_merchant_incom', $where, $prev_update_data);
+        }
 
 
+    }
+
+
+    /**
+     * MCC查询 2.2
+     * @param array    [    *参数名            *类型     *描述
+     *                     'merchant_id'  =>  int      商户ID
+     *                     'orgNo'   =>   string       合作商机构号
+     *                 ]
+     * @description  array{
+     *                      "mcc_cd"      : "string"        MCC 码
+     *                      "mcc_nm"      : "string"        MCC 名称
+     *                      "sup_mcc_cd"  : "string"        MCC 大类
+     *                      "sup_mcc_nm"  : "string"        MCC 大类名称
+     *                      "mcc_typ"     : "string"        MCC 小类
+     *                      "mcc_typ_nm"  : "string"        MCC 小类名称
+     *                }
+     * @throws Exception
+     * @return NULL
+     *
+     */
+    public function merchant_MCC(Request $request)
+    {
+
+        $id = $request->param('id');
+        if (empty($id)) {
+            return false;
+        }
+        $arr = MerchantIncom::where("merchant_id = $id")->field("orgNo")->find();
+
+        $query = [
+            'serviceId' => "6060203",
+            'version' => "V1.0.1",
+            'orgNo' => $arr->getData("orgNo"),
+        ];
+        $query['signValue'] = sign_ature(0000, $query);
+
+        $res = curl_request($this->url, true, $query, true);
+
+        /** json转成数组 */
+        $res = json_decode($res, true);
+
+        $check = $this->check_sign_value($query['signValue'], $res);
+
+        if ($check === true) {
+            $where = [
+                "merchant_id" => $id,
+                "mercId" => $res['mercId'],
+            ];
+            $data = [
+                'mcc_cd' => $res['mcc_cd'],
+                'mcc_nm' => $res['mcc_nm'],
+                'sup_mcc_cd' => $res['sup_mcc_cd'],
+                'sup_mcc_nm' => $res['sup_mcc_nm'],
+                'mcc_typ' => $res['mcc_typ'],
+                'mcc_typ_nm' => $res['mcc_typ_nm'],
+            ];
+            /** 检验无误插入数据库 */
+            $this->insert_to_incom_table("cloud_merchant_incom", $where, $data);
+        }
+
+    }
+
+    /**
+     * 区域码查询
+     * @param Request $request
+     * @return bool
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function merchant_area_code(Request $request)
+    {
+        $id = $request->param("merchant_id");
+        if (empty($id)) {
+            return false;
+        }
+        $arr = Db::name("area_code")->where("merchant_id = $id")->field("orgNo,prov_nm,city_nm")->find();
+        $query = [
+            'serviceId' => "6060206",
+            'version' => "V1.0.1",
+            'orgNo' => $arr->getData("orgNo"),
+            'prov_nm' => $arr->getData("prov_nm"),
+            'city_nm' => $arr->getData("city_nm"),
+        ];
+        $query['signValue'] = sign_ature(0000, $query);
+
+        $res = curl_request($this->url, true, $query, true);
+
+        /** json转成数组 */
+        $res = json_decode($res, true);
+        $check = $this->check_sign_value($query['signValue'], $res);
+
+        if ($check === true) {
+            $where = [
+                "merchant_id" => $id,
+            ];
+            /** @var array 要更新/插入的数据 $data */
+            $data = [
+                'merc_area' => $res['merc_area'],
+                'area_nm' => $res['area_nm'],
+                'merc_prov' => $res['merc_prov'],
+                'prov_nm' => $res['prov_nm'],
+                'merc_city' => $res['merc_city'],
+                'city_nm' => $res['city_nm'],
+            ];
+            /** 检验无误插入数据库 */
+            $this->insert_to_incom_table("cloud_area_code",$where, $data);
+        }
+
+    }
+
+
+    public function bank_query(Request $request) {
+
+
+        $arr = $request->param();
+        $id = $request->param("merchant_id");
+        if (empty($id)) {
+            return false;
+        }
+        $result = MerchantIncom::where("merchant_id=$id")->field("orgNo")->find();
+        $query = [
+            'serviceId' => "6060208",
+            'version' => "V1.0.1",
+            'lbnk_nm' => $arr['lbnk_nm'],  //最少输入不低于5个字
+            'orgNo' => $result->getData('orgNo'),
+        ];
+        $query['signValue'] = sign_ature(0000, $query);
+
+        $res = curl_request($this->url, true, $query, true);
+
+        /** json转成数组 */
+        $res = json_decode($res, true);
+        $check = $this->check_sign_value($query['signValue'], $res);
+
+        $data['wc_lbnk_no'] = $res['wc_lbnk_no'];
+        $data['lbnk_nm'] = $res['lbnk_nm'];
+        if ($check === true) {
+            return_msg(200,"查询成功",$data);
+        }
+    }
     /**
      * 商户进件
      *
      * @return \think\Response
      *
      */
-    public function merchant_incom(Request $request)
+    public function merchant_incom($insert_id)
     {
-        $data=$request->post();
-        $data['serviceId']=6060601;
-        $data['version']='V1.0.3';
+        $data = MerchantIncom::where('merchant_id', $insert_id)->find();
+//        $data=request()->post();
+        $data['serviceId'] = 6060601;
+        $data['version'] = 'V1.0.3';
         //获取商户id
-        $data['merchant_id']=1;
-        $info=MerchantIncom::insert($data);
-        $data['signValue']=sign_ature(0000,$data);
+//        $data['merchant_id']=1;
+//        $info=MerchantIncom::insert($data);
+        $data['signValue'] = sign_ature(0000, $data);
 //        var_dump(json_encode($data));die;
-        if($info){
-            //发送给新大陆
-            $result=curl_request($this->url,true,$data,true);
-            $result=json_decode($result,true);
-            $signValue=sign_ature(1111,$result);
-            if($result['msg_cd']=='000000' && $result['signValue']==$signValue){
-                //审核通过
-                //跟新数据库
-                $arr['log_no']=$result['log_no'];
-                $arr['mercId']=$result['mercId'];
-                $arr['stoe_id']=$result['stoe_id'];
-                $res=MerchantIncom::where('merchant_id',$data['merchant_id'])->update($arr,true);
-                if($res){
-                    return_msg(200,'success',$result['msg_dat']);
-                }else{
-                    return_msg(400,'failure');
-                }
+//        if ($info) {
+//        dump($data);die;
+//        var_dump(json_encode($data));die;
+//        if($info){
+        //发送给新大陆
+        $result = curl_request($this->url, true, $data, true);
+        $result = json_decode($result, true);
+        $signValue = sign_ature(1111, $result);
+        if ($result['msg_cd'] == '000000' && $result['signValue'] == $signValue) {
+            //审核通过
+            //跟新数据库
+            $arr['log_no'] = $result['log_no'];
+            $arr['mercId'] = $result['mercId'];
+            $arr['stoe_id'] = $result['stoe_id'];
+            $res = MerchantIncom::where('merchant_id', $insert_id)->update($arr, true);
+            if ($res) {
+                //返回商户自增id
+                $a = [
+                    'msg_dat' => $result['msg_dat'],
+                    'insert_id' => $insert_id
+                ];
+                return_msg(200, 'success', $a);
+//                    return $result['msg_dat'];
+            } else {
+                return_msg(400, 'failure');
             }
-        }else{
-            return_msg(400,'failure');
+        } else {
+            //审核未通过
+            return_msg(400, 'failure', $result['msg_dat']);
         }
+//        }else{
+//            return_msg(400,'failure');
+//        }
+//    }
     }
+
 
     /**
      * 商户提交
      *
-     * @param  \think\Request  $request
+     * @param  \think\Request $request
      * @return \think\Response
      */
     public function merchant_create(Request $request)
     {
-        $merchant_id=1;
+        $insert_id=request()->post('insert_id');
+        $insert_id=3;
         //取出数据表中数据
-        $data=MerchantIncom::where('merchant_id',$merchant_id)->field('serviceId,version,mercId,log_no,orgNo')->find();
+        $data=MerchantIncom::where('merchant_id',$insert_id)->field('mercId,log_no,orgNo')->find();
+        $data['serviceId']='6060603';
+        $data['version']='V1.0.1';
+        $data=$data->toArray();
+//        dump($data);die;
         $data['signValue']=sign_ature(0000,$data);
         $result=curl_request($this->url,true,$data,true);
         $result=json_decode($result,true);
-        if($result['msg_cd']==000000){
-            //修改数据表状态
-            $res=MerchantIncom::where('merchant_id',$merchant_id)->update(['check_flag'=>$result['check_flag']]);
-            if($res){
-                return_msg(200,'success',$result['msg_dat']);
+        //生成签名
+//        dump($result);die;
+        $signValue=sign_ature(1111,$result);
+        if($result['msg_cd']==000000 && $signValue==$result['signValue']){
+            if(isset($result['check_flag'])){
+                //修改数据表状态
+                $res=MerchantIncom::where('merchant_id',$insert_id)->update(['check_flag'=>$result['check_flag']]);
+                if($res){
+                    return_msg(200,'success');
+                }else{
+                    return_msg(400,'failure');
+                }
             }else{
-                return_msg(400,'failure');
+                return_msg(400,'failure',$result['msg_dat']);
             }
         }
     }
@@ -111,54 +351,137 @@ class Incom extends Controller
     /**
      * 图片上传
      *
-     * @param  int  $id
+     * @param  int $id
      * @return \think\Response
      */
     public function img_upload(Request $request)
     {
-        $merchant_id=1;
+//        $insert_id=3;
         $info=$request->post();
-        dump($info);die;
+        $info['insert_id']=4;
         //取出当前商户信息
-        $data=MerchantIncom::where('merchant_id',$merchant_id)->field('serviceId,version,mercId,orgNo,log_no,stoe_id')->find();
-        $data['imgTyp']=$info['imgTyp'];
+        $data=MerchantIncom::where('merchant_id',$info['insert_id'])->field('mercId,orgNo,log_no,stoe_id')->find();
+        $data['serviceId']='6060606';
+        $data['version']='V1.0.1';
+//        $data['imgTyp']=$info['imgTyp'];
         $data['imgNm']=$info['imgNm'];
-        $img=$this->upload_logo();
-        $img=json_encode($img);
-        $data['imgFile']=$img;
+        $data=$data->toArray();
+        $files=request()->file('imgFile');
+//        $data['imgFile']=bin2hex($files);
+//        dump($data);die;
+//        $this->send($data);
+//        dump($data);die;
+        //将图片存入数据库
+        $img=upload_logo($files);
+        $data['imgFile']=json_encode($img);
+        MerchantIncom::where('merchant_id',$info['insert_id'])->update(['imgFile'=>$data['imgFile'],'imgNm'=>$data['imgNm']]);
+        $arr=[];
+        foreach($files as $k=>$v){
+            //$k==图片类型
+            if($k==1){
+                //营业执照
+                $data['imgTyp']=1;
+                $data['imgFile']=bin2hex($v);
+                $arr[]=$this->send($data);
+            }elseif($k==4){
+                //法人身份证正面
+                $data['imgTyp']=4;
+                $data['imgFile']=bin2hex($v);
+                $arr[]=$this->send($data);
+            }elseif($k==5){
+                //法人身份证反面
+                $data['imgTyp']=5;
+                $data['imgFile']=bin2hex($v);
+                $arr[]=$this->send($data);
+            }elseif($k==14){
+                //协议
+                $data['imgTyp']=14;
+                $data['imgFile']=bin2hex($v);
+                $arr[]=$this->send($data);
+            }elseif($k==15){
+                //商户信息表
+                $data['imgTyp']=15;
+                $data['imgFile']=bin2hex($v);
+                $arr[]=$this->send($data);
+            }elseif($k==6){
+                //门头照
+                $data['imgTyp']=6;
+                $data['imgFile']=bin2hex($v);
+                $arr[]=$this->send($data);
+            }elseif($k==8){
+                //收银台照
+                $data['imgTyp']=8;
+                $data['imgFile']=bin2hex($v);
+                $arr[]=$this->send($data);
+            }elseif($k==2){
+                //经营内容照
+                $data['imgTyp']=2;
+                $data['imgFile']=bin2hex($v);
+                $arr[]=$this->send($data);
+            }elseif($k==9){
+                //结算人身份证正面（同法人）
+                $data['imgTyp']=9;
+                $data['imgFile']=bin2hex($v);
+                $arr[]=$this->send($data);
+            }elseif($k==10){
+                //结算人身份证反面（同法人）
+                $data['imgTyp']=10;
+                $data['imgFile']=bin2hex($v);
+                $arr[]=$this->send($data);
+            }elseif($k==3){
+                //开户许可证
+                $data['imgTyp']=3;
+                $data['imgFile']=bin2hex($v);
+                $arr[]=$this->send($data);
+            }elseif($k==11){
+                //银行卡照
+                $data['imgTyp']=11;
+                $data['imgFile']=bin2hex($v);
+                $arr[]=$this->send($data);
+            }elseif($k==16){
+                //授权结算书
+                $data['imgTyp']=16;
+                $data['imgFile']=bin2hex($v);
+                $arr[]=$this->send($data);
+            }
+        }
+        if(in_array(200,$arr)){
+            return_msg(200,'success',['insert_id',$info['insert_id']]);
+        }else{
+            return_msg(400,'图片上传失败');
+        }
+//        $img=json_encode($img);
+//        $data['imgFile']=bin2hex($files);
 //        $data=MerchantIncom::where('merchant_id',$merchant_id)->update($info);
+
+    }
+
+    /**
+     * 图片上传消息发送接口
+     *
+     * @param  int $id
+     * @return \think\Response
+     */
+    public function send($data)
+    {
         //获取签名
         $data['signValue']=sign_ature(0000,$data);
         //发送给新大陆
         $result=json_decode(curl_request($this->url,true,$data,true),true);
-        if($result['msg_cd']=='000000'){
-            $res=MerchantIncom::where('merchant_id',$merchant_id)->update($data);
-            if($res){
-                return_msg(200,'success',$result['msg_dat']);
-            }else{
-                return_msg(400,'failure');
-            }
+        //生成签名
+        $signValue=sign_ature(1111,$result);
+        if($result['msg_cd']=='000000' && $result['signValue']==$signValue){
+            return 200;
         }else{
-            return_msg(400,'failure');
+            return 400;
         }
-    }
-
-    /**
-     * 显示编辑资源表单页.
-     *
-     * @param  int  $id
-     * @return \think\Response
-     */
-    public function edit($id)
-    {
-        //
     }
 
     /**
      * 保存更新的资源
      *
-     * @param  \think\Request  $request
-     * @param  int  $id
+     * @param  \think\Request $request
+     * @param  int $id
      * @return \think\Response
      */
     public function update(Request $request, $id)
@@ -169,13 +492,14 @@ class Incom extends Controller
     /**
      * 删除指定资源
      *
-     * @param  int  $id
+     * @param  int $id
      * @return \think\Response
      */
     public function delete($id)
     {
         //
     }
+
 
     /**
      * 商户修改申请

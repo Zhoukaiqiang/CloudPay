@@ -21,7 +21,7 @@ class Payment extends Controller
         $id=$request->param('id');
         $serviceId=6060605;
         $version='v1.0.1';
-        $data=Db::name('merchant_store')->where('merchant_id',$id)->field('mercId,orgNo')->select();
+        $data=Db::name('merchant_incom')->where('merchant_id',$id)->field('mercId,orgNo')->select();
         $resul=md5($serviceId.$version.$data[0]['mercId'].$data[0]['orgNo'].'AFDFAASDASDAS');
 
         $arr=['serviceId'=>$serviceId,'version'=>$version,'mercId'=>$data[0]['mercId'],'orgNo'=>$data[0]['orgNo'],'signValue'=>$resul];
@@ -30,7 +30,7 @@ class Payment extends Controller
 
        $bbntu=json_decode($par);
        if($bbntu['msg_cd']===000000 && $data[0]['mercId']==$bbntu['mercId']){
-            $statu=Db::table('merchant_store')->where('merchant_id',$id)->update(['store_sn'=>$bbntu['stoe_id'],'log_no'=>$bbntu['log_no'],'status'=>1]);
+            $statu=Db::table('merchant_incom')->where('merchant_id',$id)->update(['store_sn'=>$bbntu['stoe_id'],'log_no'=>$bbntu['log_no'],'status'=>1]);
             return_msg(200,'商户修改申请成功');
        }else{
            return_msg(400,'商户修改申请失败');
@@ -44,7 +44,7 @@ class Payment extends Controller
 //
 //        $aa['serviceId']=6060604;
 //        $aa['version']='V1.0.1';
-//        $data=Db::name('merchant_store')->where('merchant_id',$del['merchant_id'])->field('log_no,mercId,store_sn')->select();
+//        $data=Db::name('merchant_incom')->where('merchant_id',$del['merchant_id'])->field('log_no,mercId,store_sn')->select();
 //        $aa=[];
 //        foreach ($data as $k=>$v)
 //        {

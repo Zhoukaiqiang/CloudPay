@@ -19,17 +19,17 @@ class Agent extends Controller
      */
     public function index()
     {
-            //获取总行数
-            $rows=TotalAgent::count();
-            $pages=page($rows);
-            //取出数据表中的数据
-            $data['data']=TotalAgent::alias('a')
-                ->field('a.id,a.agent_name,a.contact_person,a.agent_mode,a.agent_area,a.create_time,a.contract_time,a.status,b.name')
-                ->join('cloud_total_admin b','a.admin_id=b.id','left')
-                ->limit($pages['offset'],$pages['limit'])
-                ->select();
-            $data['pages']=$pages;
-            return_msg('200','success',$data);
+        //获取总行数
+        $rows = TotalAgent::count();
+        $pages = page($rows);
+        //取出数据表中的数据
+        $data['data'] = TotalAgent::alias('a')
+            ->field('a.id,a.agent_name,a.contact_person,a.agent_mode,a.agent_area,a.create_time,a.contract_time,a.status,b.name')
+            ->join('cloud_total_admin b', 'a.admin_id=b.id', 'left')
+            ->limit($pages['offset'], $pages['limit'])
+            ->select();
+        $data['pages'] = $pages;
+        return_msg('200', 'success', $data);
     }
 
     /**
@@ -40,15 +40,15 @@ class Agent extends Controller
      */
     public function add()
     {
-        if(request()->isPost()) {
+        if (request()->isPost()) {
             $data = request()->post();
             //验证
-            $validate=Loader::validate('Adminvalidate');
-            if($validate->scene('add')->check($data)){
+            $validate = Loader::validate('Adminvalidate');
+            if ($validate->scene('add')->check($data)) {
                 //上传图片
                 $data['contract_picture'] = $this->upload_logo();
                 $data['contract_picture'] = json_encode($data['contract_picture']);
-    //            $data['contract_time']=strtotime($data['contract_time']);
+                //            $data['contract_time']=strtotime($data['contract_time']);
                 //保存到数据表
                 $info = TotalAgent::create($data, true);
                 if ($info) {
@@ -58,17 +58,17 @@ class Agent extends Controller
                     //保存失败
                     return_msg('400', '保存失败');
                 }
-            }else{
-                 $error=$validate->getError();
-                 return_msg(400,'failure',$error);
-             }
-        }else{
+            } else {
+                $error = $validate->getError();
+                return_msg(400, 'failure', $error);
+            }
+        } else {
             //取出所有人员信息
-            $data['data']=TotalAdmin::field(['id','name','role_id'])->select();
+            $data['data'] = TotalAdmin::field(['id', 'name', 'role_id'])->select();
             //取出所有一级代理商名称
-            $info=TotalAgent::where('parent_id',0)->field('agent_name')->select();
-            $data['agent']=$info;
-            return_msg(200,'success',$data);
+            $info = TotalAgent::where('parent_id', 0)->field('agent_name')->select();
+            $data['agent'] = $info;
+            return_msg(200, 'success', $data);
         }
     }
 
@@ -83,43 +83,51 @@ class Agent extends Controller
     public function detail(Request $request)
     {
         //
-        if(request()->isPost()){
-            $data=$request->post();
+        if (request()->isPost()) {
+            $data = $request->post();
             //验证
-            $validate=Loader::validate('Adminvalidate');
-            if(!$validate->scene('detail')->check($data)){
-                $error=$validate->getError();
-                return_msg(400,'failure',$error);
+            $validate = Loader::validate('Adminvalidate');
+            if (!$validate->scene('detail')->check($data)) {
+                $error = $validate->getError();
+                return_msg(400, 'failure', $error);
             }
             //上传图片
             //如果没有上传图片用原来的图片
-            $file=$request->file('contract_picture');
-            if(!empty($file)){
-                $data['contract_picture']=$this->upload_logo();
-                $data['contract_picture']=json_encode($data['contract_picture']);
+            $file = $request->file('contract_picture');
+            if (!empty($file)) {
+                $data['contract_picture'] = $this->upload_logo();
+                $data['contract_picture'] = json_encode($data['contract_picture']);
             }
 //            $data['contract_time']=strtotime($data['contract_time']);
             //保存到数据表
-            $info=TotalAgent::where('id','=',$data['id'])->update($data,true);
-            if($info){
+            $info = TotalAgent::where('id', '=', $data['id'])->update($data, true);
+            if ($info) {
                 //保存成功
-                return_msg('200','修改成功',$info);
-            }else{
+                return_msg('200', '修改成功', $info);
+            } else {
                 //保存失败
-                return_msg('400','修改失败');
+                return_msg('400', '修改失败');
             }
-        }else{
-            $id=request()->param('id');
-            $data=TotalAgent::where('id',$id)->find();
-            $data['contract_picture']=json_decode($data['contract_picture']);
+        } else {
+            $id = request()->param('id');
+            $data = TotalAgent::where('id', $id)->find();
+
+            $pic_list = json_decode($data->getData()['contract_picture']);
+            $contract_list = [];
+            foreach ($pic_list as $k => $v) {
+                $contract_list[$k] = [
+                    "url" => $v
+                ];
+            }
+            $data['contract_picture'] = $contract_list;
             //取出所有人员信息
-            $admin=TotalAdmin::field(['id','name','role_id'])->select();
+            $admin = TotalAdmin::field(['id', 'name', 'role_id'])->select();
             //取出所有一级代理
-            $info=TotalAgent::where('parent_id',0)->field('agent_name')->select();
-            $data['admin']=$admin;
-            $data['agent']=$info;
+            $info = TotalAgent::where('parent_id', 0)->field('agent_name')->select();
+            $data['admin'] = $admin;
+            $data['agent'] = $info;
 //            dump($data);die;
-            return_msg(200,'success',$data);
+            return_msg(200, 'success', $data);
         }
     }
 
@@ -132,12 +140,12 @@ class Agent extends Controller
     public function open(Request $request)
     {
         //获取商户id
-        $id=$request->param('id');
+        $id = $request->param('id');
         //修改商户状态
-        $result=TotalAgent::where('id',$id)->update(['status'=>1]);
-        if($result){
-            return_msg(200,"启用成功");
-        }else {
+        $result = TotalAgent::where('id', $id)->update(['status' => 1]);
+        if ($result) {
+            return_msg(200, "启用成功");
+        } else {
             return_msg(400, "启用失败");
         }
     }
@@ -151,12 +159,12 @@ class Agent extends Controller
     public function stop(Request $request)
     {
         //获取商户id
-        $id=$request->param('id');
+        $id = $request->param('id');
         //修改商户状态
-        $result=TotalAgent::where('id',$id)->update(['status'=>0]);
-        if($result){
-            return_msg(200,"已停用");
-        }else {
+        $result = TotalAgent::where('id', $id)->update(['status' => 0]);
+        if ($result) {
+            return_msg(200, "已停用");
+        } else {
             return_msg(400, "停用失败");
         }
     }
@@ -164,32 +172,33 @@ class Agent extends Controller
     /**
      * 删除代理商
      *
-     * @param  int  $id
+     * @param  int $id
      * @return \think\Response
      */
     public function delete($id)
     {
-        $result=TotalAgent::destroy($id);
-        if($result){
+        $result = TotalAgent::destroy($id);
+        if ($result) {
             //删除成功
-            $this->success('删除成功','index');
+            $this->success('删除成功', 'index');
         }
     }
 
     //上传图片
-    private function upload_logo(){
-        $files=request()->file('contract_picture');
-        $goods_pics=[];
-        foreach($files as $file){
-            $info=$file->validate(['size'=>5*1024*1024,'ext'=>'jpg,jpeg,gif,png'])->move(ROOT_PATH.'public'.DS.'uploads');
-            if($info){
+    private function upload_logo()
+    {
+        $files = request()->file('contract_picture');
+        $goods_pics = [];
+        foreach ($files as $file) {
+            $info = $file->validate(['size' => 5 * 1024 * 1024, 'ext' => 'jpg,jpeg,gif,png'])->move(ROOT_PATH . 'public' . DS . 'uploads');
+            if ($info) {
                 //图片上传成功
-                $goods_logo=DS.'uploads'.DS.$info->getSaveName();
-                $goods_logo=str_replace('\\','/',$goods_logo);
-                $goods_pics[]=$goods_logo;
-            }else{
-                $error=$info->getError();
-                return_msg(400,$error);
+                $goods_logo = DS . 'uploads' . DS . $info->getSaveName();
+                $goods_logo = str_replace('\\', '/', $goods_logo);
+                $goods_pics[] = $goods_logo;
+            } else {
+                $error = $info->getError();
+                return_msg(400, $error);
             }
         }
         return $goods_pics;
