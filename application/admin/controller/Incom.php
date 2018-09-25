@@ -11,7 +11,7 @@ use think\Request;
 
 class Incom extends Controller
 {
-    public $url = 'https://gateway.starpos.com.cn/emercapp';
+    public $url = 'http://sandbox.starpos.com.cn/emercapp';
 //    public $url = 'http://sandbox.starpos.com.cn/emercapp';
 
 
@@ -262,18 +262,19 @@ class Incom extends Controller
      * @return \think\Response
      *
      */
-    public function merchant_incom($insert_id)
+    public function merchant_incom()
     {
-        $data = MerchantIncom::where('merchant_id', $insert_id)->find();
-//        $data=request()->post();
+//        $data = MerchantIncom::where('merchant_id', $insert_id)->find();
+        $data=request()->post();
         $data['serviceId'] = 6060601;
         $data['version'] = 'V1.0.3';
         //获取商户id
-//        $data['merchant_id']=1;
-//        $info=MerchantIncom::insert($data);
+        $data['merchant_id']=11;
+//        dump($data);die;
+        $info=MerchantIncom::insert($data);
         $data['signValue'] = sign_ature(0000, $data);
+//        dump($data);die;
 //        var_dump(json_encode($data));die;
-//        if ($info) {
 //        dump($data);die;
 //        var_dump(json_encode($data));die;
 //        if($info){
@@ -287,12 +288,12 @@ class Incom extends Controller
             $arr['log_no'] = $result['log_no'];
             $arr['mercId'] = $result['mercId'];
             $arr['stoe_id'] = $result['stoe_id'];
-            $res = MerchantIncom::where('merchant_id', $insert_id)->update($arr, true);
+            $res = MerchantIncom::where('merchant_id', $data['merchant_id'])->update($arr, true);
             if ($res) {
                 //返回商户自增id
                 $a = [
                     'msg_dat' => $result['msg_dat'],
-                    'insert_id' => $insert_id
+//                    'insert_id' => $insert_id
                 ];
                 return_msg(200, 'success', $a);
 //                    return $result['msg_dat'];
@@ -319,7 +320,7 @@ class Incom extends Controller
     public function merchant_create(Request $request)
     {
         $insert_id=request()->post('insert_id');
-        $insert_id=3;
+        $insert_id=11;
         //取出数据表中数据
         $data=MerchantIncom::where('merchant_id',$insert_id)->field('mercId,log_no,orgNo')->find();
         $data['serviceId']='6060603';
@@ -330,7 +331,7 @@ class Incom extends Controller
         $result=curl_request($this->url,true,$data,true);
         $result=json_decode($result,true);
         //生成签名
-//        dump($result);die;
+        dump($result);die;
         $signValue=sign_ature(1111,$result);
         if($result['msg_cd']==000000 && $signValue==$result['signValue']){
             if(isset($result['check_flag'])){
@@ -357,98 +358,101 @@ class Incom extends Controller
     {
 //        $insert_id=3;
         $info=$request->post();
-        $info['insert_id']=4;
+        $info['insert_id']=11;
         //取出当前商户信息
         $data=MerchantIncom::where('merchant_id',$info['insert_id'])->field('mercId,orgNo,log_no,stoe_id')->find();
         $data['serviceId']='6060606';
         $data['version']='V1.0.1';
-//        $data['imgTyp']=$info['imgTyp'];
+        $data['imgTyp']=$info['imgTyp'];
         $data['imgNm']=$info['imgNm'];
         $data=$data->toArray();
         $files=request()->file('imgFile');
-//        $data['imgFile']=bin2hex($files);
+        $data['imgFile']=bin2hex($files);
+//        $img=upload_pics($files);
+//        $data['imgFile']=json_encode($img);
+//        MerchantIncom::where('merchant_id',$info['insert_id'])->update(['imgFile'=>$data['imgFile'],'imgNm'=>$data['imgNm']]);
 //        dump($data);die;
-//        $this->send($data);
+        $this->send($data);
 //        dump($data);die;
         //将图片存入数据库
-        $img=upload_logo($files);
-        $data['imgFile']=json_encode($img);
-        MerchantIncom::where('merchant_id',$info['insert_id'])->update(['imgFile'=>$data['imgFile'],'imgNm'=>$data['imgNm']]);
-        $arr=[];
-        foreach($files as $k=>$v){
-            //$k==图片类型
-            if($k==1){
-                //营业执照
-                $data['imgTyp']=1;
-                $data['imgFile']=bin2hex($v);
-                $arr[]=$this->send($data);
-            }elseif($k==4){
-                //法人身份证正面
-                $data['imgTyp']=4;
-                $data['imgFile']=bin2hex($v);
-                $arr[]=$this->send($data);
-            }elseif($k==5){
-                //法人身份证反面
-                $data['imgTyp']=5;
-                $data['imgFile']=bin2hex($v);
-                $arr[]=$this->send($data);
-            }elseif($k==14){
-                //协议
-                $data['imgTyp']=14;
-                $data['imgFile']=bin2hex($v);
-                $arr[]=$this->send($data);
-            }elseif($k==15){
-                //商户信息表
-                $data['imgTyp']=15;
-                $data['imgFile']=bin2hex($v);
-                $arr[]=$this->send($data);
-            }elseif($k==6){
-                //门头照
-                $data['imgTyp']=6;
-                $data['imgFile']=bin2hex($v);
-                $arr[]=$this->send($data);
-            }elseif($k==8){
-                //收银台照
-                $data['imgTyp']=8;
-                $data['imgFile']=bin2hex($v);
-                $arr[]=$this->send($data);
-            }elseif($k==2){
-                //经营内容照
-                $data['imgTyp']=2;
-                $data['imgFile']=bin2hex($v);
-                $arr[]=$this->send($data);
-            }elseif($k==9){
-                //结算人身份证正面（同法人）
-                $data['imgTyp']=9;
-                $data['imgFile']=bin2hex($v);
-                $arr[]=$this->send($data);
-            }elseif($k==10){
-                //结算人身份证反面（同法人）
-                $data['imgTyp']=10;
-                $data['imgFile']=bin2hex($v);
-                $arr[]=$this->send($data);
-            }elseif($k==3){
-                //开户许可证
-                $data['imgTyp']=3;
-                $data['imgFile']=bin2hex($v);
-                $arr[]=$this->send($data);
-            }elseif($k==11){
-                //银行卡照
-                $data['imgTyp']=11;
-                $data['imgFile']=bin2hex($v);
-                $arr[]=$this->send($data);
-            }elseif($k==16){
-                //授权结算书
-                $data['imgTyp']=16;
-                $data['imgFile']=bin2hex($v);
-                $arr[]=$this->send($data);
-            }
-        }
-        if(in_array(200,$arr)){
-            return_msg(200,'success',['insert_id',$info['insert_id']]);
-        }else{
-            return_msg(400,'图片上传失败');
-        }
+//        $img=upload_logo($files);
+//        $data['imgFile']=json_encode($img);
+//        MerchantIncom::where('merchant_id',$info['insert_id'])->update(['imgFile'=>$data['imgFile'],'imgNm'=>$data['imgNm']]);
+//        $arr=[];
+//        foreach($files as $k=>$v){
+//            //$k==图片类型
+//            if($k==1){
+//                //营业执照
+//                $data['imgTyp']=1;
+//                $data['imgFile']=bin2hex($v);
+//                $arr[]=$this->send($data);
+//            }elseif($k==4){
+//                //法人身份证正面
+//                $data['imgTyp']=4;
+//                $data['imgFile']=bin2hex($v);
+//                $arr[]=$this->send($data);
+//            }elseif($k==5){
+//                //法人身份证反面
+//                $data['imgTyp']=5;
+//                $data['imgFile']=bin2hex($v);
+//                $arr[]=$this->send($data);
+//            }elseif($k==14){
+//                //协议
+//                $data['imgTyp']=14;
+//                $data['imgFile']=bin2hex($v);
+//                $arr[]=$this->send($data);
+//            }elseif($k==15){
+//                //商户信息表
+//                $data['imgTyp']=15;
+//                $data['imgFile']=bin2hex($v);
+//                $arr[]=$this->send($data);
+//            }elseif($k==6){
+//                //门头照
+//                $data['imgTyp']=6;
+//                $data['imgFile']=bin2hex($v);
+//                $arr[]=$this->send($data);
+//            }elseif($k==8){
+//                //收银台照
+//                $data['imgTyp']=8;
+//                $data['imgFile']=bin2hex($v);
+//                $arr[]=$this->send($data);
+//            }elseif($k==2){
+//                //经营内容照
+//                $data['imgTyp']=2;
+//                $data['imgFile']=bin2hex($v);
+//                $arr[]=$this->send($data);
+//            }elseif($k==9){
+//                //结算人身份证正面（同法人）
+//                $data['imgTyp']=9;
+//                $data['imgFile']=bin2hex($v);
+//                $arr[]=$this->send($data);
+//            }elseif($k==10){
+//                //结算人身份证反面（同法人）
+//                $data['imgTyp']=10;
+//                $data['imgFile']=bin2hex($v);
+//                $arr[]=$this->send($data);
+//            }elseif($k==3){
+//                //开户许可证
+//                $data['imgTyp']=3;
+//                $data['imgFile']=bin2hex($v);
+//                $arr[]=$this->send($data);
+//            }elseif($k==11){
+//                //银行卡照
+//                $data['imgTyp']=11;
+//                $data['imgFile']=bin2hex($v);
+//                $arr[]=$this->send($data);
+//            }elseif($k==16){
+//                //授权结算书
+//                $data['imgTyp']=16;
+//                $data['imgFile']=bin2hex($v);
+//                $arr[]=$this->send($data);
+//            }
+//        }
+//        if(in_array(200,$arr)){
+//            return_msg(200,'success',['insert_id',$info['insert_id']]);
+//        }else{
+//            return_msg(400,'图片上传失败');
+//        }
 //        $img=json_encode($img);
 //        $data['imgFile']=bin2hex($files);
 //        $data=MerchantIncom::where('merchant_id',$merchant_id)->update($info);
@@ -467,6 +471,7 @@ class Incom extends Controller
         $data['signValue']=sign_ature(0000,$data);
         //发送给新大陆
         $result=json_decode(curl_request($this->url,true,$data,true),true);
+        dump($result);die;
         //生成签名
         $signValue=sign_ature(1111,$result);
         if($result['msg_cd']=='000000' && $result['signValue']==$signValue){

@@ -12,9 +12,7 @@
 // [ 应用入口文件 ]
 
 // 定义应用目录
-
 define("KEY", "9773BCF5BAC01078C9479E67919157B8");
-
 define('APP_PATH', __DIR__ . '/../application/');
 
 
