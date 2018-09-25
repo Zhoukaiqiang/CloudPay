@@ -10,7 +10,7 @@ use think\Request;
 
 class Incom extends Controller
 {
-    public $url='http://sandbox.starpos.com.cn/emercapp';
+    public $url='https://gateway.starpos.com.cn/emercapp';
 
 
     /**
@@ -288,6 +288,7 @@ class Incom extends Controller
         //向新大陆接口发送请求信息
         $par= curl_request($this->url,true,$data,true);
         $par=json_decode($par,true);
+        dump($par);die;
         //获取签名域
         $return_sign=sign_ature(1111,$par);
         if ($par['msg_cd']==000000){
