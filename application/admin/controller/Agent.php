@@ -43,11 +43,8 @@ class Agent extends Controller
         if (request()->isPost()) {
             $data = request()->post();
             //验证
-            $validate = Loader::validate('Adminvalidate');
+            $validate = Loader::validate('AdminValidate');
             if ($validate->scene('add')->check($data)) {
-                //上传图片
-                $data['contract_picture'] = $this->upload_logo();
-                $data['contract_picture'] = json_encode($data['contract_picture']);
                 //            $data['contract_time']=strtotime($data['contract_time']);
                 //保存到数据表
                 $info = TotalAgent::create($data, true);
@@ -185,23 +182,20 @@ class Agent extends Controller
     }
 
     //上传图片
-    private function upload_logo()
-    {
-        $files = request()->file('contract_picture');
-        $goods_pics = [];
-        foreach ($files as $file) {
-            $info = $file->validate(['size' => 5 * 1024 * 1024, 'ext' => 'jpg,jpeg,gif,png'])->move(ROOT_PATH . 'public' . DS . 'uploads');
-            if ($info) {
-                //图片上传成功
-                $goods_logo = DS . 'uploads' . DS . $info->getSaveName();
-                $goods_logo = str_replace('\\', '/', $goods_logo);
-                $goods_pics[] = $goods_logo;
-            } else {
-                $error = $info->getError();
-                return_msg(400, $error);
-            }
+    private function upload_img(){
+        $file=request()->file('file');
+        //移动图片
+        $info=$file->validate(['size'=>5*1024*1024,'ext'=>'jpg,png,gif,jpeg'])->move(ROOT_PATH.'public'.DS.'uploads');
+        if($info){
+            //文件上传成功
+            //获取文件路径
+            $goods_logo=DS.'uploads'.DS.$info->getSaveName();
+            $goods_logo=str_replace('\\','/',$goods_logo);
+            return $goods_logo;
+        }else{
+            $error=$file->getError();
+            $this->return_msg(400,'failure',$error);
         }
-        return $goods_pics;
     }
 
 }

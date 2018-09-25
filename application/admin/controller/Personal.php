@@ -6,7 +6,7 @@ use app\admin\model\TotalAdmin;
 use think\Controller;
 use think\Request;
 
-class Personnel extends Controller
+class Personal extends Controller
 {
     /**
      * 显示人员列表
