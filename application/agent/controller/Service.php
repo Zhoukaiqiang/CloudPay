@@ -23,7 +23,7 @@ class Service extends Controller
         $rows=TotalAgent::where('parent_id',$id)->count();
         $pages=page($rows);
         //获取当前代理商下的所有子代理
-        $data=TotalAgent::field(['id,agent_name,contact_person,agent_phone,agent_mode,agent_area,create_time,status'])->where('parent_id',$id)->limit($pages['offset'],$pages['limit'])->select();
+        $data['list']=TotalAgent::field(['id,agent_name,contact_person,agent_phone,agent_mode,agent_area,create_time,status'])->where('parent_id',$id)->limit($pages['offset'],$pages['limit'])->select();
         $data['pages']=$pages;
         return_msg(200,'success',$data);
     }
@@ -147,7 +147,7 @@ class Service extends Controller
         //分页
         $pages=page($rows);
         //获取子代中的商户信息
-        $data=TotalMerchant::alias('a')
+        $data['list']=TotalMerchant::alias('a')
             ->field('a.id,a.name,a.address,a.channel,a.status,b.agent_name,b.agent_phone,a.opening_time')
             ->join('cloud_total_agent b','a.agent_id=b.id','left')
             ->where(['b.parent_id'=>$id])

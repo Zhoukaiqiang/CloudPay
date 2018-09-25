@@ -47,9 +47,10 @@ class Adminvalidate extends Validate{
         ['status','require','请选择状态'],
     ];
 
+    //命名规则 控制器_函数名称
     protected $scene=[
         //新增代理商
-        'add'=>['agent_mode','agent_name','contact_person','detailed_address','admin_id','username','password','open_bank','open_bank_branche','home','account','account_name','agent_area','agent_money','contract_time','agent_rate','contract_picture','agent_phone'],
+        'add'=>['agent_mode','agent_name','contact_person','detailed_address','admin_id','username','open_bank','open_bank_branche','home','account','account_name','agent_area','agent_money','contract_time','agent_rate','contract_picture','agent_phone'],
         //代理商修改
         'detail'=>['agent_mode','agent_name','contact_person','detailed_address','admin_id','username','password','open_bank','open_bank_branche','home','account','account_name','agent_area','agent_money','contract_time','agent_rate','agent_phone'],
         //商户间联修改

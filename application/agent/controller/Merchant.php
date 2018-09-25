@@ -68,7 +68,7 @@ class Merchant extends Incom
         $data['pages']=$pages;
         $data['pages']['rows'] = $rows;
         $data['pages']['total_row'] = $total;
-        return json_encode($data);
+        return_msg(200,'success',json_encode($data)) ;
 
 
     }
@@ -94,7 +94,7 @@ class Merchant extends Incom
             ->where($where)
             ->count();
         $pages=page($rows);
-        $data=TotalMerchant::alias('a')
+        $data['list']=TotalMerchant::alias('a')
             ->field('a.id,a.name,a.phone,a.address,a.contact,a.channel,a.opening_time,a.status,b.contact_person,b.agent_phone')
             ->join('cloud_total_agent b','a.agent_id=b.id','left')
             ->where($where)
@@ -125,7 +125,7 @@ class Merchant extends Incom
             ->where($where)
             ->count();
         $pages=page($rows);
-        $data=TotalMerchant::alias('a')
+        $data['list']=TotalMerchant::alias('a')
             ->field('a.id,a.name,a.phone,a.address,a.contact,a.opening_time,a.status,b.contact_person,b.agent_phone')
             ->join('cloud_total_agent b','a.agent_id=b.id','left')
             ->where($where)
@@ -154,7 +154,7 @@ class Merchant extends Incom
             ->where($where)
             ->count();
         $pages=page($rows);
-        $data=TotalMerchant::alias('a')
+        $data['list']=TotalMerchant::alias('a')
             ->field('a.id,a.name,a.phone,a.address,a.contact,a.opening_time,a.status,b.contact_person,b.agent_phone')
             ->join('cloud_total_agent b','a.agent_id=b.id','left')
             ->where($where)
@@ -181,7 +181,7 @@ class Merchant extends Incom
         ];
         $rows=TotalMerchant::where($where)->count();
         $pages=page($rows);
-        $data=TotalMerchant::alias('a')
+        $data['list']=TotalMerchant::alias('a')
             ->field('a.id,a.name,a.phone,a.address,a.contact,a.rejected,a.opening_time,a.status,b.contact_person,b.agent_phone')
             ->join('cloud_total_agent b','a.agent_id=b.id','left')
             ->where($where)

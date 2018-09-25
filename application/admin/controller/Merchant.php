@@ -19,11 +19,11 @@ class Merchant extends Controller
     {
         //获取总行数
         $row=TotalMerchant::where('review_status',2)->count();
-        $pages=page($row);
+        $pages = page($row);
         $data=TotalMerchant::alias('a')
             ->field('a.id,a.name,a.phone,a.address,a.contact,a.channel,a.opening_time,a.status,b.contact_person,b.agent_phone')
             ->join('cloud_total_agent b','a.agent_id=b.id','left')
-            ->where('a.review_status=2')
+            ->where('a.review_status = 2')
             ->limit($pages['offset'],$pages['limit'])
             ->select();
         $data['pages']=$pages;

@@ -35,7 +35,7 @@ class Capital extends Controller
             ->count();
         //分页
         $pages = page($rows);
-        $data = TotalMerchant::alias('a')
+        $data['list'] = TotalMerchant::alias('a')
             ->field(['a.id,a.name,b.partner_name,a.merchant_rate,c.agent_name,c.agent_rate,b.rate,b.proportion,b.model'])
             ->join($join)
             ->where('a.agent_id', $agent_id)
@@ -276,7 +276,7 @@ class Capital extends Controller
      * @param $phone
      * @param $msg
      */
-    public function send_msg_to_phone($phone, $msg)
+    public function send_msg_to_phone($phone, $msg='')
     {
         $curl = curl_init();
 
