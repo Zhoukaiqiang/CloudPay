@@ -117,16 +117,11 @@ class Agent extends Controller
 
             $pic_list = json_decode($data->toArray()['contract_picture']);
 
-//            foreach ($pic_list as $k => $v) {
-//                $contract_list[$k] = [
-//                    "url" => $v
-//                ];
-//            }
             $data['contract_picture'] = $pic_list;
             //取出所有人员信息
             $admin = TotalAdmin::field(['id', 'name', 'role_id'])->select();
             //取出所有一级代理
-            $info = TotalAgent::where('parent_id', 0)->field('agent_name')->select();
+            $info = TotalAgent::where('parent_id', 0)->field(['id','agent_name'])->select();
             $data['admin'] = $admin;
             $data['agent'] = $info;
 //            dump($data);die;
