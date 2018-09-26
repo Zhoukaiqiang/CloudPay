@@ -49,20 +49,15 @@ class Index extends Controller
         $past = $request->param('start_time') ? $request->param('start_time') : "yesterday";
         $present = $request->param('end_time') ? $request->param('end_time') : null;
         //$channel = $request->param('channel') ? $request->param('end_time') : -1;
-        $past = strtotime($past);
-        $present = strtotime($present);
 
-        /* 可选取区间为最近2个月 */
-        if (time() - $past > 5604000) {
-            $this->return_msg(400, '您选择的时间大于两个月，请重新选择！');
-        }
+
         /* 获取所有商户、代理商的数量 */
         $agent = Db::name('total_agent')->count('id');
         $merchant = Db::name('total_merchant')->count('id');
 
 
         /* 获取昨日全部的交易总额 */
-        if ($past = "yesterday") {
+        if ($past == "yesterday") {
             $total = Db::name('order')->whereTime('pay_time', "yesterday")->sum('received_money');
             $total_num = Db::name('order')->whereTime('pay_time', "yesterday")->count('id');
             $wxpay = Db::name('order')->whereTime('pay_time', "yesterday")->where(['pay_type' => 'wxpay'])->sum('received_money');
@@ -279,7 +274,7 @@ class Index extends Controller
 
         $pages = page($rows);
         /* 根据查询条件获取数据并返回 */
-        $res = Db::name('total_agent')
+        $res['data'] = Db::name('total_agent')
             ->where([
                 'agent_name|contact_person|agent_phone' => [$param['keywords_flag'], $param['keywords'] . "%"],
                 'status' => [$param['status_flag'], $param['status']],
@@ -531,7 +526,7 @@ class Index extends Controller
         /* 接受参数 */
         $pay_type = $request->param('pay_type') ? $request->param('pay_type') : -2;
         $past = $request->param('past') ? $request->param('past') : 'yesterday';
-        $present = $request->param('present') ? $request->param('present') : time();
+        $present = time();
 //        $channel = $request->param('channel') ? $request->param('channel') : -1;
         $present = intval($present);
         if ($pay_type == -2) {
@@ -539,22 +534,30 @@ class Index extends Controller
         } else {
             $pay_type_flag = "eq";
         }
-        $data = [];
-        if (!empty($present)) {
-
-            $data['chartData']['rows'] = Db::name('order')
-                ->whereTime('pay_time', 'between', [$past, $present])
+        $data = [];$list = [];
+        if ($past !== 'yesterday') {
+            $data['chartData'] = Db::name('order')
+                ->whereTime('pay_time', 'between', [$past, strtotime('yesterday')])
                 ->where("pay_type", $pay_type_flag, $pay_type)
-                ->field(['order_money as 订单金额', 'create_time as 支付时间', 'id', 'pay_type 支付类型'])->select();
+                ->field(['received_money', 'pay_time', 'id', 'pay_type'])->select();
+            return json_encode($data);
         } else {
-            $data['chartData']['row'] = Db::name('order')
+            $data['chartData'] = Db::name('order')
                 ->whereTime('pay_time', 'yesterday')
                 ->where("pay_type", $pay_type_flag, $pay_type)
-                ->field(['order_money as 订单金额', 'create_time as 支付时间', 'id', 'pay_type 支付类型'])->select();
-        }
-        $data['chartData']['columns'] = ['日期', '金额'];
-        return json_encode($data);
+                ->field(['received_money', 'pay_time', 'id', 'pay_type '])
+                ->select();
 
+            foreach ($data['chartData'] as $k => $v) {
+                $list[] = [
+                    "id" => $v['id'],
+                    "received_money" => $v['received_money'],
+                    "pay_time" => date('H', $v['pay_time']),
+                    "pay_type" => $v['pay_type'],
+                ];
+            }
+        return json_encode($list);
+        }
 
     }
 

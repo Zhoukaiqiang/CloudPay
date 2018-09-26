@@ -33,7 +33,6 @@ class TotalAgent extends Model
     }
 
     public function getAdminIdAttr($val) {
-
         return TotalAdmin::get($val)->field(["id", "name"])->find();
     }
 }

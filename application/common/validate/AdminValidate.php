@@ -1,9 +1,9 @@
 <?php
-namespace app\admin\validate;
+namespace app\common\validate;
 
 use think\Validate;
 
-class Adminvalidate extends Validate{
+class AdminValidate extends Validate{
     protected $rule=[
         //代理商
         ['agent_mode' ,'require','代理方式必填'],
@@ -59,5 +59,8 @@ class Adminvalidate extends Validate{
         'user'=>[
             'name','role_id','status','phone','password'
         ],
+        //商户登录验证
+        "merchant_login" => ['phone','password'],
     ];
+
 }

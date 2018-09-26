@@ -8,6 +8,7 @@ use think\Controller;
 use think\Loader;
 use think\Request;
 use think\Validate;
+use think\Db;
 
 class Agent extends Controller
 {
@@ -49,7 +50,8 @@ class Agent extends Controller
                 return_msg(400, "短信发送失败");
             }
             //验证
-            $validate = Loader::validate('AdminValidate');
+
+            $validate = Loader::Validate('AdminValidate');
             if ($validate->scene('add')->check($data)) {
                 //            $data['contract_time']=strtotime($data['contract_time']);
                 //保存到数据表
@@ -88,6 +90,7 @@ class Agent extends Controller
         //
         if (request()->isPost()) {
             $data = $request->post();
+
             //验证
             $validate = Loader::Validate('AdminValidate');
             if (!$validate->scene('detail')->check($data)) {
@@ -98,12 +101,13 @@ class Agent extends Controller
             //如果没有上传图片用原来的图片
             $file = $request->file('contract_picture');
             if (!empty($file)) {
-                $data['contract_picture'] = $this->upload_logo();
+                $data['contract_picture'] = $this->upload_img();
                 $data['contract_picture'] = json_encode($data['contract_picture']);
             }
 //            $data['contract_time']=strtotime($data['contract_time']);
             //保存到数据表
-            $info = TotalAgent::where('id', '=', $data['id'])->update($data, true);
+
+            $info =TotalAgent::where('id', 'eq', $data['id'])->update($data, true);
             if ($info) {
                 //保存成功
                 return_msg('200', '修改成功', $info);
