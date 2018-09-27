@@ -19,9 +19,9 @@ class TotalAdmin extends Model
      * @param $value
      * @return string
      */
-    public function getStatusAttr($value)
-    {
-        return $value ? '启用' : '停用';
-    }
+//    public function getStatusAttr($value)
+//    {
+//        return $value ? '启用' : '停用';
+//    }
 
 }

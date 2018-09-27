@@ -11,7 +11,7 @@ use think\Controller;
 use think\Request;
 use think\Db;
 
-class Merchant extends Incom
+class Merchant extends Controller
 {
 
     public function index_list()
@@ -47,28 +47,21 @@ class Merchant extends Incom
             ->count('a.id');
         $pages=page($rows);
 
-        $data=TotalMerchant::alias('a')
+        $data['list']=TotalMerchant::alias('a')
             ->field('a.id,a.name,a.phone,a.address,a.contact,a.channel,a.opening_time,a.status,a.review_status,b.partner_name')
             ->join('cloud_agent_partner b','a.partner_id=b.id','left')
             ->where('a.agent_id',$agent_id)
             ->limit($pages['offset'],$pages['limit'])
             ->select();
-        foreach($data as $k=>&$v){
-            if($v['review_status']==0){
-                $v['review_status']='待审核';
-            }else if($v['review_status'] ==1){
-                $v['review_status']='开通中';
-            }else if($v['review_status']==2){
-                $v['review_status']='开通';
-            }else if($v['review_status']==3){
-                $v['review_status']='驳回';
-            }
-            $v['opening_time']=date("Y-m-d",$v['opening_time']);
-        }
+
         $data['pages']=$pages;
         $data['pages']['rows'] = $rows;
         $data['pages']['total_row'] = $total;
-        return_msg(200,'success',json_encode($data)) ;
+        if (count($data['list'])  > 0 ) {
+            return_msg(200,'success',$data) ;
+        } else {
+            return_msg(400, '没有数据');
+        }
 
 
     }
