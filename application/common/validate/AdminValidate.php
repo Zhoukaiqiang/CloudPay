@@ -52,12 +52,15 @@ class AdminValidate extends Validate{
         //新增代理商
         'add'=>['agent_mode','agent_name','contact_person','detailed_address','admin_id','username','open_bank','open_bank_branche','home','account','account_name','agent_area','agent_money','contract_time','agent_rate','contract_picture','agent_phone'],
         //代理商修改
-        'detail'=>['agent_mode','agent_name','contact_person','detailed_address','admin_id','username','password','open_bank','open_bank_branche','home','account','account_name','agent_area','agent_money','contract_time','agent_rate','agent_phone'],
+        'detail'=>['agent_name','contact_person','detailed_address','admin_id','username','open_bank','open_bank_branche','home','account','account_name','agent_area','agent_money','contract_time','agent_rate','agent_phone'],
         //商户间联修改
         'middle_submit'=>['merchants_type','name','address','detail_address','contact','username','password','phone','category','account_type','account_name','account_no','location_account','open_bank','merchant_rate','agent_id','attachment'],
         //添加人员
         'user'=>[
             'name','role_id','status','phone','password'
         ],
+        //商户登录验证
+        "merchant_login" => ['phone','password'],
     ];
+
 }

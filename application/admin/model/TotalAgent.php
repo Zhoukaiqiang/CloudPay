@@ -23,4 +23,16 @@ class TotalAgent extends Model
         $attr_input_type = ['','直联','间联','直联 间联'];
         return $attr_input_type[$value];
     }
+
+    public function getParentIdAttr($val) {
+        if ($val == 0) {
+            return "平台";
+        }
+        $agent = TotalAgent::get($val);
+        return $agent->agent_name;
+    }
+
+    public function getAdminIdAttr($val) {
+        return TotalAdmin::get($val)->field(["id", "name"])->find();
+    }
 }

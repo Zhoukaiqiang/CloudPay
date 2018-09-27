@@ -8,6 +8,7 @@ use think\Controller;
 use think\Loader;
 use think\Request;
 use think\Validate;
+use think\Db;
 
 class Agent extends Controller
 {
@@ -49,7 +50,8 @@ class Agent extends Controller
                 return_msg(400, "短信发送失败");
             }
             //验证
-            $validate = Loader::validate('AdminValidate');
+
+            $validate = Loader::Validate('AdminValidate');
             if ($validate->scene('add')->check($data)) {
                 //            $data['contract_time']=strtotime($data['contract_time']);
                 //保存到数据表
@@ -88,6 +90,7 @@ class Agent extends Controller
         //
         if (request()->isPost()) {
             $data = $request->post();
+
             //验证
             $validate = Loader::validate('AdminValidate');
             if (!$validate->scene('detail')->check($data)) {
@@ -98,12 +101,13 @@ class Agent extends Controller
             //如果没有上传图片用原来的图片
             $file = $request->file('contract_picture');
             if (!empty($file)) {
-                $data['contract_picture'] = $this->upload_logo();
+                $data['contract_picture'] = $this->upload_img();
                 $data['contract_picture'] = json_encode($data['contract_picture']);
             }
 //            $data['contract_time']=strtotime($data['contract_time']);
             //保存到数据表
-            $info = TotalAgent::where('id', '=', $data['id'])->update($data, true);
+
+            $info =TotalAgent::where('id', 'eq', $data['id'])->update($data, true);
             if ($info) {
                 //保存成功
                 return_msg('200', '修改成功', $info);
@@ -117,16 +121,11 @@ class Agent extends Controller
 
             $pic_list = json_decode($data->toArray()['contract_picture']);
 
-//            foreach ($pic_list as $k => $v) {
-//                $contract_list[$k] = [
-//                    "url" => $v
-//                ];
-//            }
             $data['contract_picture'] = $pic_list;
             //取出所有人员信息
             $admin = TotalAdmin::field(['id', 'name', 'role_id'])->select();
             //取出所有一级代理
-            $info = TotalAgent::where('parent_id', 0)->field('agent_name')->select();
+            $info = TotalAgent::where('parent_id', 0)->field(['id','agent_name'])->select();
             $data['admin'] = $admin;
             $data['agent'] = $info;
 //            dump($data);die;

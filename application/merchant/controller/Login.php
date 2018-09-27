@@ -8,21 +8,20 @@
  */
 
 
-namespace app\admin\controller;
+namespace app\Merchant\controller;
 
-use app\admin\model\TotalAd;
 use app\admin\controller\Common;
-use app\admin\model\TotalAdmin;
-use think\Controller;
+use app\admin\model\TotalMerchant;
+use think\Exception;
 use think\Loader;
-use think\Db;
 use think\Request;
+use think\Validate;
 
 /**
  * Class User
  * @package app\index\controller
  */
-class User extends Common
+class Login extends Common
 {
     /**
      * 前置操作（调用某个方法时先调用设置的前置方法）
@@ -31,10 +30,19 @@ class User extends Common
     protected $beforeActionList = [
         //'bbb' => ['only' => 'test']
     ];
+
+    protected $rules = [
+        'Login' => [
+            "login" => [
+                ['phone','require|length:11', '账号必须填写|手机号长度为11'],
+                ['password', 'require', '密码必须填写'],
+            ],
+        ],
+    ];
     protected function _initialize()
     {
         parent::_initialize();
-        $this->request = Request::instance();
+        $this->request = Request::instance()->param();
 
     }
 
@@ -43,63 +51,29 @@ class User extends Common
      * @param [strin]   user_name 用户名（电话）
      * @param [stirng]  password  用户密码
      * @return [json] 返回信息
+     * @throws Exception
      */
     public function login()
     {
-        $data = $this->params;
-        $user_name_type = 'phone';
-        $this->check_exist($data['phone'], 'phone', 1);
-        $db_res = Db('total_admin')->field('id,name,phone,status,password,is_super_vip')
-            ->where('phone', $data['phone'])->find();
+        if (request()->isPost()) {
+            $data = $this->request;
+            $user_name_type = 'phone';
+            /** 检验参数 */
 
-        if ($db_res['password'] !== $this->encrypt_password($data['password'], $data["phone"])) {
-            $this->return_msg(400, '用户密码不正确！');
-        } else {
-            unset($db_res['password']); //密码不返回
-            $this->return_msg(200, '登录成功！', $db_res);
+            $this->check_params($data);
+
+            $this->check_exist($data['phone'], 'phone', 1);
+            $db_res = TotalMerchant::where('phone', $data['phone'])
+                ->field('id,username,phone,status,password')->find();
+
+            if ($db_res['password'] !== $this->encrypt_password($data['password'], $data["phone"])) {
+                $this->return_msg(400, '用户密码不正确！');
+            } else {
+                unset($db_res['password']); //密码不返回
+                $this->return_msg(200, '登录成功！', $db_res);
+            }
         }
-    }
 
-    /**
-     * 用户注册
-     * @param [string]  user_name 用户名
-     * @param [string]  code      验证码
-     * @return [json]   msg      返回消息
-     */
-    public function register()
-    {
-        /* 接受参数 */
-        $data = $this->request->param();
-
-        $this->check_code($data['phone'], $data['code']);
-        /* 检测用户名 */
-
-//        $user_type = $this->check_username($data['user_name']);
-        $user_type = 'phone';
-        switch ($user_type) {
-            case 'phone':
-                $this->check_exist($data['phone'], 'phone', 0);
-                break;
-            case 'email':
-                $this->check_exist($data['user_name'], 'phone', 0);
-                $data['user_email'] = $data['user_name'];
-                break;
-
-        }
-        /** 将用户信息写入数据库 **/
-        //unset($data['phone']);
-        $d['create_time'] = time();
-        $d['name'] = $data['phone'];
-        $d['password'] = $this->encrypt_password($data['password'], $data['phone']);
-        $res = db('total_admin')->insert($d);
-        if (!$res) {
-            $this->return_msg(400, '用户注册失败!');
-        } else {
-            /*注册成功发送密码到用户手机*/
-
-            $this->return_msg(200, '用户注册成功！', $res);
-
-        }
     }
 
     /**
@@ -114,12 +88,12 @@ class User extends Common
     public function addStaff()
     {
 
-        $this->check_phone($this->request->param('phone'));
-        $data['name'] = $this->request->param('name');
-        $data['phone'] = $this->request->param('phone');
-        $data['status'] = $this->request->param('status');
+        $this->check_phone($this->request('phone'));
+        $data['name'] = $this->request('name');
+        $data['phone'] = $this->request('phone');
+        $data['status'] = $this->request('status');
 
-        $data['password'] = $this->request->param('password') ? $this->encrypt_password($this->request->param('password'), $data['phone']) : "cloudpay";
+        $data['password'] = $this->request('password') ? $this->encrypt_password($this->request('password'), $data['phone']) : "cloudpay";
 
         $result = TotalAdmin::create($data);
 
@@ -151,8 +125,8 @@ class User extends Common
 
     public function delStaff(Request $request)
     {
-        $id =  $request->param("id");
-        if ( !$id) {
+        $id = $request->param("id");
+        if (!$id) {
             return;
         }
         $result = Db::table('cloud_total_admin')->delete($id);
@@ -169,17 +143,17 @@ class User extends Common
      */
     public function editStaff()
     {
-        $id = $this->request->param('id');
+        $id = $this->request('id');
         if (empty($id)) {
             return;
         }
 
-        $data['name'] = $this->request->param('name');
+        $data['name'] = $this->request('name');
 
-        $data['phone'] = $this->request->param('phone');
-        $data['status'] = $this->request->param('status');
+        $data['phone'] = $this->request('phone');
+        $data['status'] = $this->request('status');
         $data['create_time'] = date('Y-m-d H:m:s');
-        $data['password'] = $this->request->param('password');
+        $data['password'] = $this->request('password');
 
         $result = Db::table('cloud_total_admin')->where('id', $id)->update($data);
         if (!$result) {
@@ -220,7 +194,7 @@ class User extends Common
         }
 
         /* 把新的密码存入数据库 */
-        $res = db('total_admin')->where($where)->setField('password', $data['password']);
+        $res = db('total_admin')->where($where)->setField('password', $this->encrypt_password($data['password'], $data['phone']));
         if ($res !== false) {
             $this->return_msg(200, '密码修改成功！');
         } else {
@@ -249,7 +223,7 @@ class User extends Common
         }
 
         /* 修改数据库 */
-        $res = db('total_admin')->where($where)->setField('password', $data['password']);
+        $res = db('total_admin')->where($where)->setField('password', $this->encrypt_password($data['password'], $data['phone']));
         if ($res !== false) {
             $this->return_msg(200, '密码修改成功！');
         } else {
@@ -257,28 +231,6 @@ class User extends Common
         }
     }
 
-    /**
-     * 用户绑定手机
-     * @param [int] 手机号
-     * @return string
-     */
-
-    public function bind_phone()
-    {
-        /* 接受参数 */
-        $data = $this->params;
-        /* 验证验证码 */
-        $this->check_code($data['phone'], $data['code']);
-
-        /* 修改数据库 */
-        $res = db('total_admin')->where('id', $data['user_id'])->setField('phone', $data['phone']);
-        if ($res !== false) {
-            $this->return_msg(200, '手机号绑定成功！');
-        } else {
-            $this->return_msg(400, '手机号绑定失败！');
-        }
-
-    }
 
     /**
      * 绑定邮箱
@@ -302,17 +254,26 @@ class User extends Common
         }
     }
 
-    public function insert_data($db,$data) {
-        $d = [];
-        $i = 1;
-        while ($i < 20) {
-            $d[$i] = [
-                $data
-            ];
-            $i++;
+
+    /**
+     *  验证参数是否正确
+     * @param   [array] $arr 所有参数
+     * @return [json] 参数验证结果/返回参数
+     */
+    public function check_params($arr)
+    {
+        /* 获取参数的验证规则 */
+        try {
+            $rule = $this->rules[request()->controller()][request()->action()];
+        }catch (Exception $e) {return true;}
+
+        /* 验证参数并返回错误 */
+        $this->validater = new Validate($rule);
+        if (!$this->validater->check($arr)) {
+            $this->return_msg(400, $this->validater->getError());
         }
-        $result = Db::table($db)->insertAll($d);
-        dump($result);
+
+        return $arr;
     }
 
 }
