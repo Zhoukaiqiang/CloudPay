@@ -235,9 +235,12 @@ class Index extends Controller
 
         if ($param['status'] < -1) {
             $param['status_flag'] = '<>';
+        }else if($param['status'] == -1) {
+            $param['status'] = 0;
+            $param['status_flag'] = 'eq';
         } else {
             $param['status_flag'] = 'eq';
-            $param['status'] = 0;
+
         }
 
 
@@ -525,19 +528,20 @@ class Index extends Controller
 
         /* 接受参数 */
         $pay_type = $request->param('pay_type') ? $request->param('pay_type') : -2;
-        $past = $request->param('past') ? $request->param('past') : 'yesterday';
-        $present = time();
+        $past = $request->param('past');
+
 //        $channel = $request->param('channel') ? $request->param('channel') : -1;
-        $present = intval($present);
+
         if ($pay_type == -2) {
             $pay_type_flag = "<>";
         } else {
             $pay_type_flag = "eq";
         }
         $data = [];$list = [];
-        if ($past !== 'yesterday') {
+        if (1) {
+            $past = intval($past);
             $data['chartData'] = Db::name('order')
-                ->whereTime('pay_time', 'between', [$past, strtotime('yesterday')])
+                ->whereTime('pay_time', 'between', [$past, strtotime("yesterday")])
                 ->where("pay_type", $pay_type_flag, $pay_type)
                 ->field(['received_money', 'pay_time', 'id', 'pay_type'])->select();
             return json_encode($data);
@@ -573,6 +577,9 @@ class Index extends Controller
 
         $query['keywords'] = $request->param('keywords') ? $request->param('keywords') : -2;
         $query['status'] = $request->param('status');
+        if ($query['status'] == -1) {
+            $query['status'] = 0;
+        }
 
         $this->get_staff_result($query);
     }
@@ -610,7 +617,7 @@ class Index extends Controller
         $total = indexModel::name('total_admin')->count('id');
         /* 查询结果 */
         $rows = indexModel::name('total_admin')
-            ->field("name,phone,status,create_time,role_id")
+            ->field("name,phone,status,create_time,role_id,id")
             ->where([
                 "name|phone" => [$param['keywords_flag'], $param['keywords'] . "%"],
                 "status" => [$param['status_flag'], $param['status']],
@@ -618,8 +625,8 @@ class Index extends Controller
             ->count("id");
         $pages = page($rows);
 
-        $res = indexModel::name('total_admin')
-            ->field("name,phone,status,create_time,role_id")
+        $res['list'] = indexModel::name('total_admin')
+            ->field("name,phone,status,create_time,role_id,id")
             ->where([
                 "name|phone" => [$param['keywords_flag'], $param['keywords'] . "%"],
                 "status" => [$param['status_flag'], $param['status']],
@@ -687,7 +694,7 @@ class Index extends Controller
             $this->return_msg(200,'success',$goods_logo);
         }else{
             $error=$file->getError();
-            $this->return_msg(400,'failure',$error);
+            $this->return_msg(400,$error);
         }
     }
 

@@ -12,9 +12,12 @@ namespace app\Merchant\controller;
 
 use app\admin\controller\Common;
 use app\admin\model\TotalMerchant;
+use app\merchant\model\MerchantUser;
+use think\Db;
 use think\Exception;
 use think\Loader;
 use think\Request;
+use think\Session;
 use think\Validate;
 
 /**
@@ -39,15 +42,20 @@ class Login extends Common
             ],
         ],
     ];
+
+    /**
+     * @throws Exception
+     */
     protected function _initialize()
     {
         parent::_initialize();
         $this->request = Request::instance()->param();
 
+
     }
 
     /**
-     * 用户登录
+     * 用户登录 -- 可以 商户登录 / 门店店员登录
      * @param [strin]   user_name 用户名（电话）
      * @param [stirng]  password  用户密码
      * @return [json] 返回信息
@@ -61,19 +69,45 @@ class Login extends Common
             /** 检验参数 */
 
             $this->check_params($data);
+            //mark
 
             $this->check_exist($data['phone'], 'phone', 1);
-            $db_res = TotalMerchant::where('phone', $data['phone'])
-                ->field('id,username,phone,status,password')->find();
+            $db_res = TotalMerchant::where("phone",$data['phone'])->field("id,contact,phone,password,status")->find();
 
-            if ($db_res['password'] !== $this->encrypt_password($data['password'], $data["phone"])) {
+            if (!$db_res) {
+                $db_res = MerchantUser::where("phone",$data['phone'])->field("id,name,phone,role,password")->find();
+            }
+
+            $res = $db_res->toArray();
+
+            /** ((((((((((((((((((mark))))))))))))))))) */
+//            $db_res['password'] !== $this->encrypt_password($data['password'], $data["phone"])
+            if ($res['password'] !== $data['password']) {
                 $this->return_msg(400, '用户密码不正确！');
             } else {
-                unset($db_res['password']); //密码不返回
-                $this->return_msg(200, '登录成功！', $db_res);
+
+                /** 登录成功设置session */
+
+
+                if (empty($res['role'])) {
+                    Session::set("merchant_id", $res['id'], 'merchant');
+                }else {
+                    Session::set("user_id", $res['id'], 'merchant');
+                }
+
+                unset($res['password']); //密码不返回
+                $this->return_msg(200, '登录成功！', $res);
             }
         }
 
+    }
+
+    /**
+     * 退出登录
+     * @param Request $request
+     */
+    public function logout (Request $request) {
+        Session::clear();
     }
 
     /**
@@ -177,7 +211,8 @@ class Login extends Common
         $data = $request->param();
 
         /* 检测用户名并取出数据库中的密码 */
-        $user_name_type = $this->check_username($data['phone']);
+//        $user_name_type = $this->check_username($data['phone']);
+        $user_name_type = "phone";
         switch ($user_name_type) {
             case "phone":
                 $this->check_exist($data['phone'], 'phone', 1);
@@ -202,6 +237,12 @@ class Login extends Common
         }
     }
 
+    /**
+     * 找回密码
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
     public function findPwd()
     {
         /* 接受参数 */
@@ -254,6 +295,58 @@ class Login extends Common
         }
     }
 
+    /**
+     * 验证手机号是否存在
+     * @param $value
+     * @param string $type
+     * @param $exist
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function check_exist($value, $type = 'phone', $exist)
+    {
+        $type_num = $type == 'phone' ? 2 : 4;
+        $flag = $type_num + $exist;
+        $phone_res['merchant'] = Db("total_merchant")->where("phone", $value)->field("phone")->find();
+        $phone_res['user'] =     Db("merchant_user")->where("phone", $value)->field("phone")->find();
+
+//        $email_res = db("total_admin")->where("email", $value)->find();
+        if ( !empty($phone_res['merchant']) ) {
+            $phone_res = $phone_res['merchant'];
+        }else {
+            $phone_res = $phone_res['user'];
+        }
+        $email_res = 0;
+        switch ($flag) {
+            /* 2+0 phone need no exist */
+            case 2:
+                if ($phone_res) {
+                    $this->return_msg(400, '手机号已经被占用');
+                }
+                break;
+            /*  2+1 phone need exist */
+            case 3:
+                if (!$phone_res) {
+                    $this->return_msg(400, '手机号不存在！');
+                }
+                break;
+            /* 4+0 email need no exist */
+            case 4:
+                if ($email_res) {
+                    $this->return_msg(400, '此邮箱已经被占用！');
+                }
+                break;
+            /* 4+1 email need exist */
+            case 5:
+                if (!$email_res) {
+                    $this->return_msg(400, '此邮箱不存在！');
+                }
+                break;
+
+        }
+
+    }
 
     /**
      *  验证参数是否正确

@@ -199,7 +199,7 @@ class Agent extends Controller
             return $goods_logo;
         }else{
             $error=$file->getError();
-            $this->return_msg(400,'failure',$error);
+            $this->return_msg(400,$error);
         }
     }
 

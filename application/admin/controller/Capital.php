@@ -60,8 +60,8 @@ class Capital extends Controller
             }
         }else{
             $id=request()->param('id');
-            $data=TotalCapital::alias('a')
-                ->field('a.id,a.settlement_start,a.settlement_end,b.agent_name,b.create_time')
+            $data['list']=TotalCapital::alias('a')
+                ->field('a.id,a.settlement_start,a.settlement_money,a.settlement_end,b.agent_name,b.create_time')
                 ->join('cloud_total_agent b','a.agent_id=b.id','left')
                 ->where('a.id',$id)
                 ->find();
@@ -90,7 +90,7 @@ class Capital extends Controller
         }else{
             $id=request()->param('id');
             $data=TotalCapital::alias('a')
-                ->field('a.id,a.settlement_start,a.settlement_end,b.agent_name,b.create_time')
+                ->field('a.id,a.settlement_start,a.settlement_money,a.settlement_end,b.agent_name,b.create_time')
                 ->join('cloud_total_agent b','a.agent_id=b.id','left')
                 ->where('a.id',$id)
                 ->find();
@@ -110,7 +110,7 @@ class Capital extends Controller
         $rows=TotalCapital::where('status',1)->count();
         //分页
         $pages=page($rows);
-        $data=TotalCapital::alias('a')
+        $data['list']=TotalCapital::alias('a')
             ->field('a.date,a.settlement_start,a.settlement_end,a.account,b.agent_name,a.settlement_time,a.invoice,b.contact_person, b.agent_area,a.settlement_money ')
             ->join('cloud_total_agent b','a.agent_id=b.id','left')
             ->where('a.status=1')
