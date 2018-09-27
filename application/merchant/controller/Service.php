@@ -1,24 +1,25 @@
 <?php
 
-namespace app\common\controller;
+namespace app\merchant\controller;
 
 use think\Controller;
 use think\Request;
 
-class Alipay extends Controller
+class Service extends Controller
 {
     /**
-     * 显示资源列表
+     * 服务设置
      *
      * @return \think\Response
      */
     public function index()
     {
+        //取出商户下所有门店信息
 
     }
 
     /**
-     * 显示创建资源表单页.
+     * 服务设置
      *
      * @return \think\Response
      */
