@@ -11,7 +11,7 @@ use think\Controller;
 use think\Request;
 use think\Db;
 
-class Merchant extends Controller
+class Merchant extends Incom
 {
 
     public function index_list()
