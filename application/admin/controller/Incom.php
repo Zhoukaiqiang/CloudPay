@@ -359,7 +359,7 @@ class Incom extends Controller
 //        $insert_id=3;
         $info=$request->post();
         //取出当前商户信息
-        $data=MerchantIncom::where('merchant_id',$info['insert_id'])->field('mercId,orgNo,log_no,stoe_id')->find();
+        $data=MerchantIncom::where('merchant_id',$info['merchant_id'])->field('mercId,orgNo,log_no,stoe_id')->find();
         $data['serviceId']='6060606';
         $data['version']='V1.0.1';
         $data['imgTyp']=$info['imgTyp'];
@@ -389,7 +389,8 @@ class Incom extends Controller
         $signValue=sign_ature(1111,$result);
         if($result['msg_cd']=='000000' && $result['signValue']==$signValue){
             //将图片存入数据库
-            IncomImg::create(['merchant_id'=>$data['merchant_id'],'img'=>$img]);
+            $data['img']=$img;
+            IncomImg::create($data,true);
             return_msg(200,'success',['merchant_id'=>$data['merchant_id']]);
         }else{
             return_msg(400,'failure');

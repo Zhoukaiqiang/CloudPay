@@ -225,11 +225,11 @@ class Merchant extends Incom
                 $arr['fee_rat3_scan']=$data['merchant_rate'];//
                 $arr['bus_lic_no']=$data['business_license'];//营业执照号
                 $arr['bus_exp_dt']=$data['license_time'];//营业执照有限期
-                $arr['bse_lice_nm']=$data['license_name'];//营业执照名
-                $arr['mercAdds']=$data['license_address'];//营业执照地址
+                $arr['bse_lice_nm']=$data['name'];//营业执照名
+                $arr['mercAdds']=$data['detail_address'];//营业执照地址
                 $arr['stoe_nm']=$data['address'].$data['name'];//签购单名称=省市+门店名
-                $arr['mcc_cd']=$data['mcc_cd'];//mcc码?
-                $arr['stoe_area_cod']=$data['stoe_area_cod'];//地区码?
+                $arr['mcc_cd']=$data['mcc_cd'];//mcc码
+                $arr['stoe_area_cod']=$data['stoe_area_cod'];//地区码
                 $arr['trm_rec']=5;//终端数量
                 $arr['alipay_flg']="N";//扫码产品
                 $arr['yhkpay_flg']="Y";//银行卡产品
