@@ -8,11 +8,11 @@ use think\Request;
 class Service extends Controller
 {
     /**
-     * 服务设置
+     * 点菜
      *
      * @return \think\Response
      */
-    public function index()
+    public function point_food()
     {
         //取出商户下所有门店信息
 
