@@ -3,8 +3,13 @@ namespace app\common\validate;
 
 use think\Validate;
 
+/**
+ * Class AdminValidate
+ * 参数验证器
+ * @package app\common\validate
+ */
 class AdminValidate extends Validate{
-    public $rule=[
+    protected $rule=[
         //代理商
         ['agent_mode' ,'require','代理方式必填'],
         ['agent_name'  ,'require','代理商名称必填'],
@@ -48,7 +53,7 @@ class AdminValidate extends Validate{
     ];
 
     //命名规则 控制器_函数名称
-    public $scene=[
+    protected $scene=[
         //新增代理商
         'add'=>['agent_mode','agent_name','contact_person','detailed_address','admin_id','username','open_bank','open_bank_branche','home','account','account_name','agent_area','agent_money','contract_time','agent_rate','contract_picture','agent_phone'],
         //代理商修改

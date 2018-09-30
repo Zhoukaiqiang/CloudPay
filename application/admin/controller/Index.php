@@ -21,14 +21,7 @@ class Index extends Controller
 {
     protected $params = [];
     protected $query = [];
-    protected $rules = array(
-        "Index" => [
-            "get_profit" => [
-                'id' => 'require|number',
 
-            ],
-        ],
-    );
 
     /*
      *  获取首页统计数据
@@ -111,7 +104,6 @@ class Index extends Controller
     {
 
         /* 检验参数合法性 */
-        $this->check_params( $request->except(['token']) );
         $time = $request->param("time") ? $request->param("time") : -2;
 
         if ($time < -1) {
@@ -515,12 +507,7 @@ class Index extends Controller
     public function echarts(Request $request)
     {
 
-        $validate = Loader::Validate('AdminValidate');
-        if ($validate->scene("add")->check($request->param())) {
-            dump(1);
-        }else {
-            $this->return_msg(400, $validate->getError());
-        }
+
         /* 接受参数 */
         $pay_type = $request->param('pay_type');
         $past = date('Y-m-d', strtotime('-7 days'));
@@ -643,30 +630,6 @@ class Index extends Controller
     }
 
 
-    /**
-     *  验证参数是否正确
-     * @param   [array] $arr 所有参数
-     * @return [json] 参数验证结果/返回参数
-     */
-    public function check_params($arr)
-    {
-        /* 获取参数的验证规则 */
-        try {
-            $rule = $this->rules[$this->request->controller()][$this->request->action()];
-            $rule = \validate("AdminValidate");
-
-        } catch (Exception $e) {
-            return true;
-        }
-
-        /* 验证参数并返回检验结果 */
-        $validater = new Validate($rule);
-        if (!$validater->check($arr)) {
-            $this->return_msg(400, $validater->getError());
-        }
-        return $arr;
-    }
-
 
     public function return_msg($code, $msg = '', $data = [])
     {
@@ -685,7 +648,7 @@ class Index extends Controller
         $file = request()->file('file');
         //移动图片
         $info = $file->validate(['size' => 5 * 1024 * 1024, 'ext' => 'jpg,png,gif,jpeg'])->move(ROOT_PATH . 'public' . DS . 'uploads');
-        dump($info);
+
         if ($info) {
             //文件上传成功
             //获取文件路径

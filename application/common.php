@@ -204,14 +204,14 @@ if (!function_exists('page')) {
     }
 }
 
-function get_sign(Array $arr, $key = '')
-{
-    $str = '';
-    ksort($arr);
-    foreach ($arr as $k => $v) {
-        $str .= $v;
+if (!function_exists("check_params")) {
+    function check_params($scene, $param) {
+        $validate = \think\Loader::validate("AdminValidate");
+        $check = $validate->scene($scene)->check($param);
+        if (!$check) {
+            return_msg(400, $validate->getError());
+        }
     }
-    return md5($str . $key);
 }
 
 
