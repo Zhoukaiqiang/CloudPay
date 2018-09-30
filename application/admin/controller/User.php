@@ -24,6 +24,7 @@ use think\Request;
  */
 class User extends Common
 {
+    protected $request;
     /**
      * 前置操作（调用某个方法时先调用设置的前置方法）
      * @var array
@@ -113,14 +114,14 @@ class User extends Common
      */
     public function addStaff()
     {
-
         $this->check_phone($this->request->param('phone'));
         $data['name'] = $this->request->param('name');
         $data['phone'] = $this->request->param('phone');
         $data['status'] = $this->request->param('status');
-
-        $data['password'] = $this->request->param('password') ? $this->encrypt_password($this->request->param('password'), $data['phone']) : "cloudpay";
-
+        $data['password'] =  $this->encrypt_password($this->request->param('password'), $data['phone']);
+        $this->check_params($this->request->param());
+        $data['create_time'] = time();
+        /** 检查无误插入数据库  */
         $result = TotalAdmin::create($data);
 
         if (!$result) {
@@ -145,7 +146,7 @@ class User extends Common
     {
         $result = Db::table('cloud_total_admin')->where('phone', $phone)->find();
         if ($result) {
-            return $this->return_msg(400, '用户已存在！');
+            $this->return_msg(400, '用户已存在！');
         }
     }
 
@@ -302,17 +303,5 @@ class User extends Common
         }
     }
 
-    public function insert_data($db,$data) {
-        $d = [];
-        $i = 1;
-        while ($i < 20) {
-            $d[$i] = [
-                $data
-            ];
-            $i++;
-        }
-        $result = Db::table($db)->insertAll($d);
-        dump($result);
-    }
 
 }

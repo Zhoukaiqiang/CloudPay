@@ -65,7 +65,7 @@ class Agent extends Controller
                 }
             } else {
                 $error = $validate->getError();
-                return_msg(400, 'failure', $error);
+                return_msg(400, $error);
             }
         } else {
             //取出所有人员信息
@@ -95,7 +95,7 @@ class Agent extends Controller
             $validate = Loader::validate('AdminValidate');
             if (!$validate->scene('detail')->check($data)) {
                 $error = $validate->getError();
-                return_msg(400, 'failure', $error);
+                return_msg(400,  $error);
             }
             //上传图片
             //如果没有上传图片用原来的图片
@@ -198,7 +198,7 @@ class Agent extends Controller
             $goods_logo=str_replace('\\','/',$goods_logo);
             return $goods_logo;
         }else{
-            $error=$file->getError();
+            $error=$info->getError();
             $this->return_msg(400,$error);
         }
     }

@@ -49,7 +49,7 @@ class Capital extends Controller
             $time=time();
             $data=[
                 'id'=>$id,
-                'status'=>1,
+                'description' => \request()->param("description"),
                 'settlement_time'=>$time
             ];
             $result=TotalCapital::update($data);
@@ -79,7 +79,7 @@ class Capital extends Controller
     public function deal()
     {
         if(request()->isPost()){
-            $data=request()->post();
+            $data = request()->post();
             //跟新数据
             $result=TotalCapital::update($data,true);
             if($result){
@@ -129,14 +129,14 @@ class Capital extends Controller
      */
     public function capital_search(Request $request) {
         /* 获取参数 */
-        $query['keywords'] = $request->param('keywords') ? $request->param('keywords') : -2;
-        $query['address'] = $request->param('address') ? $request->param('address') : -2;
-        $query['time'] = $request->param('time') ? json_decode($request->param('time')) : -2;
+        $query['keywords'] = $request->param('keywords');
+        $query['time'] = $request->param('time');  //2018-9-28 0:0:0
+        $query['agent_area']  = $request->param('agent_area');
         $query['status'] = 0;
-        $this->get_search_result($query);
         /* 发送参数 */
-    }
+        $this->get_search_result($query);
 
+    }
 
     /**
      * 已结算搜索
@@ -147,10 +147,11 @@ class Capital extends Controller
      */
     public function ready_capital_search(Request $request) {
         /* 获取参数 */
-        $query['keywords'] = $request->param('keywords') ? $request->param('keywords') : -2;
-        $query['address'] = $request->param('address') ? $request->param('address') : -2;
-        $query['time'] = $request->param('time') ? json_decode($request->param('time')) : -2;
+        $query['keywords'] = $request->param('keywords');
+        $query['agent_area']  = $request->param('agent_area');
+        $query['ready_time'] = $request->param('time');
         $query['status'] = 1;
+
 
         $this->get_search_result($query);
         /* 发送参数 */
@@ -169,30 +170,45 @@ class Capital extends Controller
     protected function get_search_result(Array $param) {
 
         /* 设置flag */
-        $param['keywords_flag'] = 'LIKE';
-        $param['address_flag'] = 'LIKE';
+
         $param['status_flag'] = "eq";
 
-        if ($param['keywords'] < -1) {
-            $param['keywords_flag'] = '<>';
+        if (empty($param['ready_time'])) {
+
+            $param['ready_time_flag'] = ">";
+            $param['ready_time'] = 0;
+        }else {
+            $param['ready_time_flag'] = "between";
+            $first_day = date("Y-m-01", $param['ready_time']);
+            $last_day = date('Y-m-d', strtotime("{$first_day} +1 month -1 day"));
+            $param['ready_time'] = [$first_day ,  $last_day];
+
         }
-        if ($param['address'] < -1) {
-            $param['address_flag'] = '<>';
+        if (empty($param['keywords'])) {
+            $param['keywords_flag'] = '<>';
+            $param['keywords'] = '1';
+        }else {
+            $param['keywords_flag'] = 'LIKE';
+        }
+        if ($param['agent_area'] == '') {
+            $param['area_flag'] = '<>';
+            $param['agent_area'] = '-2';
+        }else {
+            $param['area_flag'] = "eq";
         }
 
-        /* 前端参数格式 JSON.stringfy([xxx,xxx]) */
-        switch (gettype($param['time'])) {
-            case 'array':
-                $param['time_flag'] = 'between';
-                break;
-            default:
-                $param['time_flag'] = '>';
+        /* 前端参数格式 */
+        if (empty($param['time'])) {
+            $param['time_flag'] = '>';
+            $param['time'] = 0;
+        }else {
+            $param['time_flag'] = "between";
+            $param['time'] = [date('Y-m-d', (int)$param['time']), date("Y-m-d",(int)$param['time']+24 *60 *60) ];
         }
+
         /**
          *
-         *
          * 根据条件SQL搜索
-         *
          *
          */
         /* 总共有N条数据 */
@@ -200,25 +216,26 @@ class Capital extends Controller
         /* 条件搜索查询有N条数据 */
         $rows = Db::name('total_capital')->alias("c")
             ->join("cloud_total_agent a", "c.agent_id = a.id")
-            ->field("a.agent_name,a.contact_person,a.agent_phone,a.agent_area,c.date,c.settlement_money,c.settlement_start,c.settlement_end,c.description,c.account,c.invoice")
             ->where([
                 "a.agent_name|contact_person|agent_phone|c.settlement_money|c.account" => [$param['keywords_flag'], $param['keywords']."%"],
-                "a.agent_area"  => [$param['address_flag'] , "{$param['address']}"],
+                "a.agent_area"  => [$param['area_flag'] , "{$param['agent_area']}"],
                 "c.status"  => [$param['status_flag'] , $param['status']],
             ])
-            ->whereTime("c.settlement_time", $param['time_flag'], $param["time"])
+            ->whereTime("c.date", $param['time_flag'], $param["time"])
+            ->whereTime("c.settlement_time", $param['ready_time_flag'], $param["ready_time"])
             ->count("c.id");
         $pages = page($rows);
 
         $res['list'] = Db::name('total_capital')->alias("c")
             ->join("cloud_total_agent a", "c.agent_id = a.id")
-            ->field("a.agent_name,a.contact_person,a.agent_phone,a.agent_area,c.date,c.settlement_money,c.settlement_start,c.settlement_end,c.description,c.account,c.invoice")
+            ->field("c.settlement_time,c.id,a.agent_name,a.contact_person,a.agent_phone,a.agent_area,c.date,c.settlement_money,c.settlement_start,c.settlement_end,c.description,c.account,c.invoice")
             ->where([
                 "a.agent_name|contact_person|agent_phone|c.settlement_money|c.account" => [$param['keywords_flag'], $param['keywords']."%"],
-                "a.agent_area"  => [$param['address_flag'] , "{$param['address']}"],
+                "a.agent_area"  => [$param['area_flag'] , $param['agent_area'] ],
                 "c.status"  => [$param['status_flag'] , $param['status']],
             ])
-            ->whereTime("c.settlement_time", $param['time_flag'], $param["time"])
+            ->whereTime("c.date", $param['time_flag'], $param["time"])
+            ->whereTime("c.settlement_time", $param['ready_time_flag'], $param["ready_time"])
             ->limit($pages['offset'],$pages['limit'])
             ->select();
 

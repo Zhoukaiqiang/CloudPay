@@ -14,6 +14,7 @@ class Merchant extends Controller
      * review_status 0待审核 1开通中 2通过 3未通过
      *
      * @return \think\Response
+     * @throws \Exception
      */
     public function index()
     {
@@ -21,7 +22,7 @@ class Merchant extends Controller
         $rows=TotalMerchant::where('review_status',2)->count();
         $pages = page($rows);
         $data['list']=TotalMerchant::alias('a')
-            ->field('a.id,a.name,a.phone,a.address,a.contact,a.channel,a.opening_time,a.status,b.contact_person,b.agent_phone')
+            ->field('a.id,a.name,a.phone,a.address,a.contact,a.channel,a.opening_time,a.status,b.agent_name,b.agent_phone')
             ->join('cloud_total_agent b','a.agent_id=b.id','left')
             ->where('a.review_status = 2')
             ->limit($pages['offset'],$pages['limit'])

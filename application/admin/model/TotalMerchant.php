@@ -14,11 +14,6 @@ class TotalMerchant extends Model
         return $attr_input_type[$value];
     }
 
-//    public function getStatusAttr($value)
-//    {
-//        //账号状态 0开启 1关闭
-//        return $value ? '启用':'停用';
-//    }
 
     public function getAccountTypeAttr($value)
     {

@@ -11,6 +11,7 @@ use think\Request;
 use think\Validate;
 use app\admin\model\TotalMerchant as Merchant;
 use app\admin\model\Index as indexModel;
+use think\Loader;
 
 /**
  * Class Index
@@ -25,13 +26,6 @@ class Index extends Controller
             "get_profit" => [
                 'id' => 'require|number',
 
-            ],
-            'echarts' => [
-//                'pay_type' => 'require',
-            ],
-            'search_agent' => [
-
-                'contact_time' => 'number',
             ],
         ],
     );
@@ -67,7 +61,7 @@ class Index extends Controller
             $etc = Db::name('order')->whereTime('pay_time', "yesterday")->where(['pay_type' => 'etc'])->sum('received_money');
             $etc_num = Db::name('order')->whereTime('pay_time', "yesterday")->where(['pay_type' => 'etc'])->count('id');
 
-        }else {
+        } else {
             $time_flag = "between";
             $total = Db::name('order')->whereTime('pay_time', $time_flag, [$past, $present])->sum('received_money');
             $total_num = Db::name('order')->whereTime('pay_time', $time_flag, [$past, $present])->count('id');
@@ -117,7 +111,7 @@ class Index extends Controller
     {
 
         /* 检验参数合法性 */
-        $this->check_params($this->request->except(['time', 'token']));
+        $this->check_params( $request->except(['token']) );
         $time = $request->param("time") ? $request->param("time") : -2;
 
         if ($time < -1) {
@@ -203,11 +197,10 @@ class Index extends Controller
     {
         /* 搜索条件项 */
 
-        $this->query['keywords'] = $request->param('keywords') ? $request->param('keywords') : -2;
-        $this->query['status'] = $request->param('status') ? $request->param('status') : -2;
-        $this->query['agent_area'] = $request->param('agent_area') ? $request->param('agent_area') : -2;
-        $this->query['contract_time'] = $request->param('contract_time') ? $request->param('contract_time') : -2;
-
+        $this->query['keywords'] = $request->param('keywords');
+        $this->query['status'] = $request->param('status');
+        $this->query['agent_area'] = $request->param('agent_area');
+        $this->query['contract_time'] = $request->param('contract_time');
 
 
         /* 传入参数并返回数据 */
@@ -227,29 +220,27 @@ class Index extends Controller
     public function get_search_result(Array $param)
     {
         /* 判断参数是否为默认，默认则不进入查询 */
-        if ($param['keywords'] < -1) {
+        if (empty($param['keywords'])) {
             $param['keywords_flag'] = '<>';
+            $param['keywords'] = '-2';
         } else {
             $param['keywords_flag'] = 'like';
         }
 
-        if ($param['status'] < -1) {
+        if (empty($param['status'])) {
             $param['status_flag'] = '<>';
-        }else if($param['status'] == -1) {
-            $param['status'] = 0;
-            $param['status_flag'] = 'eq';
+            $param['status'] = '-2';
         } else {
             $param['status_flag'] = 'eq';
 
         }
 
-
-        if ($param['agent_area'] < -1) {
+        if (empty($param['agent_area'])) {
             $param['agent_area_flag'] = '<>';
+            $param['agent_area'] = '-2';
         } else {
             $param['agent_area_flag'] = 'eq';
         }
-
 
         switch ($param['contract_time']) {
             case -2:
@@ -468,9 +459,9 @@ class Index extends Controller
             $param['create_time_flag'] = 'between';
         }
 
-        $total = Merchant::name('total_merchant')->count('id');
+        $total = Merchant::all()->count('id');
         /* 条件搜索查询有N条数据 */
-        $rows = Merchant::name('total_merchant')->alias('m')
+        $rows = Merchant::alias('m')
             ->where([
                 'm.name|m.contact|m.phone|m.agent_name' => [$param['keywords_flag'], $param['keywords'] . "%"],
                 'm.review_status' => [$param['review_status_flag'], $param['review_status']],
@@ -484,7 +475,7 @@ class Index extends Controller
 
         $pages = page($rows);
         /* 根据查询条件获取数据并返回 */
-        $res = Merchant::name('total_merchant')->alias('m')
+        $res = Merchant::alias('m')
             ->where([
                 'm.name|m.contact|m.phone|m.agent_name' => [$param['keywords_flag'], $param['keywords'] . "%"],
                 'm.review_status' => [$param['review_status_flag'], $param['review_status']],
@@ -523,45 +514,52 @@ class Index extends Controller
      */
     public function echarts(Request $request)
     {
-        /* 检验参数 */
-        $this->check_params($request->param());
 
+        $validate = Loader::Validate('AdminValidate');
+        if ($validate->scene("add")->check($request->param())) {
+            dump(1);
+        }else {
+            $this->return_msg(400, $validate->getError());
+        }
         /* 接受参数 */
-        $pay_type = $request->param('pay_type') ? $request->param('pay_type') : -2;
-        $past = $request->param('past');
-
-//        $channel = $request->param('channel') ? $request->param('channel') : -1;
-
-        if ($pay_type == -2) {
+        $pay_type = $request->param('pay_type');
+        $past = date('Y-m-d', strtotime('-7 days'));
+        $persent = date("Y-m-d", strtotime("today"));
+        if (empty($pay_type)) {
             $pay_type_flag = "<>";
+            $pay_type = '-2';
         } else {
             $pay_type_flag = "eq";
         }
-        $data = [];$list = [];
-        if (1) {
-            $past = intval($past);
-            $data['chartData'] = Db::name('order')
-                ->whereTime('pay_time', 'between', [$past, strtotime("yesterday")])
-                ->where("pay_type", $pay_type_flag, $pay_type)
-                ->field(['received_money', 'pay_time', 'id', 'pay_type'])->select();
-            return json_encode($data);
-        } else {
-            $data['chartData'] = Db::name('order')
-                ->whereTime('pay_time', 'yesterday')
-                ->where("pay_type", $pay_type_flag, $pay_type)
-                ->field(['received_money', 'pay_time', 'id', 'pay_type '])
-                ->select();
 
-            foreach ($data['chartData'] as $k => $v) {
-                $list[] = [
-                    "id" => $v['id'],
-                    "received_money" => $v['received_money'],
-                    "pay_time" => date('H', $v['pay_time']),
-                    "pay_type" => $v['pay_type'],
-                ];
-            }
-        return json_encode($list);
+        $data['chartData'] = Db::name('order')
+            ->field(['received_money', 'pay_time', 'id', 'pay_type'])
+            ->where("pay_type", $pay_type_flag, $pay_type)
+            ->whereTime('pay_time', 'between', [$past, $persent])
+            ->select();
+
+        /** 处理数据为Echarts格式 */
+        $filted_data = [];
+        foreach ($data['chartData'] as $k => $v) {
+            $filted_data[] = [
+                "pay_time" => date("Y-m-d", $v['pay_time']),
+                "sum" => $v['received_money'],
+                "pay_type" => $v['pay_type'],
+            ];
         }
+        $wx_num = [];$ali_num= [];
+        foreach ($filted_data as $k => $v) {
+           $wx_num[] =array_search("wxpay",$v);
+           $ali_num[] =array_search("alipay",$v);
+        }
+
+
+        if (!empty($data['chartData'])) {
+            $this->return_msg(200, '成功取出数据', $data['chartData']);
+        } else {
+            $this->return_msg(400, '没有数据');
+        }
+
 
     }
 
@@ -655,6 +653,7 @@ class Index extends Controller
         /* 获取参数的验证规则 */
         try {
             $rule = $this->rules[$this->request->controller()][$this->request->action()];
+            $rule = \validate("AdminValidate");
 
         } catch (Exception $e) {
             return true;
@@ -681,20 +680,21 @@ class Index extends Controller
         die;
     }
 
-    public function upload_img(){
-        $file=request()->file('file');
+    public function upload_img()
+    {
+        $file = request()->file('file');
         //移动图片
-        $info=$file->validate(['size'=>5*1024*1024,'ext'=>'jpg,png,gif,jpeg'])->move(ROOT_PATH.'public'.DS.'uploads');
+        $info = $file->validate(['size' => 5 * 1024 * 1024, 'ext' => 'jpg,png,gif,jpeg'])->move(ROOT_PATH . 'public' . DS . 'uploads');
         dump($info);
-        if($info){
+        if ($info) {
             //文件上传成功
             //获取文件路径
-            $goods_logo=DS.'uploads'.DS.$info->getSaveName();
-            $goods_logo=str_replace('\\','/',$goods_logo);
-            $this->return_msg(200,'success',$goods_logo);
-        }else{
-            $error=$file->getError();
-            $this->return_msg(400,$error);
+            $goods_logo = DS . 'uploads' . DS . $info->getSaveName();
+            $goods_logo = str_replace('\\', '/', $goods_logo);
+            $this->return_msg(200, 'success', $goods_logo);
+        } else {
+            $error = $file->getError();
+            $this->return_msg(400, $error);
         }
     }
 
