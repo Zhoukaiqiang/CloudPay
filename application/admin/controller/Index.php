@@ -507,7 +507,6 @@ class Index extends Controller
     public function echarts(Request $request)
     {
 
-
         /* 接受参数 */
         $pay_type = $request->param('pay_type');
         $past = date('Y-m-d', strtotime('-7 days'));
