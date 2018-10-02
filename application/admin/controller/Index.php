@@ -496,9 +496,6 @@ class Index extends Controller
     /**
      * @param Request $request
      * @param [string]  $pay_type 支付类型
-     * @param [int]  $past 过去的时间戳
-     * @param [int]  $present 现在的时间戳
-     * @pram [string] $channel 全部： -1 / 直联： 1 / 间联： 2
      * @return [json] $data 返回数据
      * @throws \think\db\exception\DataNotFoundException
      * @throws \think\db\exception\ModelNotFoundException
@@ -509,8 +506,7 @@ class Index extends Controller
 
         /* 接受参数 */
         $pay_type = $request->param('pay_type');
-        $past = date('Y-m-d', strtotime('-7 days'));
-        $persent = date("Y-m-d", strtotime("today"));
+
         if (empty($pay_type)) {
             $pay_type_flag = "<>";
             $pay_type = '-2';
@@ -518,34 +514,35 @@ class Index extends Controller
             $pay_type_flag = "eq";
         }
 
-        $data['chartData'] = Db::name('order')
-            ->field(['received_money', 'pay_time', 'id', 'pay_type'])
-            ->where("pay_type", $pay_type_flag, $pay_type)
-            ->whereTime('pay_time', 'between', [$past, $persent])
-            ->select();
+        $i = -7; $sum = [];
+        //make
+        while($i < 0) {
+            $past = date('Y-m-d', strtotime($i .' days'));
+            $data['chartData'][] = Db::name('order')
+                ->where("pay_type", $pay_type_flag, $pay_type)
+                ->whereTime('pay_time', $past)
+                ->sum("received_money");
+            $sum[] = Db::name("order")
+                ->where("pay_type", $pay_type_flag, $pay_type)
+                ->whereTime('pay_time', $past)
+                ->count("id");
 
-        /** 处理数据为Echarts格式 */
-        $filted_data = [];
-        foreach ($data['chartData'] as $k => $v) {
+            $i++;
+        }
+        foreach($data["chartData"] as $k => $v) {
             $filted_data[] = [
-                "pay_time" => date("Y-m-d", $v['pay_time']),
-                "sum" => $v['received_money'],
-                "pay_type" => $v['pay_type'],
+                "amount" => $v,
+                "count"    => $sum[$k],
+                "pay_time" => date('Y-m-d', strtotime(-7 + $k . ' days')),
             ];
         }
-        $wx_num = [];$ali_num= [];
-        foreach ($filted_data as $k => $v) {
-           $wx_num[] =array_search("wxpay",$v);
-           $ali_num[] =array_search("alipay",$v);
-        }
 
 
-        if (!empty($data['chartData'])) {
-            $this->return_msg(200, '成功取出数据', $data['chartData']);
+        if (count($filted_data) > 0) {
+            $this->return_msg(200, '成功取出数据', $filted_data);
         } else {
             $this->return_msg(400, '没有数据');
         }
-
 
     }
 
