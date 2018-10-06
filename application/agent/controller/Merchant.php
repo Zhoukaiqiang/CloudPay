@@ -72,6 +72,39 @@ class Merchant extends Incom
 
     }
     /**
+     * 启用商户
+     */
+    public function start()
+    {
+        //获取商户id
+        $id=request()->param('id');
+        //修改商户状态
+        $result=TotalMerchant::where('id',$id)->update(['status'=>1]);
+        if($result){
+            return_msg(200,"启用成功");
+        }else{
+            return_msg(400,"启用失败");
+        }
+    }
+    /**
+     * 停用商户 0关闭 1开启
+     *
+     * @param  int  $id
+     * @return \think\Response
+     */
+    public function stop()
+    {
+        //获取商户id
+        $id=request()->param('id');
+        //修改商户状态
+        $result=TotalMerchant::where('id',$id)->update(['status'=>0]);
+        if($result){
+            return_msg(200,"已停用");
+        }else{
+            return_msg(400,"停用失败");
+        }
+    }
+    /**
      * 显示当前代理商下正常使用的商户列表
      *  review_status 审核状态 0待审核 1开通中 2通过 3未通过
      *  status  账号状态 0开启 1关闭
@@ -247,6 +280,7 @@ class Merchant extends Incom
                 $arr['tranTyps']="C1";//交易类型
                 $arr['orgNo']="518";//合作商机构号
                 $arr['crp_nm']=$data['contact'];//法人姓名
+                $arr['stoe_nm']=$data['name'];//签购单名称
                 MerchantIncom::insert($arr,true);
                 $this->merchant_incom($insert_id);
 //                return_msg(200,'添加成功');
