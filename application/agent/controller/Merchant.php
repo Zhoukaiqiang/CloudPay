@@ -3,11 +3,13 @@
 namespace app\agent\controller;
 
 use app\admin\controller\Incom;
+use app\agent\model\AgentCategory;
 use app\agent\model\AgentPartner;
 use app\agent\model\MerchantIncom;
 use app\agent\model\TotalAgent;
 use app\agent\model\TotalMerchant;
 use think\Controller;
+use think\Loader;
 use think\Request;
 use think\Db;
 
@@ -199,6 +201,11 @@ class Merchant extends Incom
             $data=request()->post();
 //            $data['channel']=3;//表示间联
             //验证
+            /*$validate = Loader::validate('AgentValidate');
+            if (!$validate->scene('add_middle')->check($data)) {
+                $error = $validate->getError();
+                return_msg(400, 'failure', $error);
+            }*/
             //上传图片
 //            $data['attachment']=$this->upload_logo();
 //            $data['agent_id']=$agent_id;
@@ -226,7 +233,7 @@ class Merchant extends Incom
                 $arr['bus_lic_no']=$data['business_license'];//营业执照号
                 $arr['bus_exp_dt']=$data['license_time'];//营业执照有限期
                 $arr['bse_lice_nm']=$data['name'];//营业执照名
-                $arr['mercAdds']=$data['detail_address'];//营业执照地址
+                $arr['mercAdds']=$data['address'];//营业执照地址
                 $arr['stoe_nm']=$data['address'].$data['name'];//签购单名称=省市+门店名
                 $arr['mcc_cd']=$data['mcc_cd'];//mcc码
                 $arr['stoe_area_cod']=$data['stoe_area_cod'];//地区码
@@ -237,18 +244,27 @@ class Merchant extends Incom
                 $arr['orgNo']="518";//合作商机构号
                 $arr['crp_nm']=$data['contact'];//法人姓名
                 MerchantIncom::insert($arr,true);
-                $this->merchant_create($insert_id);
+                $this->merchant_incom($insert_id);
 //                return_msg(200,'添加成功');
             }else{
                 return_msg(400,'添加失败');
             }
         }else{
             //取出当前代理商下所有合伙人
-            $data=AgentPartner::field(['id','partner_name'])->where('agent_id',$agent_id)->select();
+            $data['list']=AgentPartner::field(['id','partner_name'])->where('agent_id',$agent_id)->select();
+            //显示所有一级分类
+            $data['category']=AgentCategory::where('pid',0)->select();
             return_msg(200,'success',$data);
         }
     }
 
+    //获取二级分类和三级分类
+    public function getCatePid()
+    {
+        $id=request()->param('pid');
+        $data=AgentCategory::where('pid',$id)->select();
+        return_msg(200,'success',$data);
+    }
     /**
      * 新增直联商户
      *

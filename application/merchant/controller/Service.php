@@ -2,63 +2,87 @@
 
 namespace app\merchant\controller;
 
+
+use app\merchant\model\MerchantDish;
+use app\merchant\model\MerchantDishNorm;
+use app\merchant\model\ShopComestible;
+use app\merchant\model\ShopTable;
 use think\Controller;
 use think\Request;
 
 class Service extends Controller
 {
     /**
-     * 点菜
+     * 选择桌位
      *
      * @return \think\Response
      */
-    public function point_food()
+    public function select_table()
     {
-        //取出商户下所有门店信息
-
+        //选择桌位
+        $data=ShopTable::field('id,name,img')->select();
+        return_msg(200,'success',$data);
     }
 
     /**
-     * 服务设置
+     * 桌位名称搜索
      *
      * @return \think\Response
      */
-    public function create()
+    public function search(Request $request)
     {
-        //
+        $table=$request->param('table');
+        $info=ShopTable::field('id,name,img')->where('name','like',$table."%")->select();
+        return_msg(200,'success',$info);
     }
 
     /**
-     * 保存新建的资源
+     * 菜品列表
      *
      * @param  \think\Request  $request
      * @return \think\Response
      */
-    public function save(Request $request)
+    public function food_list(Request $request)
     {
-        //
+        //获取菜品分类名和桌号id
+        $data=$request->param();
+        //根据菜品名字取出菜品id
+        $norm_id=MerchantDishNorm::field('id')->where('dish_norm',$data['dish_norm'])->find();
+        //取出所有菜品属性信息
+        $info=MerchantDish::field('id,dish_name,dish_describe,dish_img,money')->where('norm_id',$norm_id)->select();
     }
 
     /**
-     * 显示指定的资源
+     * 菜品搜索
      *
      * @param  int  $id
      * @return \think\Response
      */
-    public function read($id)
+    public function dish_search(Request $request)
     {
-        //
+        $dish_name=$request->param('dish_name');
+        $data=MerchantDish::field('id,dish_name,dish_describe,dish_img,money')->where('dish_name','like',$dish_name."%")->select();
+        return_msg(200,'success',$data);
     }
 
     /**
-     * 显示编辑资源表单页.
+     * 点菜
      *
      * @param  int  $id
      * @return \think\Response
      */
-    public function edit($id)
+    public function point_food(Request $request)
     {
-        //
+        //获取菜品信息
+        $dish=$request->param();
+        $dish['create_time']=time();
+        //加入临时表
+        $insert=ShopComestible::insert($dish,true);
+        if($insert){
+            return_msg(200,'success');
+        }else{
+            return_msg(400,'failure');
+        }
     }
 
     /**
