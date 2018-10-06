@@ -17,7 +17,7 @@ class AdminValidate extends Validate{
         ['detailed_address','require','请填写详细地址'],
         ['admin_id'      ,'require','请选择运营人员'],
         ['username'      ,'require','请填写登录账号'],
-        ['password'      ,'require','请填写登录密码'],
+        ['password'      ,'require|length:6','请填写密码|密码必须为6位数'],
         ['open_bank'     ,'require','请填写开户行名称'],
         ['open_bank_branche','require','请填写开户行网点'],
         ['home'          ,'require','请选择所在地'],
@@ -36,7 +36,7 @@ class AdminValidate extends Validate{
         ['address','require','请选择地址信息'],
         ['detail_address','require','请输入详细地址'],
         ['contact','require','请填写联系人'],
-        ['phone','require|regex:/^1[3-9]\d{9}$/|unique:phone','请填写联系电话|联系电话格式不正确|联系电话已存在'],
+        ['phone','require|regex:/^1[3-9]\d{9}$/','请填写联系电话|联系电话格式不正确'],
         ['category','require','请选择经营类目'],
         ['account_type','require','请选择账户类型'],
         ['account_name','require','请输入账户名'],
@@ -50,6 +50,9 @@ class AdminValidate extends Validate{
         ['name','require','请输入用户名'],
         ['role_id','require','请选择所属角色'],
         ['status','require','请选择状态'],
+
+        //商户后台
+        ["stop_reason", "max:120", "消息最多120个字"]
     ];
 
     //命名规则 控制器_函数名称
@@ -66,6 +69,11 @@ class AdminValidate extends Validate{
         ],
         //商户登录验证
         "merchant_login" => ['phone','password'],
+        "merchant_get_profile" => ['phone'],
+        "merchant_change_pwd"  => ['phone', 'password'],
+
+        //商户服务
+        "service_stop_agent" => ["stop_reason"],
     ];
 
 }

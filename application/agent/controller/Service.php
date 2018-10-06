@@ -14,31 +14,36 @@ class Service extends Controller
      *
      * @return \think\Response
      */
-    public function service_list()
+    public function service_list(Request $request)
     {
         //获取上级代理商id
-        $id=session('agent_id');
-        $id=1;
+        $id = $request->param("id");
+
         //获取所有行数
         $rows=TotalAgent::where('parent_id',$id)->count();
         $pages=page($rows);
         //获取当前代理商下的所有子代理
         $data['list']=TotalAgent::field(['id,agent_name,contact_person,agent_phone,agent_mode,agent_area,create_time,status'])->where('parent_id',$id)->limit($pages['offset'],$pages['limit'])->select();
         $data['pages']=$pages;
-        return_msg(200,'success',$data);
+
+        if (count($data['list'])) {
+            return_msg(200,'success',$data);
+        }else {
+            return_msg(400, "没有数据");
+        }
     }
 
     /**
      * 启用子代
-     *
+     * @param [int]  当前代理商ID
      * @return \think\Response
      */
     public function open_agent()
     {
         //获取当前代理商id
-        $id=request()->param('id');
-        $id=1;
-        $result=TotalAgent::where('id',$id)->update(['status'=>1]);
+        $id= request()->param('id');
+
+        $result=TotalAgent::get(['id' => $id])->save(['status'=>1]);
         if($result){
             return_msg(200,'启用成功');
         }else{
@@ -54,10 +59,21 @@ class Service extends Controller
      */
     public function stop_agent(Request $request)
     {
-        //
-        $data=$request->post();
-        $data['status']=0;
-        $result=TotalAgent::update($data);
+        $param =$request->param();
+        check_params("service_stop_agent", $param);
+
+        $id = $param['id'];
+
+        if( $request->param("stop_reason") )  {
+            $stop_msg = $param['stop_reason'];
+        }else {
+            $stop_msg = '';
+        }
+        $result = TotalAgent::get(['id' => $id])->save([
+            'status'  => 0,
+            "stop_reason" => $stop_msg,
+        ]);
+
         if($result){
             return_msg(200,'停用成功');
         }else{
@@ -140,8 +156,8 @@ class Service extends Controller
     public function service_merchant()
     {
         //获取上级代理商id
-        $id=session('agent_id');
-        $id=1;
+        $id = request()->param("id");
+
         //获取总行数
         $rows=TotalAgent::where('parent_id',$id)->count();
         //分页
@@ -154,7 +170,12 @@ class Service extends Controller
             ->limit($pages['offset'],$pages['limit'])
             ->select();
         $data['pages']=$pages;
-        return_msg(200,'success',$data);
+
+        if (count($data['list'])) {
+            return_msg(200,'success',$data);
+        }else {
+            return_msg(400, "没有数据");
+        }
     }
 
     /**

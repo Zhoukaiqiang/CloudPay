@@ -214,6 +214,19 @@ if (!function_exists("check_params")) {
     }
 }
 
+if (!function_exists("generate_order_no")) {
+    /**
+     * 生成订单号 规则:  /[日期+用户ID+3位随机码]/
+     * @param $uid [int] 用户ID
+     * @return [string] 订单号码
+     */
+    function generate_order_no($uid) {
+
+        $order_num = (string)date("YmdHms") + (string)$uid + rand(100, 999);
+        return $order_num;
+
+    }
+}
 
 /**
  * 设置curl

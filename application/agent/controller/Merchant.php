@@ -55,20 +55,9 @@ class Merchant extends Incom
             ->where('a.agent_id',$agent_id)
             ->limit($pages['offset'],$pages['limit'])
             ->select();
-        $arr=Db::name('cloud_agent_partner')->where('agent_id',$agent_id)->field(['id','partner_name'])->select();
+        $arr=Db::name('agent_partner')->where('agent_id',$agent_id)->field(['id','partner_name'])->select();
 
-        foreach($data as $k=>&$v){
-            if($v['review_status']==0){
-                $v['review_status']='待审核';
-            }else if($v['review_status'] ==1){
-                $v['review_status']='开通中';
-            }else if($v['review_status']==2){
-                $v['review_status']='开通';
-            }else if($v['review_status']==3){
-                $v['review_status']='驳回';
-            }
-            $v['opening_time']=date("Y-m-d",$v['opening_time']);
-        }
+
 
         $data['pages']=$pages;
         $data['partner']=$arr;
@@ -273,6 +262,43 @@ class Merchant extends Incom
         }
     }
 
+    /**
+     * 启用商户 0关闭 1开启
+     *
+     * @param  \think\Request  $request
+     * @return \think\Response
+     */
+    public function enable()
+    {
+        //获取商户id
+        $id=request()->param('id');
+        //修改商户状态
+        $result=TotalMerchant::where('id',$id)->update(['status'=>1]);
+        if($result){
+            return_msg(200,"启用成功");
+        }else{
+            return_msg(400,"启用失败");
+        }
+    }
+
+    /**
+     * 停用商户 0关闭 1开启
+     *
+     * @param  int  $id
+     * @return \think\Response
+     */
+    public function disable()
+    {
+        //获取商户id
+        $id=request()->param('id');
+        //修改商户状态
+        $result=TotalMerchant::where('id',$id)->update(['status'=>0]);
+        if($result){
+            return_msg(200,"已停用");
+        }else{
+            return_msg(400,"停用失败");
+        }
+    }
     //获取二级分类和三级分类
     public function getCatePid()
     {
