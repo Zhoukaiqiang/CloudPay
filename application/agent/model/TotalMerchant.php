@@ -14,11 +14,11 @@ class TotalMerchant extends Model
         return $attr_input_type[$value];
     }
 
-    public function getStatusAttr($value)
-    {
-        //账号状态 0开启 1关闭
-        return $value ? '关闭' : '开启';
-    }
+//    public function getStatusAttr($value)
+//    {
+//        //账号状态 0开启 1关闭
+//        return $value ? '关闭' : '开启';
+//    }
 
     public function getAccountTypeAttr($value)
     {
@@ -26,23 +26,23 @@ class TotalMerchant extends Model
         return $value ? '个体账户' : '对公账户';
     }
 
-    public function getReviewStatusAttr($val)
-    {
-        switch ($val) {
-            case 0:
-                return "待审核";
-                break;
-            case 1:
-                return "开通中";
-                break;
-            case 2:
-                return "开通";
-                break;
-            case 3:
-                return "驳回";
-                break;
-        }
-    }
+//    public function getReviewStatusAttr($val)
+//    {
+//        switch ($val) {
+//            case 0:
+//                return "待审核";
+//                break;
+//            case 1:
+//                return "开通中";
+//                break;
+//            case 2:
+//                return "开通";
+//                break;
+//            case 3:
+//                return "驳回";
+//                break;
+//        }
+//    }
 
     public function getChannelAttr($value)
     {
