@@ -274,6 +274,7 @@ class Incom extends Controller
 //        $data['merchant_id']=11;
 //        dump($data);die;
 //        $info=MerchantIncom::insert($data);
+        $data=$data->toArray();
         $data['signValue'] = sign_ature(0000, $data);
 //        dump($data);die;
 //        var_dump(json_encode($data));die;
@@ -281,6 +282,7 @@ class Incom extends Controller
 //        var_dump(json_encode($data));die;
 //        if($info){
         //发送给新大陆
+        dump($data);die;
         $result = curl_request($this->url, true, $data, true);
         $result = json_decode($result, true);
         $signValue = sign_ature(1111, $result);

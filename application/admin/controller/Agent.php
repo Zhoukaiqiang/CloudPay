@@ -90,7 +90,6 @@ class Agent extends Controller
         //
         if (request()->isPost()) {
             $data = $request->post();
-
             //验证
             $validate = Loader::validate('AdminValidate');
             if (!$validate->scene('detail')->check($data)) {

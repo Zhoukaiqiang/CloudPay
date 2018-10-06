@@ -4,8 +4,10 @@ namespace app\merchant\controller;
 
 use app\merchant\model\MerchantMember;
 use app\merchant\model\MerchantMemberCart;
+use app\merchant\model\MerchantShop;
 use app\merchant\model\MerchantUser;
 use app\merchant\model\Order;
+use app\merchant\model\ShopActiveRecharge;
 use think\Controller;
 use think\Request;
 
@@ -70,7 +72,7 @@ class Member extends Controller
     {
         //获取会员id
         $id=$request->param('id');
-        $id=1;
+        $id=1;//测试
         $data=MerchantMember::field('id,member_head,recharge_money,consumption_money,member_name,member_phone,money,consume_number,register_time')
             ->where('id',$id)
             ->find();
@@ -87,7 +89,7 @@ class Member extends Controller
     {
         //获取会员id
         $member_id=$request->param('id');
-        $member_id=1;
+        $member_id=1;//测试
         $data=Order::field('id,order_money,pay_type,status,create_time')
             ->where('member_id',$member_id)
             ->whereTime('pay_time','month')
@@ -118,12 +120,46 @@ class Member extends Controller
     /**
      * 会员充值
      *
-     * @param  int  $id
+     * @param  int  $id 会员id
      * @return \think\Response
      */
-    public function edit($id)
+    public function recharge(Request $request)
     {
-        //
+        if($request->isPost()){
+            //获取会员id
+            $data=$request->post();
+            $data['money']=floatval($data['money']);
+            $info=MerchantMember::field('money')->where('id',$data['id'])->find();
+            $total=$data['money']+$info['money'];
+            $result=MerchantMember::where('id',$data['id'])->update(['money'=>$total]);
+            if($result){
+                return_msg(200,'充值成功');
+            }else{
+                return_msg(400,'充值失败');
+            }
+        }else{
+            //取出所有会员充值送活动
+            //获取门店信息
+            if(!empty($this->merchant_id)){//?????
+                $info=MerchantShop::where('id')->where('merchant_id',$this->merchant_id)->find();
+                //取出门店下所有活动
+                //取出永久充值送活动
+                $data[]=ShopActiveRecharge::field('recharge_money,give_money')->where(['recharge_time'=>0,'shop_id'=>$info['id']])->select();
+                //取出非永久充值送活动
+            }elseif(empty($this->merchant_id) && !empty($this->user_id)){
+                $info=MerchantUser::field('shop_id')->where('id',$this->user_id)->find();
+                //取出门店下所有活动
+                //取出永久充值送活动
+                $data[]=ShopActiveRecharge::field('recharge_money,give_money')->where(['recharge_time'=>0,'shop_id'=>$info['shop_id']])->select();
+                //取出未过期充值送活动
+                $data[]=ShopActiveRecharge::field('recharge_money,give_money')->where(['recharge_time'=>1,'shop_id'=>$info['shop_id']])->whereTime('end_time','>',time())->select();
+               return_msg(200,'success',$data);
+            }
+
+
+
+
+        }
     }
 
     /**
