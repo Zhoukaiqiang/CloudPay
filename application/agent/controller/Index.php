@@ -508,16 +508,21 @@ class Index extends Controller
         //获取商户|联系人|联系方式
         $name=$request->param('keyword');
         //获取合伙人id
-        $partner_id=$request->param('partner_id');
+            $partner_id=$request->param('partner_id');
         //获取是否交易
-        $deal=$request->param('deal');
+//        $deal=$request->param('deal');
+        //状态0开启 1关闭
+        $status=$request->param('status');
+        $create_time=$request->param('pay_time') ? $request->param('pay_time') : mktime(0,0,0,date('m'),date('d'),date('Y'));
+        $end_time=$create_time + (60*60*24);
 
         //如果$deal=1是有交易用户，$deal=2是无交易用户
-        $nodeal='between';
 
-        if($deal==2){
-            $nodeal='not between';
-        }
+//        $nodeal='between';
+//
+//        if($deal==2){
+//            $nodeal='not between';
+//        }
         $symbol='<>';
         if($partner_id >0){
             $symbol='eq';
@@ -529,7 +534,8 @@ class Index extends Controller
             ->join('cloud_agent_partner','a.partner_id=cloud_agent_partner.id')
             ->where('a.abbreviation|a.contact|a.phone','like',"%$name%")
             ->where('a.partner_id',$symbol,$partner_id)
-            ->whereTime('cloud_order.pay_time',$nodeal,[$request->param('pay_time'),$request->param('yesterday')])
+            ->where('a.status',$status)
+            ->whereTime('cloud_order.pay_time','between',[$create_time,$end_time])
             ->group('a.id')
             ->count('a.id');
         $pages = page($rows);
@@ -540,7 +546,8 @@ class Index extends Controller
             ->join('cloud_agent_partner','a.partner_id=cloud_agent_partner.id')
             ->where('a.abbreviation|a.contact|a.phone','like',"%$name%")
             ->where('a.partner_id',$symbol,$partner_id)
-            ->whereTime('cloud_order.pay_time',$nodeal,[$request->param('pay_time'),$request->param('yesterday')])
+            ->where('a.status',$status)
+            ->whereTime('cloud_order.pay_time',between,[$create_time,$end_time])
             ->group('a.id')
             ->limit($pages['offset'],$pages['limit'])
             ->select();
@@ -587,7 +594,7 @@ class Index extends Controller
             ->join('cloud_order','a.id=cloud_order.merchant_id','left')
             ->where('a.abbreviation|a.contact|a.phone','like',"%$name%")
             ->where('a.partner_id',$symbol,$partner_id)
-            ->whereTime('cloud_order.pay_time',$nodeal,[$request->param('pay_time'),$request->param('yesterday')])
+            ->whereTime('cloud_order.pay_time',$nodeal,[$request->param('create_time'),$request->param('end_time')])
             ->group('a.id')
             ->count('a.id');
         $pages = page($rows);
@@ -597,7 +604,7 @@ class Index extends Controller
             ->join('cloud_order','a.id=cloud_order.merchant_id','left')
             ->where('a.abbreviation|a.contact|a.phone','like',"%$name%")
             ->where('a.partner_id',$symbol,$partner_id)
-            ->whereTime('cloud_order.pay_time',$nodeal,[$request->param('pay_time'),$request->param('yesterday')])
+            ->whereTime('cloud_order.pay_time',$nodeal,[$request->param('create_time'),$request->param('end_time')])
             ->group('a.id')
             ->limit($pages['offset'],$pages['limit'])
             ->select();

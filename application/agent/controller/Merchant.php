@@ -53,6 +53,8 @@ class Merchant extends Incom
             ->where('a.agent_id',$agent_id)
             ->limit($pages['offset'],$pages['limit'])
             ->select();
+        $arr=Db::name('cloud_agent_partner')->where('agent_id',$agent_id)->field(['id','partner_name'])->select();
+
         foreach($data as $k=>&$v){
             if($v['review_status']==0){
                 $v['review_status']='待审核';
@@ -66,6 +68,7 @@ class Merchant extends Incom
             $v['opening_time']=date("Y-m-d",$v['opening_time']);
         }
         $data['pages']=$pages;
+        $data['partner']=$arr;
         $data['pages']['rows'] = $rows;
         $data['pages']['total_row'] = $total;
         return_msg(200,'success',json_encode($data)) ;
