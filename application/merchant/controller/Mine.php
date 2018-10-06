@@ -1,30 +1,39 @@
 <?php
 
-namespace app\common\controller;
+namespace app\merchant\controller;
 
+use app\merchant\model\MerchantShop;
 use think\Controller;
 use think\Request;
 
-class Alipay extends Controller
+class Mine extends Controller
 {
     /**
-     * 显示资源列表
+     * 显示签约信息
      *
      * @return \think\Response
      */
-    public function index()
+    public function get_sign()
     {
-
+        $rate['alipay_rate'] = 0.38;
+        $rate['wx_rate'] = 0.38;
+        $rate['union_rate'] = 0.55;
+        return $rate;
     }
 
+
     /**
-     * 显示创建资源表单页.
+     * 显示我的资料.
      *
      * @return \think\Response
      */
-    public function create()
+    public function get_profile(Request $request)
     {
-        //
+        if ($request->isGet()) {
+            $query = $request->param();
+            $res = MerchantShop::get($query['id'])->field('name, phone, role')->find();
+            return json_encode($res);
+        }
     }
 
     /**

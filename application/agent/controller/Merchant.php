@@ -3,11 +3,13 @@
 namespace app\agent\controller;
 
 use app\admin\controller\Incom;
+use app\agent\model\AgentCategory;
 use app\agent\model\AgentPartner;
 use app\agent\model\MerchantIncom;
 use app\agent\model\TotalAgent;
 use app\agent\model\TotalMerchant;
 use think\Controller;
+use think\Loader;
 use think\Request;
 use think\Db;
 
@@ -47,7 +49,7 @@ class Merchant extends Incom
             ->count('a.id');
         $pages=page($rows);
 
-        $data=TotalMerchant::alias('a')
+        $data['list']=TotalMerchant::alias('a')
             ->field('a.id,a.name,a.phone,a.address,a.contact,a.channel,a.opening_time,a.status,a.review_status,b.partner_name')
             ->join('cloud_agent_partner b','a.partner_id=b.id','left')
             ->where('a.agent_id',$agent_id)
@@ -67,11 +69,16 @@ class Merchant extends Incom
             }
             $v['opening_time']=date("Y-m-d",$v['opening_time']);
         }
+
         $data['pages']=$pages;
         $data['partner']=$arr;
         $data['pages']['rows'] = $rows;
         $data['pages']['total_row'] = $total;
-        return_msg(200,'success',json_encode($data)) ;
+        if (count($data['list'])  > 0 ) {
+            return_msg(200,'success',$data) ;
+        } else {
+            return_msg(400, '没有数据');
+        }
 
 
     }
@@ -209,6 +216,11 @@ class Merchant extends Incom
             $data=request()->post();
 //            $data['channel']=3;//表示间联
             //验证
+            /*$validate = Loader::validate('AgentValidate');
+            if (!$validate->scene('add_middle')->check($data)) {
+                $error = $validate->getError();
+                return_msg(400, 'failure', $error);
+            }*/
             //上传图片
 //            $data['attachment']=$this->upload_logo();
 //            $data['agent_id']=$agent_id;
@@ -235,11 +247,11 @@ class Merchant extends Incom
                 $arr['fee_rat3_scan']=$data['merchant_rate'];//
                 $arr['bus_lic_no']=$data['business_license'];//营业执照号
                 $arr['bus_exp_dt']=$data['license_time'];//营业执照有限期
-                $arr['bse_lice_nm']=$data['license_name'];//营业执照名
-                $arr['mercAdds']=$data['license_address'];//营业执照地址
+                $arr['bse_lice_nm']=$data['name'];//营业执照名
+                $arr['mercAdds']=$data['address'];//营业执照地址
                 $arr['stoe_nm']=$data['address'].$data['name'];//签购单名称=省市+门店名
-                $arr['mcc_cd']=$data['mcc_cd'];//mcc码?
-                $arr['stoe_area_cod']=$data['stoe_area_cod'];//地区码?
+                $arr['mcc_cd']=$data['mcc_cd'];//mcc码
+                $arr['stoe_area_cod']=$data['stoe_area_cod'];//地区码
                 $arr['trm_rec']=5;//终端数量
                 $arr['alipay_flg']="N";//扫码产品
                 $arr['yhkpay_flg']="Y";//银行卡产品
@@ -247,18 +259,27 @@ class Merchant extends Incom
                 $arr['orgNo']="518";//合作商机构号
                 $arr['crp_nm']=$data['contact'];//法人姓名
                 MerchantIncom::insert($arr,true);
-                $this->merchant_create($insert_id);
+                $this->merchant_incom($insert_id);
 //                return_msg(200,'添加成功');
             }else{
                 return_msg(400,'添加失败');
             }
         }else{
             //取出当前代理商下所有合伙人
-            $data=AgentPartner::field(['id','partner_name'])->where('agent_id',$agent_id)->select();
+            $data['list']=AgentPartner::field(['id','partner_name'])->where('agent_id',$agent_id)->select();
+            //显示所有一级分类
+            $data['category']=AgentCategory::where('pid',0)->select();
             return_msg(200,'success',$data);
         }
     }
 
+    //获取二级分类和三级分类
+    public function getCatePid()
+    {
+        $id=request()->param('pid');
+        $data=AgentCategory::where('pid',$id)->select();
+        return_msg(200,'success',$data);
+    }
     /**
      * 新增直联商户
      *

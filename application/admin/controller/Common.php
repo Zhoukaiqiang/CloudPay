@@ -17,8 +17,8 @@ class Common extends Controller
     protected $rules = array(
         'User' => array(
             'login' => array(
-                'phone' => ['require', 'length' => 11, 'number'],
-                'password' => ['require', 'max' => 20],
+                ['phone','require|length:11|/^1[345678]{1}\d{9}$/','请填写电话号码|手机号为11位|手机号不正确'],
+                ['password','require|max:6','请填写密码|密码最多不能超过6位'],
                 //'user_name' => ['require'],
             ),
             'index' => [
@@ -30,13 +30,13 @@ class Common extends Controller
                 'password' => 'require|length:32',
                 'code' => 'require|number|length:6'
             ],
-            'changePwd' => [
+            'changepwd' => [
                 'phone' => 'require',
                 'password' => 'require|length:32',
                 'ini_pwd' => 'require|length:32',
 
             ],
-            'findPwd' => [
+            'findpwd' => [
                 'phone' => 'require',
                 'password' => 'require|length:32',
                 'code' => 'require|length:6|number',
@@ -54,11 +54,11 @@ class Common extends Controller
                 'code' => 'require|length:6|number',
 
             ],
-            'addStaff' => [
-                'name' => ['require', 'max' => 20],
-                'phone' => ['require', 'length' => 11, 'number'],
-                'password' => ['require'],
-                'status' => ['require'],
+            'addstaff' => [
+                ['name','require|max:25','请填写名称|名称最多不能超过25个字符'],
+                ['phone','require|length:11|/^1[345678]{1}\d{9}$/','请填写电话号码|手机号为11位|手机号不正确'],
+                ['password','require|max:6','请填写密码|密码最多不能超过6位'],
+                ['status', 'require', '请选择状态']
             ],
             'test' => [],
         ),
@@ -291,9 +291,10 @@ class Common extends Controller
      * @return [string] [加密后的密码]
      *
      */
-    public function encrypt_password($password, $phone= '')
+    public function encrypt_password($passwor='', $phone= '')
     {
-
+        $password = request()->param('password');
+        $phone = request()->param('phone');
         return md5('$ysf' . md5($password). $phone );
     }
 

@@ -16,7 +16,7 @@ class Index extends Model
     public function getRoleIdAttr($value)
     {
         //  直联和间联 0待审核 1开通中 2通过 3未通过
-        $attr_input_type = ['运营总监', '管理总监'];
+        $attr_input_type = ['运营专员', '运营总监'];
         return $attr_input_type[$value];
     }
 }

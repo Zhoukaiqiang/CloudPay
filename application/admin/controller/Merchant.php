@@ -14,19 +14,21 @@ class Merchant extends Controller
      * review_status 0待审核 1开通中 2通过 3未通过
      *
      * @return \think\Response
+     * @throws \Exception
      */
     public function index()
     {
         //获取总行数
-        $row=TotalMerchant::where('review_status',2)->count();
-        $pages = page($row);
-        $data=TotalMerchant::alias('a')
-            ->field('a.id,a.name,a.phone,a.address,a.contact,a.channel,a.opening_time,a.status,b.contact_person,b.agent_phone')
+        $rows=TotalMerchant::where('review_status',2)->count();
+        $pages = page($rows);
+        $data['list']=TotalMerchant::alias('a')
+            ->field('a.id,a.name,a.phone,a.address,a.contact,a.channel,a.opening_time,a.status,b.agent_name,b.agent_phone')
             ->join('cloud_total_agent b','a.agent_id=b.id','left')
             ->where('a.review_status = 2')
             ->limit($pages['offset'],$pages['limit'])
             ->select();
         $data['pages']=$pages;
+        $data['pages']['rows'] = $rows;
         return_msg('200','success',$data);
     }
 
@@ -46,7 +48,7 @@ class Merchant extends Controller
     }
 
     /**
-     * 启用商户 0开启 1关闭
+     * 启用商户 0关闭 1开启
      *
      * @param  \think\Request  $request
      * @return \think\Response
@@ -56,7 +58,7 @@ class Merchant extends Controller
         //获取商户id
         $id=request()->param('id');
         //修改商户状态
-        $result=TotalMerchant::where('id',$id)->update(['status'=>0]);
+        $result=TotalMerchant::where('id',$id)->update(['status'=>1]);
         if($result){
             return_msg(200,"启用成功");
         }else{
@@ -65,7 +67,7 @@ class Merchant extends Controller
     }
 
     /**
-     * 停用商户 0开启 1关闭
+     * 停用商户 0关闭 1开启
      *
      * @param  int  $id
      * @return \think\Response
@@ -75,7 +77,7 @@ class Merchant extends Controller
         //获取商户id
         $id=request()->param('id');
         //修改商户状态
-        $result=TotalMerchant::where('id',$id)->update(['status'=>1]);
+        $result=TotalMerchant::where('id',$id)->update(['status'=>0]);
         if($result){
             return_msg(200,"已停用");
         }else{
@@ -222,7 +224,7 @@ class Merchant extends Controller
         $validate=Loader::validate('Adminvalidate');
         if(!$validate->scene('middle_submit')->check($data)){
             $error=$validate->getError();
-            return_msg(400,'failure',$error);
+            return_msg(400,$error);
         }
         //修改审核状态
         $result=TotalMerchant::where('id',$id)->update(['review_status'=>1]);
