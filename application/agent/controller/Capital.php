@@ -7,7 +7,9 @@ use app\agent\model\TotalAgent;
 use app\agent\model\TotalCapital;
 use app\agent\model\TotalMerchant;
 use think\Controller;
+use think\Exception;
 use think\Request;
+use think\Session;
 
 class Capital extends Controller
 {
@@ -19,9 +21,9 @@ class Capital extends Controller
      */
     public function index()
     {
-        //获取当前代理商id mark
-        $agent_id = session('agent_id');
-        $agent_id = 1;
+        //获取当前代理商id
+        $agent_id = Session::get("username_")['id'];
+
         $join = [
             ['cloud_agent_partner b', 'a.partner_id=b.id'],
             ['cloud_total_agent c', 'a.agent_id=c.id'],
@@ -44,7 +46,7 @@ class Capital extends Controller
             ->select();
 //        dump($data);die;
         //取出商户支付宝和微信交易额交易量
-        foreach ($data as &$v) {
+        foreach ($data['list'] as &$v) {
             $where = [
                 'status' => 1,
                 'pay_type' => 'alipay',
@@ -92,9 +94,8 @@ class Capital extends Controller
      */
     public function apply_money(Request $request)
     {
-        // mark test
-        // $agent_id = session('agent_id');
-        $agent_id = $request->param('id');
+
+        $agent_id =  Session::get("username_")['id'];
         /**  agent_id不存在返回 */
         if (!$agent_id) {
             return_msg(400, 'id不存在');
@@ -166,12 +167,9 @@ class Capital extends Controller
      * @return float total 总额
      */
     public function check_apply_money_by_month($time) {
-//        $id = session("agent_id");
-//        if (!empty($time)) {
-//            return_msg();
-//        }
+
         /** 时间区间 */
-        $id = 3; //mark
+        $id =  Session::get("username_")['id'];
         $res = TotalAgent::get($id)->field('parent_id')->find();
         $merchant_total = [];$agent_id_arr = []; $sum =0;$agent_sec_rate_arr = [];$per_sec_agent_merchant_id=[];
         /** 代理商费率 $agent_rate */
@@ -310,11 +308,12 @@ class Capital extends Controller
      *
      * @param  \think\Request $request
      * @return \think\Response
+     * @throws Exception
      */
     public function agent_count(Request $request)
     {
-        $agent_id = session('agent_id');
-        $agent_id = 1;
+        $agent_id = Session::get('agent_id');
+
         $data = TotalAgent::alias('a')
             ->field('a.id,a.agent_name,b.id merchant_id')
             ->join('cloud_total_merchant b', 'a.id=b.agent_id')

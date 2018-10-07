@@ -5,6 +5,7 @@ namespace app\agent\controller;
 use app\agent\model\TotalAgent;
 use app\agent\model\TotalMerchant;
 use think\Controller;
+use think\Exception;
 use think\Request;
 
 class Service extends Controller
@@ -141,8 +142,6 @@ class Service extends Controller
             }else{
                 return_msg(400,'添加失败');
             }
-        }else{
-            return_msg(200,'success');
         }
     }
 
@@ -152,6 +151,7 @@ class Service extends Controller
      * @param  \think\Request  $request
      * @param  int  $id
      * @return \think\Response
+     * @throws Exception
      */
     public function service_merchant()
     {
@@ -191,20 +191,28 @@ class Service extends Controller
 
     //上传图片
     private function upload_logo(){
-        $files=request()->file('contract_picture');
-        $goods_pics=[];
+        $files = request()->file('contract_picture');
+
+        $goods_pics = [];
+
         foreach($files as $file){
-            $info=$file->validate(['size'=>5*1024*1024,'ext'=>'jpg,jpeg,gif,png'])->move(ROOT_PATH.'public'.DS.'uploads');
+
+            $info = $file->validate(['size'=>5*1024*1024,'ext'=>'jpg,jpeg,gif,png'])->move(ROOT_PATH.'public'.DS.'uploads');
+
             if($info){
                 //图片上传成功
-                $goods_logo=DS.'uploads'.DS.$info->getSaveName();
-                $goods_logo=str_replace('\\','/',$goods_logo);
-                $goods_pics[]=$goods_logo;
+                $goods_logo = DS.'uploads'.DS.$info->getSaveName();
+
+                $goods_logo = str_replace('\\','/',$goods_logo);
+
+                $goods_pics[] = $goods_logo;
             }else{
-                $error=$info->getError();
-                return_msg(400,$error);
+                $error = $info->getError();
+
+                return_msg(400, $error);
             }
         }
+
         return $goods_pics;
     }
 }

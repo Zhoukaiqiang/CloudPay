@@ -29,7 +29,11 @@ class AdminValidate extends Validate{
         ['agent_rate'   ,'number|max:0.6','间联费率必须是数字|间联费率最高为0.6'],
         ['contract_picture','require','请上传合同图片'],
         ['agent_phone' ,'require|regex:/^1[3-9]\d{9}$/|unique:agent_phone','请填写手机号|手机号格式不正确|手机号已存在'],
-
+        //添加合伙人
+        ["partner_name", "require", "请填写名称"],
+        ["partner_phone", "require|length:11|regex:/^1[3-9]\d{9}$/", "请填写手机号|长度必须11位|手机号格式不正确"],
+        ["model", "require", "请填写模式"],
+        ["commission", "require", "请选择分佣模式"],
         //商户
         ['merchants_type','require','请选择商户类型'],
         ['merchant_name','require','请输入商户全称'],
@@ -67,6 +71,9 @@ class AdminValidate extends Validate{
         'user'=>[
             'name','role_id','status','phone','password'
         ],
+        //代理商登录
+        "agent_login"   => ["phone", "password"],
+        "agent_add_partner" => ["partner_phone", "password", "agent_id", "partner_name", "model","commission"],
         //商户登录验证
         "merchant_login" => ['phone','password'],
         "merchant_get_profile" => ['phone'],
