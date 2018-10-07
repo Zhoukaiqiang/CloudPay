@@ -266,10 +266,11 @@ class Incom extends Controller
      */
     public function merchant_incom($merchant_id)
     {
-        $data = MerchantIncom::where('merchant_id', $merchant_id)->find();
+        $data = MerchantIncom::field('incom_type,stl_typ,stl_sign,stl_oac,bnk_acnm,wc_lbnk_no,bus_lic_no,bse_lice_nm,crp_nm,mercAdds,bus_exp_dt,crp_id_no,crp_exp_dt,stoe_nm,stoe_cnt_nm,stoe_cnt_tel,mcc_cd,stoe_area_cod,stoe_adds,trm_rec,mailbox,yhkpay_flg,alipay_flg,orgNo,cardTyp,suptDbfreeFlg,tranTyps,crp_exp_dt_tmp,icrp_id_no,fee_rat,max_fee_amt,fee_rat1')->where('merchant_id', $merchant_id)->find();
 //        $data=request()->post();
         $data['serviceId'] = 6060601;
         $data['version'] = 'V1.0.3';
+        $data['cardTyp']='01';
         //获取商户id
 //        $data['merchant_id']=11;
 //        dump($data);die;
@@ -282,7 +283,6 @@ class Incom extends Controller
 //        var_dump(json_encode($data));die;
 //        if($info){
         //发送给新大陆
-        dump($data);die;
         $result = curl_request($this->url, true, $data, true);
         $result = json_decode($result, true);
         $signValue = sign_ature(1111, $result);
@@ -370,7 +370,8 @@ class Incom extends Controller
         $data=$data->toArray();
         $file=$request->file('imgFile');
         $data['imgFile']=bin2hex($file);
-        $img=upload_pics($file);
+        $img=$this->upload_pics($file);
+        dump($data);die;
         $this->send($data,$img);
 
     }
@@ -396,6 +397,22 @@ class Incom extends Controller
             return_msg(200,'success',['merchant_id'=>$data['merchant_id']]);
         }else{
             return_msg(400,'failure');
+        }
+    }
+
+    public function upload_pics(){
+        //移动图片
+        $file=request()->file('imgFile');
+        $info=$file->validate(['size'=>5*1024*1024,'ext'=>'jpg,png,gif,jpeg'])->move(ROOT_PATH.'public'.DS.'uploads');
+        if($info){
+            //文件上传成功,生成缩略图
+            //获取文件路径
+            $goods_logo=DS.'uploads'.DS.$info->getSaveName();
+            $goods_logo=str_replace('\\','/',$goods_logo);
+            return $goods_logo;
+        }else{
+            $error=$file->getError();
+            $this->error($error);
         }
     }
 

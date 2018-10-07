@@ -342,7 +342,7 @@ if (!function_exists('upload_logo')) {
 }
 
 //图片上传
-if (!function_exists('upload_pics')) {
+/*if (!function_exists('upload_pics')) {
     function upload_pics($file){
         //移动图片
         $info=$file->validate(['size'=>5*1024*1024,'ext'=>'jpg,png,gif,jpeg'])->move(ROOT_PATH.'public'.DS.'uploads');
@@ -357,7 +357,7 @@ if (!function_exists('upload_pics')) {
             $this->error($error);
         }
     }
-}
+}*/
 
 /**
  * 发送短信到手机

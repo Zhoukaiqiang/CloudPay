@@ -133,31 +133,22 @@ class Member extends Controller
             $total=$data['money']+$info['money'];
             $result=MerchantMember::where('id',$data['id'])->update(['money'=>$total]);
             if($result){
+                //修改充值总额
+                $recharge_money=MerchantMember::field('recharge_money')->where('id',$data['id'])->find();
+                $recharge_total=$recharge_money['recharge_money']+$data['money'];
+                MerchantMember::where('id',$data['id'])->update(['recharge_money'=>$recharge_total]);
                 return_msg(200,'充值成功');
             }else{
                 return_msg(400,'充值失败');
             }
         }else{
             //取出所有会员充值送活动
-            //获取门店信息
-            if(!empty($this->merchant_id)){//?????
-                $info=MerchantShop::where('id')->where('merchant_id',$this->merchant_id)->find();
                 //取出门店下所有活动
                 //取出永久充值送活动
-                $data[]=ShopActiveRecharge::field('recharge_money,give_money')->where(['recharge_time'=>0,'shop_id'=>$info['id']])->select();
-                //取出非永久充值送活动
-            }elseif(empty($this->merchant_id) && !empty($this->user_id)){
-                $info=MerchantUser::field('shop_id')->where('id',$this->user_id)->find();
-                //取出门店下所有活动
-                //取出永久充值送活动
-                $data[]=ShopActiveRecharge::field('recharge_money,give_money')->where(['recharge_time'=>0,'shop_id'=>$info['shop_id']])->select();
+                $data[]=ShopActiveRecharge::field('recharge_money,give_money')->where(['recharge_time'=>0])->select();
                 //取出未过期充值送活动
-                $data[]=ShopActiveRecharge::field('recharge_money,give_money')->where(['recharge_time'=>1,'shop_id'=>$info['shop_id']])->whereTime('end_time','>',time())->select();
+                $data[]=ShopActiveRecharge::field('recharge_money,give_money')->where(['recharge_time'=>1])->whereTime('end_time','>',time())->select();
                return_msg(200,'success',$data);
-            }
-
-
-
 
         }
     }
