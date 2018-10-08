@@ -23,7 +23,7 @@ class Capital extends Controller
     {
         //获取当前代理商id
         $agent_id = Session::get("username_")['id'];
-        
+
         $join = [
             ['cloud_agent_partner b', 'a.partner_id=b.id'],
             ['cloud_total_agent c', 'a.agent_id=c.id'],

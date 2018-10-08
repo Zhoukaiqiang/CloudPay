@@ -238,13 +238,14 @@ class Merchant extends Incom
         $agent_id=Session::get("username_")["id"];
         if(request()->isPost()){
             $data=request()->post();
+
 //            $data['channel']=3;//表示间联
             //验证
-            $validate = Loader::validate('AgentValidate');
-            if (!$validate->scene('add_middle')->check($data)) {
-                $error = $validate->getError();
-                return_msg(400, 'failure', $error);
-            }
+            //$validate = Loader::validate('AgentValidate');
+//            if (!$validate->scene('add_middle')->check($data)) {
+//                $error = $validate->getError();
+//                return_msg(400, 'failure', $error);
+//            }
             //上传图片
 //            $data['attachment']=$this->upload_logo();
 //            $data['agent_id']=$agent_id;
@@ -277,12 +278,12 @@ class Merchant extends Incom
                 $arr['mcc_cd']=$data['mcc_cd'];//mcc码
                 $arr['stoe_area_cod']=$data['stoe_area_cod'];//地区码
                 $arr['trm_rec']=5;//终端数量
-                $arr['alipay_flg']="N";//扫码产品
+                $arr['alipay_flg']="Y";//扫码产品
                 $arr['yhkpay_flg']="Y";//银行卡产品
                 $arr['tranTyps']="C1";//交易类型
                 $arr['orgNo']="518";//合作商机构号
                 $arr['crp_nm']=$data['contact'];//法人姓名
-                $arr['stoe_nm']=$data['name'];//签购单名称
+
                 MerchantIncom::insert($arr,true);
                 $this->merchant_incom($insert_id);
 //                return_msg(200,'添加成功');

@@ -266,8 +266,8 @@ class Incom extends Controller
      */
     public function merchant_incom($merchant_id)
     {
-        $data = MerchantIncom::field('incom_type,stl_typ,stl_sign,stl_oac,bnk_acnm,wc_lbnk_no,bus_lic_no,bse_lice_nm,crp_nm,mercAdds,bus_exp_dt,crp_id_no,crp_exp_dt,stoe_nm,stoe_cnt_nm,stoe_cnt_tel,mcc_cd,stoe_area_cod,stoe_adds,trm_rec,mailbox,yhkpay_flg,alipay_flg,orgNo,cardTyp,suptDbfreeFlg,tranTyps,crp_exp_dt_tmp,icrp_id_no,fee_rat,max_fee_amt,fee_rat1')->where('merchant_id', $merchant_id)->find();
-//        $data=request()->post();
+
+        $data = MerchantIncom::field('fee_rat1_scan,fee_rat3_scan,fee_rat_scan, incom_type,stl_typ,stl_sign,stl_oac,bnk_acnm,wc_lbnk_no,bus_lic_no,bse_lice_nm,crp_nm,mercAdds,bus_exp_dt,crp_id_no,crp_exp_dt,stoe_nm,stoe_cnt_nm,stoe_cnt_tel,mcc_cd,stoe_area_cod,stoe_adds,trm_rec,mailbox,yhkpay_flg,alipay_flg,orgNo,cardTyp,suptDbfreeFlg,tranTyps,crp_exp_dt_tmp,icrp_id_no,fee_rat,max_fee_amt,fee_rat1')->where('merchant_id', $merchant_id)->find();
         $data['serviceId'] = 6060601;
         $data['version'] = 'V1.0.3';
         $data['cardTyp']='01';
@@ -277,7 +277,7 @@ class Incom extends Controller
 //        $info=MerchantIncom::insert($data);
         $data=$data->toArray();
         $data['signValue'] = sign_ature(0000, $data);
-//        dump($data);die;
+//        halt($data);
 //        var_dump(json_encode($data));die;
 //        dump($data);die;
 //        var_dump(json_encode($data));die;
@@ -325,16 +325,20 @@ class Incom extends Controller
         $merchant_id=$request->post('merchant_id');
         //取出数据表中数据
         $data=MerchantIncom::where('merchant_id',$merchant_id)->field('mercId,log_no,orgNo')->find();
+        $data = $data->toArray();
         $data['serviceId']='6060603';
         $data['version']='V1.0.1';
-        $data=$data->toArray();
-//        dump($data);die;
-        $data['signValue']=sign_ature(0000,$data);
+
+        $data['signValue'] = sign_ature(0000,$data);
+
         $result=curl_request($this->url,true,$data,true);
         $result=json_decode($result,true);
+        if (!empty($result)) {
+            return_msg(400, $result);
+        }
         //生成签名
-        $signValue=sign_ature(1111,$result);
-        if($result['msg_cd']==000000 && $signValue==$result['signValue']){
+        $signValue = sign_ature(1111,$result);
+        if( $signValue == $result['signValue'] ){
             if(isset($result['check_flag'])){
                 //修改数据表状态
                 $res=MerchantIncom::where('merchant_id',$merchant_id)->update(['check_flag'=>$result['check_flag']]);
@@ -357,7 +361,7 @@ class Incom extends Controller
      */
     public function img_upload(Request $request)
     {
-//        $insert_id=3;
+
         $info=$request->post();
         //取出当前商户信息
         $data=MerchantIncom::where('merchant_id',$info['merchant_id'])->field('mercId,orgNo,log_no,stoe_id')->find();

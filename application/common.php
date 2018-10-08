@@ -327,7 +327,7 @@ if (!function_exists('sign_ature')) {
             }
 
         }
-//        return $stra;
+
         return md5($stra . KEY);
     }
 }
