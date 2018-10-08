@@ -20,9 +20,9 @@ class Advertise extends Common
         $res = Db('total_ad')->order('id', 'DESC')->find();
 
         if ($res) {
-            $this->return_msg(200, '取出图片成功！', $res);
+            $this->return_msg(200, 'success！', $res);
         }else {
-            $this->return_msg(400, '取出图片出错');
+            $this->return_msg(400, 'fail');
         }
     }
 
@@ -30,12 +30,13 @@ class Advertise extends Common
      * 总后台 - 广告上传处理
      * @param [file]  image
      * @return [json]  成功或者失败的消息
+     * @param  [int] admin_id  /  agent_id  管理员ID / 代理商ID
      */
     // 图片上传处理
     public function upload(Request $request)
     {
 
-
+        $param = $request->param();
         // 获取表单上传文件 例如上传了001.jpg
         $file = $request->file('image');
         //校验器，判断图片格式是否正确
@@ -44,7 +45,7 @@ class Advertise extends Common
         } else {
             // 移动到框架应用根目录/public/uploads/ 目录下
             $info = $file->move(ROOT_PATH . 'public' . DS . 'uploads');
-            dump($info->getSaveName());
+
             if ($info) {
                 // 成功上传后 获取上传信息
                 //存入相对路径/upload/日期/文件名
@@ -52,6 +53,8 @@ class Advertise extends Common
                 $url = str_replace('\\', '/', $data);
                 $insertData = array(
                     'url' => $url,
+                    "admin_id" => $param['admin_id'],
+                    "agent_id" => $param['agent_id'],
                 );
                 $result = TotalAd::create($insertData);
                 if ($result) {

@@ -55,8 +55,7 @@ class Merchant extends Incom
             ->where('a.agent_id',$agent_id)
             ->limit($pages['offset'],$pages['limit'])
             ->select();
-        $arr=Db::name('agent_partner')->where('agent_id',$agent_id)->field(['id','partner_name'])->select();
-
+        $arr = Db::name('agent_partner')->where('agent_id',$agent_id)->field(['id','partner_name'])->select();
 
 
         $data['pages']=$pages;
@@ -372,16 +371,6 @@ class Merchant extends Incom
 //        }
 //    }
 
-    /**
-     * 删除指定资源
-     *
-     * @param  int  $id
-     * @return \think\Response
-     */
-    public function delete($id)
-    {
-        //
-    }
 
     //上传图片
     private function upload_logo(){
