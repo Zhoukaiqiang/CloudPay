@@ -283,7 +283,6 @@ class Merchant extends Incom
                 $arr['tranTyps']="C1";//交易类型
                 $arr['orgNo']="518";//合作商机构号
                 $arr['crp_nm']=$data['contact'];//法人姓名
-
                 MerchantIncom::insert($arr,true);
                 $this->merchant_incom($insert_id);
 //                return_msg(200,'添加成功');

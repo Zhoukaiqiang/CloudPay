@@ -273,11 +273,9 @@ class Incom extends Controller
         $data['cardTyp']='01';
         //获取商户id
 //        $data['merchant_id']=11;
-//        dump($data);die;
 //        $info=MerchantIncom::insert($data);
         $data=$data->toArray();
         $data['signValue'] = sign_ature(0000, $data);
-//        halt($data);
 //        var_dump(json_encode($data));die;
 //        dump($data);die;
 //        var_dump(json_encode($data));die;

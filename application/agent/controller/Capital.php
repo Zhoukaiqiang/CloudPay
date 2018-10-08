@@ -23,7 +23,6 @@ class Capital extends Controller
     {
         //获取当前代理商id
         $agent_id = Session::get("username_")['id'];
-
         $join = [
             ['cloud_agent_partner b', 'a.partner_id=b.id'],
             ['cloud_total_agent c', 'a.agent_id=c.id'],
@@ -49,6 +48,7 @@ class Capital extends Controller
         if (!count($data['list'])) {
             return_msg(400, "no data");
         }
+//        dump($data);die;
         //取出商户支付宝和微信交易额交易量
         foreach ($data['list'] as &$v) {
             $where = [
@@ -69,22 +69,20 @@ class Capital extends Controller
             $wxpay_number = Order::where($where1)->count();
             //计算佣金
             $money = $alipay + $wxpay;//总交易量
-            //间联预估佣金=本代理商所负责商户的交易额*（代理商与商户约定的费率-平台与代理商约定的费率）
-            $v['total_money'] = $money * (($v['merchant_rate'] - $v['agent_rate']) / 100);//所得佣金
+            //间联预估佣金=本代理商所负责商户的交易额*（二级代理费率-一级代理费率-平台与代理商约定的费率）
+            $v['total_money'] = $money * (($v['merchant_rate'] - $v['agent_rate']) / 100);//总佣金
             $v['agent_money'] = $money * $v['merchant_rate'] / 100;//代理商佣金
             if ($v['model'] == 0) {
                 //安比例
                 $v['partner_money'] = $money * $v['proportion'] / 100;
             } elseif ($v['model'] == 1) {
                 //按费率
-                $v['partner_money'] = $money * $v['rate'] / 100;
+                $v['partner_money'] = $money * ($v['merchant_rate']-$v['rate']) / 100;
             }
             $v['alipay'] = $alipay;
             $v['alipay_number'] = $alipay_number;
             $v['wxpay'] = $wxpay;
             $v['wxpay_number'] = $wxpay_number;
-
-
         }
 
 
@@ -92,7 +90,83 @@ class Capital extends Controller
         return_msg(200, 'success', $data);
     }
 
+    /**
+     * 时间查询
+     */
+    public function agent_time()
+    {
+        //获取时间
+        $time=request()->param('time');
+        //获取当前代理商id
+        $agent_id = Session::get("username_")['id'];
+        $agent_id=1;
+        $join = [
+            ['cloud_agent_partner b', 'a.partner_id=b.id'],
+            ['cloud_total_agent c', 'a.agent_id=c.id'],
+            ['cloud_order d', 'd.merchant_id=a.id']
+        ];
 
+        //获取总行数
+//        $rows = TotalMerchant::alias('a')
+//            ->join($join)
+//            ->where('a.agent_id', $agent_id)
+//            ->group('a.id')
+//            ->count();
+//        //分页
+//        $pages = page($rows);
+        $data['list'] = TotalMerchant::alias('a')
+            ->field(['a.id,a.name,b.partner_name,a.merchant_rate,c.agent_name,c.agent_rate,b.rate,b.proportion,b.model'])
+            ->join($join)
+            ->where('a.agent_id', $agent_id)
+            ->whereTime('pay_time','>',$time)
+            ->group('a.id')
+//            ->limit($pages['offset'], $pages['limit'])
+            ->select();
+
+        if (!count($data['list'])) {
+            return_msg(400, "no data");
+        }
+//        dump($data);die;
+        //取出商户支付宝和微信交易额交易量
+        foreach ($data['list'] as &$v) {
+            $where = [
+                'status' => 1,
+                'pay_type' => 'alipay',
+                'merchant_id' => $v['id']
+            ];
+            $alipay = Order::where($where)->sum('received_money');
+            $alipay_number = Order::where($where)->count();
+            $where1 = [
+                'status' => 1,
+                'pay_type' => 'wxpay',
+                'merchant_id' => $v['id']
+            ];
+            //取出微信交易额
+            $wxpay = Order::where($where1)->sum('received_money');
+            //取出微信交易量
+            $wxpay_number = Order::where($where1)->count();
+            //计算佣金
+            $money = $alipay + $wxpay;//总交易量
+            //间联预估佣金=本代理商所负责商户的交易额*（二级代理费率-一级代理费率-平台与代理商约定的费率）
+            $v['total_money'] = $money * (($v['merchant_rate'] - $v['agent_rate']) / 100);//所得佣金
+            $v['agent_money'] = $money * $v['merchant_rate'] / 100;//代理商佣金
+            if ($v['model'] == 0) {
+                //安比例
+                $v['partner_money'] = $money * $v['proportion'] / 100;
+            } elseif ($v['model'] == 1) {
+                //按费率
+                $v['partner_money'] = $money * ($v['merchant_rate']-$v['rate']) / 100;
+            }
+            $v['alipay'] = $alipay;
+            $v['alipay_number'] = $alipay_number;
+            $v['wxpay'] = $wxpay;
+            $v['wxpay_number'] = $wxpay_number;
+        }
+
+
+
+        return_msg(200, 'success', $data);
+    }
     /**
      * 代理商申请结算
      * @param [int] agent_id  代理商id 从session获取
