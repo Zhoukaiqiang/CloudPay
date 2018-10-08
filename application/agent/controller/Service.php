@@ -115,10 +115,18 @@ class Service extends Controller
             //获取子代id
             $id = request()->param('id');
             //通过子代id查询子代信息
-            $data = TotalAgent::where('id', $id)->find();
+            $data = TotalAgent::get($id);
+            $data = $data->toArray();
+            unset($data['password']);
             //解析图片
             $data['contract_picture'] = json_decode($data['contract_picture']);
-            return_msg(200, 'success', $data);
+
+            if (count($data)) {
+                return_msg(200, 'success', $data);
+            }else {
+                return_msg(400, "no data");
+            }
+
         }
     }
 

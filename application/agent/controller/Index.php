@@ -531,80 +531,64 @@ class Index extends Controller
     public function merchant_list(Request $request)
     {
         //获取商户|联系人|联系方式
-        $id = Session::get("username_")['id'];
+        $agent_id=Session::get('username_');
+
         $name = $request->param('keyword');
         //获取合伙人id
-        $partner_id = $request->param('partner_id');
-
+        $partner_id = $request->param('partner_id') ? $request->param('partner_id') :0;
+        //获取是否交易
+//        $deal=$request->param('deal');
         //状态0开启 1关闭
-        $status = $request->param('status');
-        /** @var [int]开通日期 $create_time */
-        $create_time = $request->param('opening_time');
+        $status = $request->param('status') ? $request->param('status') :3;
+        $create_time = $request->param('opening_time') ? $request->param('opening_time') : 0;
+        $end_time = $create_time+60*60*24-1;
+        $address=$request->param('address') ? $request->param('address') : '0';
 
-        $area = $request->param("address");
-        if(!empty($create_time)) {
-            $ctime_flag = ">=";
-        }else {
-            $create_time = -2;
-            $ctime_flag = ">";
+        $statusxyom='eq';
+        if($status==3){
+            $statusxyom='<>';
+        }
+        if($status==2){
+            $status=0;
+        }
+        $addresssyom='=';
+        if($address=='0'){
+            $addresssyom='<>';
         }
 
-        if(!empty($area)) {
-            $area_flag = "eq";
-        }else {
-            $area = -2;
-            $area_flag = "<>";
-        }
+        $nodeal='between';
 
-        if(!empty($name)) {
-            $k_flag = "LIKE";
-        }else {
-            $name = -2;
-            $k_flag = "<>";
+        if($create_time==0){
+            $nodeal='not between';
         }
-
-        if ( !empty($partner_id) ) {
-            $partner_flag = "eq";
-        }else {
-            $partner_id = -2;
-            $partner_flag = "<>";
+        $symbol = '=';
+        if ($partner_id == 0) {
+            $symbol = '<>';
         }
-        if ( !empty($status) ) {
-            $status_flag = "eq";
-        }else {
-            $status = -2;
-            $status_flag = "<>";
-        }
-
         $total = Db::name('total_merchant')->count('id');
         $rows = TotalMerchant::alias('a')
-
+            ->field('a.address,a.name,a.id,a.contact,a.phone,a.status,a.opening_time,a.review_status,a.abbreviation,a.contact,a.phone,cloud_order.received_money,cloud_order.cashier,cloud_agent_partner.partner_name')
             ->join('cloud_order', 'a.id=cloud_order.merchant_id')
             ->join('cloud_agent_partner', 'a.partner_id=cloud_agent_partner.id')
-            ->where('a.abbreviation|a.contact|a.phone', $k_flag, "%$name%")
-            ->where("a.agent_id" , $id)
-            ->where('a.partner_id', $partner_flag, $partner_id)
-            ->where('a.status', $status_flag, $status)
-            ->where("a.address", $area_flag, $area)
-            ->whereTime('a.opening_time', $ctime_flag, $create_time)
+            ->where('a.abbreviation|a.contact|a.phone', 'like', "%$name%")
+            ->where('a.partner_id', $symbol, $partner_id)
+            ->where(['a.status'=>[$statusxyom,$status],'a.agent_id'=>['=',$agent_id],'a.address'=>[$addresssyom,$address]])
+            ->whereTime('a.opening_time', $nodeal, [$create_time, $end_time])
             ->group('a.id')
             ->count('a.id');
         $pages = page($rows);
 
         $data['list'] = TotalMerchant::alias('a')
-            ->field('a.id,a.name,a.phone,a.address,a.contact,a.channel,a.opening_time,a.status,a.review_status,b.partner_name')
+            ->field('a.channel,a.address,a.name,a.id,a.contact,a.phone,a.status,a.opening_time,a.review_status,a.abbreviation,a.contact,a.phone,cloud_order.received_money,cloud_order.cashier,cloud_agent_partner.partner_name')
             ->join('cloud_order', 'a.id=cloud_order.merchant_id')
-            ->join('cloud_agent_partner b', 'a.partner_id = b.id')
-            ->where('a.abbreviation|a.contact|a.phone', $k_flag, "%$name%")
-            ->where("a.agent_id = $id")
-            ->where('a.partner_id', $partner_flag, $partner_id)
-            ->where('a.status', $status_flag, $status)
-            ->where("a.address", $area_flag, $area)
-            ->whereTime('a.opening_time', $ctime_flag, $create_time)
+            ->join('cloud_agent_partner', 'a.partner_id=cloud_agent_partner.id')
+            ->where('a.name|a.contact|a.phone', 'like', "%$name%")
+            ->where('a.partner_id', $symbol, $partner_id)
+            ->where(['a.status'=>[$statusxyom,$status],'a.agent_id'=>['=',$agent_id],'a.address'=>[$addresssyom,$address]])
+            ->whereTime('a.opening_time', $nodeal, [$create_time, $end_time])
             ->group('a.id')
             ->limit($pages['offset'], $pages['limit'])
             ->select();
-
         $data['pages'] = $pages;
         $data['pages']['rows'] = $rows;
         $data['pages']['total_row'] = $total;

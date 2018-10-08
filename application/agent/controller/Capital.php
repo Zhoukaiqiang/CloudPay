@@ -23,28 +23,32 @@ class Capital extends Controller
     {
         //获取当前代理商id
         $agent_id = Session::get("username_")['id'];
-
+        
         $join = [
             ['cloud_agent_partner b', 'a.partner_id=b.id'],
             ['cloud_total_agent c', 'a.agent_id=c.id'],
             ['cloud_order d', 'd.merchant_id=a.id']
         ];
+
         //获取总行数
-        $rows = TotalMerchant::alias('a')
-            ->join($join)
-            ->where('a.agent_id', $agent_id)
-            ->group('a.id')
-            ->count();
-        //分页
-        $pages = page($rows);
+//        $rows = TotalMerchant::alias('a')
+//            ->join($join)
+//            ->where('a.agent_id', $agent_id)
+//            ->group('a.id')
+//            ->count();
+//        //分页
+//        $pages = page($rows);
         $data['list'] = TotalMerchant::alias('a')
             ->field(['a.id,a.name,b.partner_name,a.merchant_rate,c.agent_name,c.agent_rate,b.rate,b.proportion,b.model'])
             ->join($join)
             ->where('a.agent_id', $agent_id)
             ->group('a.id')
-            ->limit($pages['offset'], $pages['limit'])
+//            ->limit($pages['offset'], $pages['limit'])
             ->select();
-//        dump($data);die;
+
+        if (!count($data['list'])) {
+            return_msg(400, "no data");
+        }
         //取出商户支付宝和微信交易额交易量
         foreach ($data['list'] as &$v) {
             $where = [
@@ -79,11 +83,15 @@ class Capital extends Controller
             $v['alipay_number'] = $alipay_number;
             $v['wxpay'] = $wxpay;
             $v['wxpay_number'] = $wxpay_number;
+
+
         }
-        $data['pages'] = $pages;
+
+
 
         return_msg(200, 'success', $data);
     }
+
 
     /**
      * 代理商申请结算

@@ -9,8 +9,10 @@ use app\agent\model\MerchantIncom;
 use app\agent\model\TotalAgent;
 use app\agent\model\TotalMerchant;
 use think\Controller;
+use think\Exception;
 use think\Loader;
 use think\Request;
+use think\Session;
 use think\Db;
 
 class Merchant extends Incom
@@ -19,8 +21,8 @@ class Merchant extends Incom
     public function index_list()
     {
 
-        $agent_id=session('agent_id');
-        $agent_id=1;
+        $agent_id=Session::get("username_")["id"];
+
         //获取总行数
         $rows=TotalMerchant::where('agent_id',$agent_id)->count();
         $pages=page($rows);
@@ -38,8 +40,8 @@ class Merchant extends Incom
      */
     public function index()
     {
-        $agent_id=session('agent_id');
-        $agent_id=1;
+        $agent_id=Session::get("username_")["id"];
+
         //获取总行数
         $total=TotalMerchant::where('agent_id',$agent_id)->count('id');
         $rows=TotalMerchant::alias('a')
@@ -108,12 +110,13 @@ class Merchant extends Incom
      *  review_status 审核状态 0待审核 1开通中 2通过 3未通过
      *  status  账号状态 0开启 1关闭
      * @return \think\Response
+     * @throws Exception
      */
     public function normal_list()
     {
         //获取代理商id
-        $agent_id=session('agent_id');
-        $agent_id=1;
+        $agent_id=Session::get("username_")["id"];
+
         $where=[
             'a.review_status' =>2,
             'a.status'=>0,
@@ -143,8 +146,8 @@ class Merchant extends Incom
     public function stop_list()
     {
         //获取代理商id
-        $agent_id=session('agent_id');
-        $agent_id=1;
+        $agent_id=Session::get("username_")["id"];
+
         $where=[
             'a.review_status' =>2,
             'a.status'=>1,
@@ -162,6 +165,7 @@ class Merchant extends Incom
             ->where($where)
             ->limit($pages['offset'],$pages['limit'])
             ->select();
+
         return_msg('200','success',$data);
     }
 
@@ -174,8 +178,8 @@ class Merchant extends Incom
     public function review_list()
     {
         //获取代理商id
-        $agent_id=session('agent_id');
-        $agent_id=1;
+        $agent_id=Session::get("username_")["id"];
+
         $where=[
             'a.review_status'=>['<',2],
             'a.agent_id'=>['=',$agent_id]
@@ -204,8 +208,8 @@ class Merchant extends Incom
     public function reject()
     {
         //获取代理商id
-        $agent_id=session('agent_id');
-        $agent_id=1;
+        $agent_id=Session::get("username_")["id"];
+
         $where=[
             'review_status'=>3,
             'agent_id'=>$agent_id
@@ -231,8 +235,7 @@ class Merchant extends Incom
     public function add_middle()
     {
         //
-        $agent_id=session('agent_id');
-        $agent_id=1;
+        $agent_id=Session::get("username_")["id"];
         if(request()->isPost()){
             $data=request()->post();
 //            $data['channel']=3;//表示间联
