@@ -50,7 +50,7 @@ class Receipt extends Controller
                 return_msg(400,'密码不正确');
             }
             //取出订单号
-            $order=Order::field('order_number')->where('id',$param['id'])->find();
+            $order=Order::field('orderNo')->where('id',$param['id'])->find();
             $order=$order->toArray($order);
             //发给新大陆
             $result = curl_request($this->url, true, $order, true);
@@ -68,6 +68,17 @@ class Receipt extends Controller
             //判断
             if($param['password']!=$data['password']){
                 return_msg(400,'密码不正确');
+            }
+            //取出订单号
+            $order=Order::field('orderNo')->where('id',$param['id'])->find();
+            $order=$order->toArray($order);
+            //发给新大陆
+            $result = curl_request($this->url, true, $order, true);
+            $result = json_decode($result, true);
+            if($result['result']=='S'){
+                return_msg(200,'退款成功');
+            }else{
+                return_msg(400,'退款失败');
             }
         }
 

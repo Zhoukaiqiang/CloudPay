@@ -4,7 +4,7 @@ namespace app\admin\controller;
 
 use app\admin\model\MerchantIncom;
 use app\admin\model\TotalMerchant;
-use app\agent\model\IncomImg;
+use app\admin\model\IncomImg;
 use think\Controller;
 use think\Db;
 use think\Exception;
@@ -296,7 +296,6 @@ class Incom extends Controller
             if ($res) {
                 //返回商户自增id
                 $a = [
-                    'msg_dat' => $result['msg_dat'],
                     'merchant_id' => $merchant_id
                 ];
                 return_msg(200, 'success', $a);
@@ -371,7 +370,6 @@ class Incom extends Controller
         $file=$request->file('imgFile');
         $data['imgFile']=bin2hex($file);
         $img=$this->upload_pics($file);
-        dump($data);die;
         $this->send($data,$img);
 
     }

@@ -18,7 +18,7 @@ use think\Request;
 class Deposit extends Controller
 {
     public $url='http://139.196.141.163:4243/emercapp';
-    public $id=6;
+
 
     /**
      * 商户提现页面
@@ -30,8 +30,6 @@ class Deposit extends Controller
      */
     public function withdraw_list(Request $request)
     {
-
-
         //获取商户id
         $merchant_id=session('merchant_id');
         $merchant_id=1;
@@ -182,16 +180,17 @@ class Deposit extends Controller
         //返回数据的签名域
 
         $return_sign = sign_ature(1111, $par);
-
+        $stor_ids=import(',',$del['stoe_id']);
+        $stor_ids=rtrim($stor_ids,',');
         if ($par[ 'repCode' ] == '000000') {
             if ($par[ 'signValue' ] == $return_sign) {
-                Db::table('merchant_shop')->whereIn('stoe_id',$del['stoe_id'])->update(['sts'=>1,'serviceTime'=>$par['serviceTime']]);
+                Db::table('merchant_shop')->whereIn('stoe_id',$stor_ids)->update(['sts'=>1,'serviceTime'=>$par['serviceTime']]);
                 return_msg(200, 'success',$par['repMsg']);
             } else {
                 return_msg(400, 'error',$par['repMsg']);
             }
         } else {
-            Db::table('merchant_shop')->whereIn('stoe_id',$del['stoe_id'])->update(['sts'=>0]);
+            Db::table('merchant_shop')->whereIn('stoe_id',$stor_ids)->update(['sts'=>0]);
 
             return_msg(500, 'error',$par['repMsg']);
         }

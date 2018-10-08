@@ -81,6 +81,8 @@ class Index extends Controller
             ->group('a.id')
             ->limit($pages['offset'], $pages['limit'])
             ->select();
+        $parent=AgentPartner::where('agent_id',$agent_id)->field('partner_name,id')->select();
+        $data['parent']=$parent;
         //取出商户支付宝和微信交易额交易量
         foreach ($data['list'] as &$v) {
             $where = [
@@ -609,53 +611,79 @@ class Index extends Controller
     public function merchant_deal(Request $request)
     {
         //获取商户|联系人|联系方式
-        $name = $request->param('keyword');
+        $name=$request->param('keyword');
         //获取合伙人id
-        $partner_id = $request->param('partner_id');
-        //获取是否交易
-        $deal = $request->param('deal');
+        $partner_id=$request->param('partner_id') ? $request->param('partner_id') :0 ;
+        //获取是否交易 //如果$deal=1是有交易用户，$deal=2是无交易用户
+        $deal=$request->param('deal') ? $request->param('deal') :0;
 
-        //如果$deal=1是有交易用户，$deal=2是无交易用户
-        $nodeal = 'between';
+        $create_time = $request->param('pay_time') ? $request->param('pay_time') : 1507424363;
+        $end_time = $request->param('pay_time') ? $request->param('pay_time') +3600*24-1: 1917651563;
 
-        if ($deal == 2) {
-            $nodeal = 'not between';
+        //是否交易
+        $nodeal='between';
+        if($deal==2){
+            $nodeal='not between';
         }
-        $symbol = '<>';
-        if ($partner_id > 0) {
-            $symbol = 'eq';
+        //合伙人
+        $symbol='<>';
+        if($partner_id >0){
+            $symbol='eq';
         }
         $total = Db::name('total_merchant')->count('id');
 
-        $rows = TotalMerchant::alias('a')
+        $rows=TotalMerchant::alias('a')
             ->field('a.abbreviation,a.contact,a.phone,cloud_order.received_money,cloud_order.cashier')
-            ->join('cloud_order', 'a.id=cloud_order.merchant_id', 'left')
-            ->where('a.abbreviation|a.contact|a.phone', 'like', "%$name%")
-            ->where('a.partner_id', $symbol, $partner_id)
-            ->whereTime('cloud_order.pay_time', $nodeal, [$request->param('create_time'), $request->param('end_time')])
+            ->join('cloud_order','a.id=cloud_order.merchant_id','left')
+            ->join('cloud_agent_partner','cloud_agent_partner.id=a.partner_id')
+            ->where('a.abbreviation|a.contact|a.phone','like',"%$name%")
+            ->where('a.partner_id',$symbol,$partner_id)
+            ->whereTime('cloud_order.pay_time',$nodeal,[$create_time,$end_time])
             ->group('a.id')
             ->count('a.id');
         $pages = page($rows);
 
-        $data['list'] = TotalMerchant::alias('a')
-            ->field('a.abbreviation,a.contact,a.phone,cloud_order.received_money,cloud_order.cashier')
-            ->join('cloud_order', 'a.id=cloud_order.merchant_id', 'left')
-            ->where('a.abbreviation|a.contact|a.phone', 'like', "%$name%")
-            ->where('a.partner_id', $symbol, $partner_id)
-            ->whereTime('cloud_order.pay_time', $nodeal, [$request->param('create_time'), $request->param('end_time')])
+        $data['list']=TotalMerchant::alias('a')
+            ->field('a.name,a.address,cloud_agent_partner.partner_name,a.id,a.abbreviation,a.contact,a.phone,cloud_order.received_money,cloud_order.cashier')
+            ->join('cloud_order','a.id=cloud_order.merchant_id','left')
+            ->join('cloud_agent_partner','cloud_agent_partner.id=a.partner_id')
+            ->where('a.name|a.contact|a.phone','like',"%$name%")
+            ->where('a.partner_id',$symbol,$partner_id)
+            ->whereTime('cloud_order.pay_time',$nodeal,[$create_time,$end_time])
             ->group('a.id')
-            ->limit($pages['offset'], $pages['limit'])
+            ->limit($pages['offset'],$pages['limit'])
             ->select();
+        foreach ($data['list'] as &$v) {
+            $where = [
+                'status' => 1,
+                'pay_type' => 'alipay',
+                'merchant_id' => $v['id']
+            ];
+            $alipay = Order::where($where)->sum('received_money');
+            $alipay_number = Order::where($where)->count();
+            $where1 = [
+                'status' => 1,
+                'pay_type' => 'wxpay',
+                'merchant_id' => $v['id']
+            ];
+            //取出微信交易额
+            $wxpay = Order::where($where1)->sum('received_money');
+            //取出微信交易量
+            $wxpay_number = Order::where($where1)->count();
+            $v['alipay'] = $alipay;
+            $v['alipay_number'] = $alipay_number;
+            $v['wxpay'] = $wxpay;
+            $v['wxpay_number'] = $wxpay_number;
+        }
         $data['pages'] = $pages;
         $data['pages']['rows'] = $rows;
         $data['pages']['total_row'] = $total;
-        if (count($data['list'])) {
-            return_msg(200, 'success', $data);
-        } else {
-            return_msg(400, '没有数据');
+        if(count($data)!==0){
+            return_msg(200,'success',$data);
+        }else{
+            return_msg(400,'没有数据');
         }
     }
-
     /**
      * 服务商列表-筛选搜索
      * @param Request $request
@@ -665,6 +693,7 @@ class Index extends Controller
      */
     public function facilitator_list(Request $request)
     {
+        $parent_id=$request->param('id');
         //服务商名称|联系人|联系方式
         $name = $request->param('keyword');
         //服务商的状态，1启用 0停用 3全部
@@ -706,6 +735,7 @@ class Index extends Controller
             ->field(['id,agent_name,contact_person,agent_phone,agent_mode,agent_area,create_time,status'])
             ->limit($pages['offset'], $pages['limit'])
             ->select();
+
         $data['pages'] = $pages;
         $data['pages']['rows'] = $rows;
         $data['pages']['total_row'] = $total;
