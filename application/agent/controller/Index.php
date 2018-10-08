@@ -95,6 +95,8 @@ class Index extends Controller
             ->group('a.id')
             ->limit($pages['offset'],$pages['limit'])
             ->select();
+        $parent=AgentPartner::where('agent_id',$agent_id)->field('partner_name,id')->select();
+        $data['parent']=$parent;
         //取出商户支付宝和微信交易额交易量
         foreach($data['list'] as &$v){
                 $where=[
@@ -506,58 +508,72 @@ class Index extends Controller
     public function merchant_list(Request $request)
     {
         //获取商户|联系人|联系方式
-        $name=$request->param('keyword');
+        $agent_id=session('agent_id');
+        $agent_id=1;
+        $name = $request->param('keyword');
         //获取合伙人id
-            $partner_id=$request->param('partner_id');
+        $partner_id = $request->param('partner_id') ? $request->param('partner_id') :0;
         //获取是否交易
 //        $deal=$request->param('deal');
-        //状态0开启 1关闭
-        $status=$request->param('status');
-        $create_time=$request->param('pay_time') ? $request->param('pay_time') : mktime(0,0,0,date('m'),date('d'),date('Y'));
-        $end_time=$create_time + (60*60*24);
+        //状态0停用 1开启
+        $status = $request->param('status') ? $request->param('status') :3;
+        $create_time = $request->param('opening_time') ? $request->param('opening_time') : 0;
+        $end_time = $create_time+60*60*24-1;
+        $address=$request->param('address') ? $request->param('address') : '0';
 
-        //如果$deal=1是有交易用户，$deal=2是无交易用户
+        $statusxyom='eq';
+        if($status==3){
+            $statusxyom='<>';
+        }
+        if($status==2){
+             $status=0;
+        }
+        $addresssyom='=';
+        if($address=='0'){
+            $addresssyom='<>';
+        }
 
-//        $nodeal='between';
-//
-//        if($deal==2){
-//            $nodeal='not between';
-//        }
-        $symbol='<>';
-        if($partner_id >0){
-            $symbol='eq';
+
+        $nodeal='between';
+
+        if($create_time==0){
+            $nodeal='not between';
+        }
+        $symbol = '=';
+        if ($partner_id == 0) {
+            $symbol = '<>';
         }
         $total = Db::name('total_merchant')->count('id');
-        $rows=TotalMerchant::alias('a')
-            ->field('a.contact,a.phone,a.status,a.opening_time,a.review_status,a.abbreviation,a.contact,a.phone,cloud_order.received_money,cloud_order.cashier,cloud_agent_partner.partner_name')
-            ->join('cloud_order','a.id=cloud_order.merchant_id')
-            ->join('cloud_agent_partner','a.partner_id=cloud_agent_partner.id')
-            ->where('a.abbreviation|a.contact|a.phone','like',"%$name%")
-            ->where('a.partner_id',$symbol,$partner_id)
-            ->where('a.status',$status)
-            ->whereTime('cloud_order.pay_time','between',[$create_time,$end_time])
+        $rows = TotalMerchant::alias('a')
+            ->field('a.address,a.name,a.id,a.contact,a.phone,a.status,a.opening_time,a.review_status,a.abbreviation,a.contact,a.phone,cloud_order.received_money,cloud_order.cashier,cloud_agent_partner.partner_name')
+            ->join('cloud_order', 'a.id=cloud_order.merchant_id')
+            ->join('cloud_agent_partner', 'a.partner_id=cloud_agent_partner.id')
+            ->where('a.abbreviation|a.contact|a.phone', 'like', "%$name%")
+            ->where('a.partner_id', $symbol, $partner_id)
+            ->where(['a.status'=>[$statusxyom,$status],'a.agent_id'=>['=',$agent_id],'a.address'=>[$addresssyom,$address]])
+            ->whereTime('a.opening_time', $nodeal, [$create_time, $end_time])
             ->group('a.id')
             ->count('a.id');
         $pages = page($rows);
 
-        $data['list']=TotalMerchant::alias('a')
-            ->field('a.contact,a.phone,a.status,a.opening_time,a.review_status,a.abbreviation,a.contact,a.phone,cloud_order.received_money,cloud_order.cashier,cloud_agent_partner.partner_name')
-            ->join('cloud_order','a.id=cloud_order.merchant_id')
-            ->join('cloud_agent_partner','a.partner_id=cloud_agent_partner.id')
-            ->where('a.abbreviation|a.contact|a.phone','like',"%$name%")
-            ->where('a.partner_id',$symbol,$partner_id)
-            ->where('a.status',$status)
-            ->whereTime('cloud_order.pay_time',between,[$create_time,$end_time])
+        $data['list'] = TotalMerchant::alias('a')
+            ->field('a.channel,a.address,a.name,a.id,a.contact,a.phone,a.status,a.opening_time,a.review_status,a.abbreviation,a.contact,a.phone,cloud_order.received_money,cloud_order.cashier,cloud_agent_partner.partner_name')
+            ->join('cloud_order', 'a.id=cloud_order.merchant_id')
+            ->join('cloud_agent_partner', 'a.partner_id=cloud_agent_partner.id')
+            ->where('a.name|a.contact|a.phone', 'like', "%$name%")
+            ->where('a.partner_id', $symbol, $partner_id)
+            ->where(['a.status'=>[$statusxyom,$status],'a.agent_id'=>['=',$agent_id],'a.address'=>[$addresssyom,$address]])
+            ->whereTime('a.opening_time', $nodeal, [$create_time, $end_time])
             ->group('a.id')
-            ->limit($pages['offset'],$pages['limit'])
+            ->limit($pages['offset'], $pages['limit'])
             ->select();
         $data['pages'] = $pages;
         $data['pages']['rows'] = $rows;
         $data['pages']['total_row'] = $total;
-        if(count($data)!==0){
-            return_msg(200,'success',$data);
-        }else{
-            return_msg(400,'没有数据');
+        if (count($data['list'])) {
+            return_msg(200, 'success', $data);
+        } else {
+            return_msg(400, '没有数据');
         }
     }
 
@@ -573,18 +589,21 @@ class Index extends Controller
         //获取商户|联系人|联系方式
         $name=$request->param('keyword');
         //获取合伙人id
-        $partner_id=$request->param('partner_id');
-        //获取是否交易
-        $deal=$request->param('deal');
+        $partner_id=$request->param('partner_id') ? $request->param('partner_id') :0 ;
+        //获取是否交易 //如果$deal=1是有交易用户，$deal=2是无交易用户
+        $deal=$request->param('deal') ? $request->param('deal') :0;
 
-        //如果$deal=1是有交易用户，$deal=2是无交易用户
+        $create_time = $request->param('pay_time') ? $request->param('pay_time') : 1507424363;
+        $end_time = $request->param('yesterday') ? $request->param('yesterday') +3600*24-1: 1917651563;
+
+        //是否交易
         $nodeal='between';
-
         if($deal==2){
             $nodeal='not between';
         }
+        //合伙人
         $symbol='<>';
-        if($partner_id >0){
+        if($partner_id !=0){
             $symbol='eq';
         }
         $total = Db::name('total_merchant')->count('id');
@@ -594,7 +613,7 @@ class Index extends Controller
             ->join('cloud_order','a.id=cloud_order.merchant_id','left')
             ->where('a.abbreviation|a.contact|a.phone','like',"%$name%")
             ->where('a.partner_id',$symbol,$partner_id)
-            ->whereTime('cloud_order.pay_time',$nodeal,[$request->param('create_time'),$request->param('end_time')])
+            ->whereTime('cloud_order.pay_time',$nodeal,[$create_time,$end_time])
             ->group('a.id')
             ->count('a.id');
         $pages = page($rows);
@@ -604,7 +623,7 @@ class Index extends Controller
             ->join('cloud_order','a.id=cloud_order.merchant_id','left')
             ->where('a.abbreviation|a.contact|a.phone','like',"%$name%")
             ->where('a.partner_id',$symbol,$partner_id)
-            ->whereTime('cloud_order.pay_time',$nodeal,[$request->param('create_time'),$request->param('end_time')])
+            ->whereTime('cloud_order.pay_time',$nodeal,[$create_time,$end_time])
             ->group('a.id')
             ->limit($pages['offset'],$pages['limit'])
             ->select();
@@ -627,48 +646,51 @@ class Index extends Controller
      */
     public function facilitator_list(Request $request)
     {
+        $parent_id=$request->param('id');
         //服务商名称|联系人|联系方式
-        $name=$request->param('keyword');
+        $name=$request->param('keyword') ? $request->param('status') : 3;
         //服务商的状态，1启用 0停用 3全部
-        $status=$request->param('status');
+        $status=$request->param('status') ? $request->param('status') : 3;
+
+        $create_time=$request->param('create_time') ? $request->param('create_time') :0 ;
+        $end_time=$request->param('end_time') ? $request->param('end_time') : 0;
         //代理区域    0代表全部区域
-        $agent_area=$request->param('agent_area');
+        $agent_area=$request->param('agent_area') ? $request->param('agent_area') : '0';
         $agent_ateabol='eq';
-        if($agent_area==0){
+        if($agent_area=='0'){
             $agent_ateabol='<>';
+        }
+        $createsyom='not between time';
+        if($create_time){
+            $createsyom='between  time';
         }
         $statusbol='eq';
         if($status==3){
             $statusbol='<>';
         }
-        $parent_id=0;
-        $symbol='<>';
-        if(!empty($name))
-        {
-            $symbol='eq';
-            $parent_id=Db::name('total_agent')->where('agent_name|contact_person|agent_phone','like',"%$name%")
-                ->field(['id'])->find();
-            $parent_id=$parent_id['id'];
-        }
+        $parent_id=1;
+
+
         $total = Db::name('total_agent')->count('id');
 
         $rows=Db::name('total_agent')->where([
-            'parent_id'=>[$symbol,$parent_id],
+            'parent_id'=>['=',$parent_id],
         'agent_area'=>[$agent_ateabol,$agent_area],
             'status'=>[$statusbol,$status]
-        ,'create_time'=>['between time',[$request->param('create_time'),$request->param('end_time')]]
+        ,'create_time'=>[$createsyom,[$create_time,$end_time]]
         ])
             ->count('id');
         $pages = page($rows);
         $data['list']=Db::name('total_agent')->where([
-            'parent_id'=>[$symbol,$parent_id],
+            'parent_id'=>['=',$parent_id],
             'agent_area'=>[$agent_ateabol,$agent_area],
             'status'=>[$statusbol,$status]
-            ,'create_time'=>['between time',[$request->param('create_time'),$request->param('end_time')]]
+            ,'create_time'=>[$createsyom,[$create_time,$end_time]]
         ])
             ->field(['agent_name','contact_person','agent_phone','agent_area','create_time','status'])
             ->limit($pages['offset'],$pages['limit'])
             ->select();
+
         $data['pages'] = $pages;
         $data['pages']['rows'] = $rows;
         $data['pages']['total_row'] = $total;

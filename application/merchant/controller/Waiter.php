@@ -10,6 +10,7 @@ namespace app\merchant\controller;
 
 
 use app\agent\model\Order;
+use app\merchant\model\MerchantShop;
 use app\merchant\model\MerchantUser;
 use app\merchant\model\ShopTable;
 use think\Controller;
@@ -17,11 +18,74 @@ use think\Db;
 use think\Request;
 use app\merchant\model\MerchantDish;
 
+
 class Waiter extends Controller
 {
+    /**
+     * 店小二首页面
+     * @return string
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function index()
+    {
+        $merchant_id=session('merchant_id');
+        $merchant_id=1;
+        $shop_id=session('shop_id');
+        if($merchant_id){
+            //门店名称及id
+            $shop=MerchantShop::where('merchant_id',$merchant_id)->field(['id','shop_name'])->select();
+                //订单数量
+            $data=Order::where('merchant_id',$merchant_id)
+                ->whereTime('create_time', 'today')
+                ->count('id');
+            //order_receiving接单状况 1已接单  status 0未支付
+            //下单消息 服务消息
+            $result=Order::alias('a')
+                ->field(['b.name','a.status','a.order_receiving','a.table_name','a.create_time','a.receivi_time'])
+                ->join('cloud_merchant_user b','b.id=a.user_id','left')
+                ->where(['a.merchant_id'=>$merchant_id,'a.status'=>0,'a.order_receiving'=>1])
+                ->whereTime('a.create_time', 'today')
+                ->select();
+            $data=['shop'=>$shop,'count'=>$data,'result'=>$result];
+            return json_encode($data);
+        }else if($shop_id){
+            //订单数量
+            $data=Order::where('shop_id',$shop_id)
+                ->whereTime('create_time', 'today')
+                ->count('id');
+            //order_receiving接单状况 1已接单  status 0未支付
+            //下单消息 服务消息
+            $result=Order::alias('a')
+                ->field(['b.name','a.status','a.order_receiving','a.table_name','a.create_time','a.receivi_time'])
+                ->join('cloud_merchant_user b','b.id=a.user_id','left')
+                ->where(['a.merchant_id'=>$merchant_id,'a.status'=>0,'a.order_receiving'=>1])
+                ->whereTime('a.create_time', 'today')
+                ->select();
+            $data=['count'=>$data,'result'=>$result];
+            return json_encode($data);
+        }
+    }
 
     /**
-     * 增加菜品
+     * 服务设置
+     * @return string
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function waiter_set()
+    {
+        if(session('merchant_id')){
+            $merchant_id=session('merchant_id');
+            $shop=MerchantShop::where('merchant_id',$merchant_id)->field(['id','shop_name'])->select();
+            return json_encode($shop);
+        }
+    }
+
+    /**
+     * 新增菜品
      * @param Request $request
      * @return string
      * @throws \think\db\exception\DataNotFoundException
@@ -30,10 +94,12 @@ class Waiter extends Controller
      */
     public function add_cuisine(Request $request)
     {
-        return 34;
+
         if(Request::instance()->isGet()){
             //取出所有属性
+            $shop_id=$request->param(['shop_id']);
             $data=Db::name('merchant_dish_norm')->select();
+            $data['shop_id']=$shop_id;
             return json_encode($data);
         }else if(Request::instance()->isPost()){
             $data=$request->post();
@@ -52,7 +118,7 @@ class Waiter extends Controller
     }
 
     /**
-     * 修改菜品
+     * 编辑菜品
      * @param Request $request
      * @throws \think\db\exception\DataNotFoundException
      * @throws \think\db\exception\ModelNotFoundException
@@ -234,7 +300,7 @@ class Waiter extends Controller
     {
         $shop_id=$request->param('shop_id');
 
-        $result=Db::name('merchant_dish')->where('shop_id',$shop_id)->update($request->post());
+        $result=Db::name('merchant_shop')->where('id',$shop_id)->update($request->post());
         if($result){
             return_msg(200,'success','设置成功');
         }else{
@@ -243,7 +309,7 @@ class Waiter extends Controller
     }
 
     /**
-     * 菜品首页面
+     * 菜品设置
      * @param Request $request
      * @return string
      * @throws \think\db\exception\DataNotFoundException
@@ -252,16 +318,16 @@ class Waiter extends Controller
      */
     public function cuisine_list(Request $request)
     {
+        $shop_id = $request->param('shop_id');
         if(Request::instance()->isGET()) {
 
-            $shop_id = $request->param('shop_id');
-            $data = MerchantDish::where('shop_id', $shop_id)->field(['dish_name', 'dish_introduce', 'money', 'dish_categery', 'dish_img', 'id'])->select();
+            $data = MerchantDish::where('shop_id', $shop_id)->field(['shop_id','dish_name', 'dish_introduce', 'money', 'dish_categery', 'dish_img', 'id'])->select();
             //菜品分类
             $type=Db::name('merchant_dish_norm')->where('parent_id',8)->select();
             return json_encode([$data,$type]);
         }else if($request->param('dish_name')){
             $dish_name=$request->param('dish_name');
-            $data=MerchantDish::where('dish_name','like','%'.$dish_name.'%')->select();
+            $data=MerchantDish::where(['dish_name'=>['like','%'.$dish_name.'%'],'shop_id'=>$shop_id])->select();
             if($data){
                 return_msg(200,'success',json_encode($data));
             }else{
@@ -287,13 +353,34 @@ class Waiter extends Controller
     }
 
     /**
-     * 添加菜品分类
+     * 管理分类
+     * @param Request $request
+     * @return string
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function manage_type(Request $request)
+    {
+        $shop_id=$request->param('shop_id');
+        $data=MerchantDish::alias('a')
+            ->field('b.dish_norm,b.id')
+            ->join('cloud_merchant_dish_norm b','b.id=a.norm_id')
+            ->where('shop_id',$shop_id)
+            ->group('a.norm_id')
+            ->select();
+        return json_encode($data);
+    }
+
+    /**
+     * 添加菜品分类  新增管理分类
      * @param Request $request
      */
     public function add_type(Request $request)
     {
         $data=$request->post();
         $data['parent_id']=8;
+        //dish_norm 菜品分类名称
         $result=Db::name('merchant_dish_norm')->insert($data);
         if($result){
             return_msg(200,'success','菜品分类新增成功');
@@ -330,6 +417,7 @@ class Waiter extends Controller
      */
     public function today_orderquery(Request $request)
     {
+        //订单ID
         $order_id=$request->param('id');
         if($request->param('status')==1){
             $data=Order::alias('a')
@@ -368,7 +456,7 @@ class Waiter extends Controller
         $id=$request->param('shop_id');
         //开始时间和结束时间
         $create_time=$request->param('create_time') ? strtotime($request->param('create_time')) : mktime(0,0,0,date('m'),date('d'),date('Y'));
-        $end_time=$request->param('end_time') ? strtotime($request->param('end_time')) : mktime(0,0,0,date('m'),date('d')+1,date('Y'));
+        $end_time=$request->param('end_time') ? strtotime($request->param('end_time')) : mktime(23,59,59,date('m'),date('d'),date('Y'));
         //$status 5全部状态 支付状态 0未支付 1已支付 2已关闭 3会员充值
         $status=$request->param('status') ? $request->param('status') :5;
         $symbol='=';
@@ -428,7 +516,7 @@ class Waiter extends Controller
     }
 
     /**
-     * 服务员服务次数详情
+     * 服务员服务次数详情  服务员数据详情
      * @param Request $request
      * @throws \think\db\exception\DataNotFoundException
      * @throws \think\db\exception\ModelNotFoundException
@@ -470,7 +558,7 @@ class Waiter extends Controller
     }
 
     /**
-     * 属性的删除与新增  首页面展示
+     * 属性的删除与新增  首页面展示 新增属性
      * @param Request $request
      * @throws \think\Exception
      * @throws \think\exception\PDOException
@@ -501,7 +589,7 @@ class Waiter extends Controller
     }
 
     /**
-     * 服务端桌位展示
+     *  点菜 --服务端桌位展示
      * @return string
      * @throws \think\db\exception\DataNotFoundException
      * @throws \think\db\exception\ModelNotFoundException
@@ -527,6 +615,12 @@ class Waiter extends Controller
     public function place_order(Request $request)
     {
         $data=$request->post();
+        //订单总金额
+        $count_money=0;
+        foreach ($data as $k=>$v){
+            $count_money+=$v['money'];
+        }
+        $data['count_money']=$count_money;
         return json_encode($data);
     }
 
@@ -538,8 +632,11 @@ class Waiter extends Controller
     {
         $data=$request->post();
         //订单号
-        $code = $this->unique_rand(100000000000000000, 999999999999999999, 1);
-
+//        $code = $this->unique_rand(100000000000000000, 999999999999999999, 1);
+        list($usec, $sec) = explode(" ", microtime());
+        $times=str_replace('.','',$usec + $sec);
+        $timese=date('YmdHis',time());
+        $code=$timese.$times;
         $order=['order_money'=>$data['order_money'],'received_money'=>$data['received_money'],'table_name'=>$data['table_name'],'order_remark'=>$data['order_remark'],'shop_id'=>$data['shop_id'],'merchant_id'=>$data['merchant_id'],'order_number'=>$code];
         $order_id=Order::insertGetId($order,true);
 
@@ -547,19 +644,30 @@ class Waiter extends Controller
     }
 
     /**
-     * 服务员端首页    呼叫服务
+     * 服务员端首页
      * @return string
      * @throws \think\db\exception\DataNotFoundException
      * @throws \think\db\exception\ModelNotFoundException
      * @throws \think\exception\DbException
      */
-    public function call_service()
+        public function call_service()
     {
         $user_id=session('user_id');
+        $user_id=1;
         //获取门店id
         $shop=MerchantUser::where('id',$user_id)->field(['shop_id'])->find();
-        $receiving=Order::where(['shop_id'=>$shop['shop_id'],'order_receiving'=>0])->field(['table_name','create_time','id'])->select();
-        return json_encode($receiving);
+        //order_receiving 是否接单 0未接单 1已接单 2已完结
+        $receiving=Order::where(['shop_id'=>$shop['shop_id'],'order_receiving'=>['in','0,1']])->field(['order_receiving','table_name','create_time','id'])->select();
+        $data=[];
+        foreach ($receiving as $k=>$v){
+            if($v['order_receiving']==0){
+                $data['call'][]=$v;
+            }else{
+                $data['accepted '][]=$v;
+            }
+        }
+
+        return json_encode($data);
 
     }
 
@@ -581,20 +689,6 @@ class Waiter extends Controller
 
     }
 
-    /**
-     * 服务员端首页    已接服务
-     * @return string
-     * @throws \think\db\exception\DataNotFoundException
-     * @throws \think\db\exception\ModelNotFoundException
-     * @throws \think\exception\DbException
-     */
-    public function accepted_service()
-    {
-        $user_id=session('user_id');
-        //获取门店id
-        $receiving=Order::where(['user_id'=>$user_id,'order_receiving'=>1])->field(['table_name','create_time','id'])->select();
-        return json_encode($receiving);
-    }
 
     /**
      * 服务员端首页   服务记录
