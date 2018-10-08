@@ -228,6 +228,17 @@ if (!function_exists("generate_order_no")) {
     }
 }
 
+if (!function_exists("getSN")) {
+    /**
+     * 生成SN码 规则:  /[时间戳+4位随机码]/
+     * @param $uid [int]
+     * @return [string]
+     */
+    function getSN() {
+        $order_num = time().rand(1000, 9999);
+        return $order_num;
+    }
+}
 /**
  * 设置curl
  */

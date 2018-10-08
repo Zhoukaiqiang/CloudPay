@@ -143,7 +143,6 @@ class Member extends Controller
             }
         }else{
             //取出所有会员充值送活动
-                //取出门店下所有活动
                 //取出永久充值送活动
                 $data[]=ShopActiveRecharge::field('recharge_money,give_money')->where(['recharge_time'=>0])->select();
                 //取出未过期充值送活动
