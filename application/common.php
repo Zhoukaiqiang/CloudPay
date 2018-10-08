@@ -214,7 +214,31 @@ if (!function_exists("check_params")) {
     }
 }
 
+if (!function_exists("generate_order_no")) {
+    /**
+     * 生成订单号 规则:  /[日期+用户ID+3位随机码]/
+     * @param $uid [int] 用户ID
+     * @return [string] 订单号码
+     */
+    function generate_order_no($uid) {
 
+        $order_num = (string)date("YmdHms") + (string)$uid + rand(100, 999);
+        return $order_num;
+
+    }
+}
+
+if (!function_exists("getSN")) {
+    /**
+     * 生成SN码 规则:  /[时间戳+4位随机码]/
+     * @param $uid [int]
+     * @return [string]
+     */
+    function getSN() {
+        $order_num = time().rand(1000, 9999);
+        return $order_num;
+    }
+}
 /**
  * 设置curl
  */
@@ -329,7 +353,7 @@ if (!function_exists('upload_logo')) {
 }
 
 //图片上传
-if (!function_exists('upload_pics')) {
+/*if (!function_exists('upload_pics')) {
     function upload_pics($file){
         //移动图片
         $info=$file->validate(['size'=>5*1024*1024,'ext'=>'jpg,png,gif,jpeg'])->move(ROOT_PATH.'public'.DS.'uploads');
@@ -344,7 +368,7 @@ if (!function_exists('upload_pics')) {
             $this->error($error);
         }
     }
-}
+}*/
 
 /**
  * 发送短信到手机

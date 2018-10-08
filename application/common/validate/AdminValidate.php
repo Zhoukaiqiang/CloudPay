@@ -17,7 +17,7 @@ class AdminValidate extends Validate{
         ['detailed_address','require','请填写详细地址'],
         ['admin_id'      ,'require','请选择运营人员'],
         ['username'      ,'require','请填写登录账号'],
-        ['password'      ,'require','请填写登录密码'],
+        ['password'      ,'require|length:6','请填写密码|密码必须为6位数'],
         ['open_bank'     ,'require','请填写开户行名称'],
         ['open_bank_branche','require','请填写开户行网点'],
         ['home'          ,'require','请选择所在地'],
@@ -29,14 +29,18 @@ class AdminValidate extends Validate{
         ['agent_rate'   ,'number|max:0.6','间联费率必须是数字|间联费率最高为0.6'],
         ['contract_picture','require','请上传合同图片'],
         ['agent_phone' ,'require|regex:/^1[3-9]\d{9}$/|unique:agent_phone','请填写手机号|手机号格式不正确|手机号已存在'],
-
+        //添加合伙人
+        ["partner_name", "require", "请填写名称"],
+        ["partner_phone", "require|length:11|regex:/^1[3-9]\d{9}$/", "请填写手机号|长度必须11位|手机号格式不正确"],
+        ["model", "require", "请填写模式"],
+        ["commission", "require", "请选择分佣模式"],
         //商户
         ['merchants_type','require','请选择商户类型'],
         ['merchant_name','require','请输入商户全称'],
         ['address','require','请选择地址信息'],
         ['detail_address','require','请输入详细地址'],
         ['contact','require','请填写联系人'],
-        ['phone','require|regex:/^1[3-9]\d{9}$/|unique:phone','请填写联系电话|联系电话格式不正确|联系电话已存在'],
+        ['phone','require|regex:/^1[3-9]\d{9}$/','请填写联系电话|联系电话格式不正确'],
         ['category','require','请选择经营类目'],
         ['account_type','require','请选择账户类型'],
         ['account_name','require','请输入账户名'],
@@ -50,6 +54,9 @@ class AdminValidate extends Validate{
         ['name','require','请输入用户名'],
         ['role_id','require','请选择所属角色'],
         ['status','require','请选择状态'],
+
+        //商户后台
+        ["stop_reason", "max:120", "消息最多120个字"]
     ];
 
     //命名规则 控制器_函数名称
@@ -64,8 +71,16 @@ class AdminValidate extends Validate{
         'user'=>[
             'name','role_id','status','phone','password'
         ],
+        //代理商登录
+        "agent_login"   => ["phone", "password"],
+        "agent_add_partner" => ["partner_phone", "password", "agent_id", "partner_name", "model","commission"],
         //商户登录验证
         "merchant_login" => ['phone','password'],
+        "merchant_get_profile" => ['phone'],
+        "merchant_change_pwd"  => ['phone', 'password'],
+
+        //商户服务
+        "service_stop_agent" => ["stop_reason"],
     ];
 
 }

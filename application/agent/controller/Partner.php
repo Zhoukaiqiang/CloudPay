@@ -9,53 +9,74 @@ use app\agent\model\TotalMerchant;
 use think\Controller;
 use think\Exception;
 use think\Request;
+use think\Session;
 
 class Partner extends Controller
 {
     /**
      * 显示员工列表
-     *
+     * @param [int]  $agent_id 代理商ID
      * @return \think\Response
+     * @throws Exception
      */
     public function index()
     {
         //显示当前代理商下面所有员工
-        $id=session('agent_id');
-        $id=1;
-        $data=AgentPartner::field(['id,partner_name,partner_phone,create_time,model'])
-            ->where('agent_id',$id)
+        $id = Session::get("username_")["id"];
+
+        $rows = AgentPartner::where('agent_id',$id)->count("id");
+        //分页
+        $pages = page($rows);
+
+        $data["list"] = AgentPartner::where('agent_id',$id)
+            ->field(['id,partner_name,partner_phone,create_time,model'])
+            ->limit($pages['limit'], $pages['offset'])
             ->select();
         //取出负责商户数
-        foreach($data as &$v){
-            $count=TotalMerchant::where('partner_id',$v['id'])->count();
+
+        foreach($data['list'] as &$v){
+
+            $count= TotalMerchant::where('partner_id',$v['id'])->count('id');
             $v['count']=$count;
+
         }
-        return_msg(200,'success',$data);
+        $data['pages'] = $pages;
+
+        if (count($data["list"])) {
+            return_msg(200, "success", $data);
+        }else {
+            return_msg(400, "fail");
+        }
     }
 
     /**
      * 新增合伙人
-     *
+     * @param [int]  $id 代理商ID
+     * @param array [partner_name partner_phone password model agent_id]
      * @return \think\Response
      */
     public function add_partner()
     {
         if(request()->isPost()){
             //传入当前代理商id
-            $data=request()->post();
-            $data['agent_id']=session('agent_id');
+            $phone = \request()->param("partner_phone");
+            /** 检验参数 */
+            $data = request()->post();
+            check_params("agent_add_partner",$data);
+            $exist = AgentPartner::get(["partner_phone" => $phone]);
+            if ($exist) {
+                return_msg(400, "手机号已经存在");
+            }
             //提交时间
             $data['create_time']=time();
-            //验证
-            $data['password']=addslashes(encrypt_password($data['password']));
-            $result=AgentPartner::insert($data);
+            //加密密码
+            $data['password'] = encrypt_password($data['password'] , $data["partner_phone"]);
+            $result = AgentPartner::insert($data);
             if($result){
                 return_msg(200,'添加成功');
             }else{
                 return_msg(400,'添加失败');
             }
-        }else{
-            return_msg(200,'success');
         }
     }
 
@@ -68,7 +89,7 @@ class Partner extends Controller
     public function del()
     {
         //获取合伙人id
-        $id=request()->param('id');
+        $id = request()->param('id');
         $result=AgentPartner::destroy($id);
         if($result){
             return_msg(200,'删除成功');
@@ -85,10 +106,13 @@ class Partner extends Controller
      */
     public function partner_detail()
     {
-        if(request()->isPost){
+        if(request()->isPost()){
             $data=request()->post();
-            $data['password']=addslashes(encrypt_password($data['password']));
-            $result=AgentPartner::update($data,true);
+            $id = $data['id'];
+            if (!empty($data['password'])) {
+                $data['password'] = encrypt_password($data['password'], $data["partner_phone"]);
+            }
+            $result=AgentPartner::where("id",$id)->update($data,true);
             if($result){
                 return_msg(200,'修改成功');
             }else{
@@ -96,10 +120,17 @@ class Partner extends Controller
             }
         }else{
             //获取合伙人id
-            $id=request()->param('id');
-            $id=1;
-            $data=AgentPartner::where('id',$id)->field(['id,partner_name,partner_phone,create_time,model'])->select();
-            return_msg(200,'success',$data);
+            $id = request()->param('id');
+            $data = AgentPartner::get($id);
+
+            $data = $data->toArray();
+
+            if($data) {
+                unset($data['password']);
+                return_msg(200,'success',$data);
+            }else {
+                return_msg(400, "没有数据");
+            }
         }
     }
 
@@ -114,7 +145,7 @@ class Partner extends Controller
     {
         //获取合伙人id
         $id=request()->param('id');
-        $id=1;
+
         //取出合伙人下的所有有交易的商户
         $rows=TotalMerchant::alias('a')
             ->join('cloud_agent_partner b','a.partner_id=b.id','left')
@@ -171,16 +202,16 @@ class Partner extends Controller
     public function partner_report()
     {
         //获取当前代理商id
-        $id=session('agent_id');
+        $id= Session::get("username_")['id'];
         // test mark
-        $id=1;
+
         /** 代理商费率   */
         $res = TotalAgent::where('id',$id)->field("agent_rate")->find();
         $agent_rate = intval($res->agent_rate);
         $data['list']=AgentPartner::field(['id,partner_name,partner_phone,create_time,model,proportion,rate'])
             ->where('agent_id',$id)
             ->select();
-//        dump($data);die;
+
         //取出负责商户数
         $flag=array();
         foreach($data['list'] as &$v){
@@ -202,10 +233,10 @@ class Partner extends Controller
                 //按费率
                 $v['money']=$sum * abs( $v['rate'] - $agent_rate )/100;
             }
-            $flag[]=$v['new_count'];
+            $flag[] = $v['new_count'];
         }
         //按照新增商户数降序排列
-       array_multisort($flag, SORT_DESC, $data);
+        //array_multisort($flag, SORT_DESC, $data);
         return_msg(200,'success',$data);
 
     }
@@ -220,7 +251,7 @@ class Partner extends Controller
     {
         //按合伙人姓名和电话搜索
         $search=request()->param('search');
-        $search='端';
+
         if(is_numeric($search)){
             //电话搜索
             $data=AgentPartner::where('partner_phone','like',$search.'%')
@@ -230,7 +261,12 @@ class Partner extends Controller
             $data=AgentPartner::where('partner_name','like',$search.'%')
                 ->select();
         }
-        return_msg(200,'success',$data);
+        if (count($data)) {
+            return_msg(200,'success',$data);
+        }else {
+            return_msg(400, "没有数据");
+        }
+
     }
 
     /**
@@ -339,8 +375,8 @@ class Partner extends Controller
     public function get_search($time,$sort,$param='>')
     {
         //获取当前代理商id
-        $id=session('agent_id');
-        $id=1;
+        $id= Session::get("username_")['id'];
+
         $res = TotalAgent::where('id',$id)->field("agent_rate")->find();
         $agent_rate = intval($res->agent_rate);
         $data=AgentPartner::field(['id,partner_name,partner_phone,create_time,model,proportion,rate'])
@@ -370,7 +406,15 @@ class Partner extends Controller
             $flag[]=$v[$sort];
         }
         array_multisort($flag, SORT_DESC, $data);
-        return_msg(200,'success',$data);
+        $this->check_empty($data);
+
+    }
+
+    public function check_empty(Array $d) {
+        if (count($d)) {
+            return_msg(200, "success", $d);
+        }else {
+            return_msg(400, "没有数据");
+        }
     }
 }
-
