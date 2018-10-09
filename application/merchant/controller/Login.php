@@ -90,9 +90,9 @@ class Login extends Common
 
 
                 if (empty($res['role'])) {
-                    Session::set("merchant_id", $res['id'], 'merchant');
+                    Session::set("username_", [ "id" => $res['id'] , "role" => -1 ], 'app');
                 }else {
-                    Session::set("user_id", $res['id'], 'merchant');
+                    Session::set("username_", [ "id" => $res['id'],  "role" => $res["role"] ], 'app');
                 }
 
                 unset($res['password']); //密码不返回
