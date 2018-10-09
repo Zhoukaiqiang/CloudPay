@@ -13,7 +13,7 @@ use think\Request;
 class Incom extends Controller
 {
 
-   public $url = 'http://sandbox.starpos.com.cn/emercapp';
+   public $url = 'https://gateway.starpos.com.cn/emercapp';
 
 
 
@@ -368,10 +368,14 @@ class Incom extends Controller
         $data['imgTyp']=$info['imgTyp'];
         $data['imgNm']=$info['imgNm'];
         $data['merchant_id']=$info['merchant_id'];
-        $data=$data->toArray();
-        $file=$request->file('imgFile');
-        $data['imgFile']=bin2hex($file);
-        $img=$this->upload_pics($file);
+        $data = $data->toArray();
+        $file = $request->file('imgFile');
+        /** 转为二进制 */
+
+        $data['imgFile'] = bin2hex(file_get_contents($file->getRealPath()));
+
+        $img = $this->upload_pics($file);
+
         $this->send($data,$img);
     }
 
@@ -387,27 +391,30 @@ class Incom extends Controller
         $data['signValue']=sign_ature(0000,$data);
         //发送给新大陆
         $result=json_decode(curl_request($this->url,true,$data,true),true);
+        if ($result['msg_cd'] !== '000000') {
+            return_msg(400, $result["msg_dat"]);
+        }
         //生成签名
         $signValue=sign_ature(1111,$result);
         if($result['msg_cd']=='000000' && $result['signValue']==$signValue){
             //取出数据库中的图片
-            $file_img=IncomImg::field('img')->where('merchant_id',$data['merchant_id'])->find();
+            $file_img = IncomImg::field('img')->where('merchant_id',$data['merchant_id'])->find();
             if($file_img == null){
                 //没有图片
                 $data['img']=json_encode($img);
                 IncomImg::create($data,true);
             }elseif(is_array(json_decode($file_img['img']))){
                 //有多张图片
-//                dump(json_decode($file_img['img']));
+
                 $arr=json_decode($file_img['img']);
                 $arr[]=$img;
                 IncomImg::where('merchant_id',$data['merchant_id'])->update(['img'=>json_encode($arr)]);
             }else{
                 //只有一张图片
-//                dump(json_decode($file_img['img']));die;
+
                 $arr[]=json_decode($file_img['img']);
                 $arr[]=$img;
-//                dump($arr);die;
+
                 IncomImg::where('merchant_id',$data['merchant_id'])->update(['img'=>json_encode($arr)]);
             }
 //            $file_img=$file_img['img'].$img;
@@ -419,13 +426,13 @@ class Incom extends Controller
 
     public function upload_pics(){
         //移动图片
-        $file=request()->file('imgFile');
-        $info=$file->validate(['size'=>5*1024*1024,'ext'=>'jpg,png,gif,jpeg'])->move(ROOT_PATH.'public'.DS.'uploads');
+        $file = request()->file('imgFile');
+        $info = $file->validate(['size'=>5*1024*1024,'ext'=>'jpg,png,gif,jpeg'])->move(ROOT_PATH.'public'.DS.'uploads');
         if($info){
             //文件上传成功,生成缩略图
             //获取文件路径
-            $goods_logo=DS.'uploads'.DS.$info->getSaveName();
-            $goods_logo=str_replace('\\','/',$goods_logo);
+            $goods_logo = DS.'uploads'.DS.$info->getSaveName();
+            $goods_logo = str_replace('\\','/',$goods_logo);
             return $goods_logo;
         }else{
             $error=$file->getError();
@@ -570,9 +577,9 @@ class Incom extends Controller
         $par=json_decode($par,true);
 
         //获取签名域
-        $return_sign=sign_ature(1111,$par);
+        $return_sign = sign_ature(1111,$par);
         if ($par['msg_cd']==000000){
-            if($par['signValue']==$return_sign){
+            if($par['signValue'] == $return_sign){
                 Db::name('merchant_incom')->where('merchant_id',$id)->update(['status'=>0]);
                 return_msg(200,'success',$par);
             }else{

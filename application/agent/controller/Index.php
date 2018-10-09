@@ -30,7 +30,7 @@ class Index extends Controller
         check_params("agent_login", $data);
 //        $user_name_type = 'phone';
         $this->check_exist($data['phone'], 'phone', 1);
-        $db_res = Db('total_agent')->field('id,username,agent_phone,status,password')
+        $db_res = Db('total_agent')->field('id,username,agent_phone,status,password, parent_id')
             ->where('agent_phone', $data['phone'])->find();
 
         if ($db_res['password'] !== encrypt_password($data['password'], $data["phone"])) {
@@ -653,6 +653,7 @@ class Index extends Controller
             ->group('a.id')
             ->limit($pages['offset'],$pages['limit'])
             ->select();
+
         foreach ($data['list'] as &$v) {
             $where = [
                 'status' => 1,
@@ -679,8 +680,11 @@ class Index extends Controller
         $data['pages']['rows'] = $rows;
         $data['pages']['total_row'] = $total;
         if(count($data)!==0){
+
             return_msg(200,'success',$data);
+
         }else{
+
             return_msg(400,'没有数据');
         }
     }

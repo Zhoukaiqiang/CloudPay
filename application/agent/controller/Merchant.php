@@ -281,7 +281,7 @@ class Merchant extends Incom
                 $arr['alipay_flg']="Y";//扫码产品
                 $arr['yhkpay_flg']="Y";//银行卡产品
                 $arr['tranTyps']="C1";//交易类型
-                $arr['orgNo']="518";//合作商机构号
+                $arr['orgNo']="27573";//合作商机构号
                 $arr['crp_nm']=$data['contact'];//法人姓名
                 MerchantIncom::insert($arr,true);
                 $this->merchant_incom($insert_id);
