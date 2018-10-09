@@ -553,13 +553,13 @@ class Incom extends Controller
         //向新大陆接口发送请求信息
         $par= curl_request($this->url,true,$data,true);
         $par=json_decode($par,true);
-        dump($par);die;
+
         //获取签名域
         $return_sign=sign_ature(1111,$par);
         if ($par['msg_cd']==000000){
             if($par['signValue']==$return_sign){
                 Db::name('merchant_incom')->where('merchant_id',$id)->update(['status'=>0]);
-                return_msg(200,'success',$par['msg_dat']);
+                return_msg(200,'success',$par);
             }else{
                 return_msg(400,'error',$par['msg_dat']);
             }

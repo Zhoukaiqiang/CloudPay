@@ -618,7 +618,7 @@ class Index extends Controller
         $deal=$request->param('deal') ? $request->param('deal') :0;
 
         $create_time = $request->param('pay_time') ? $request->param('pay_time') : 1507424363;
-        $end_time = $request->param('pay_time') ? $request->param('pay_time') +3600*24-1: 1917651563;
+        $end_time = $request->param('pay_time') ? $request->param('pay_time') +3600*24-1 : 1917651563;
 
         //是否交易
         $nodeal='between';
