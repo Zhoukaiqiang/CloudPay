@@ -273,11 +273,9 @@ class Incom extends Controller
         $data['cardTyp']='01';
         //获取商户id
 //        $data['merchant_id']=11;
-//        dump($data);die;
 //        $info=MerchantIncom::insert($data);
         $data=$data->toArray();
         $data['signValue'] = sign_ature(0000, $data);
-//        halt($data);
 //        var_dump(json_encode($data));die;
 //        dump($data);die;
 //        var_dump(json_encode($data));die;
@@ -375,7 +373,6 @@ class Incom extends Controller
         $data['imgFile']=bin2hex($file);
         $img=$this->upload_pics($file);
         $this->send($data,$img);
-
     }
 
     /**
@@ -393,9 +390,27 @@ class Incom extends Controller
         //生成签名
         $signValue=sign_ature(1111,$result);
         if($result['msg_cd']=='000000' && $result['signValue']==$signValue){
-            //将图片存入数据库
-            $data['img']=$img;
-            IncomImg::create($data,true);
+            //取出数据库中的图片
+            $file_img=IncomImg::field('img')->where('merchant_id',$data['merchant_id'])->find();
+            if($file_img == null){
+                //没有图片
+                $data['img']=json_encode($img);
+                IncomImg::create($data,true);
+            }elseif(is_array(json_decode($file_img['img']))){
+                //有多张图片
+//                dump(json_decode($file_img['img']));
+                $arr=json_decode($file_img['img']);
+                $arr[]=$img;
+                IncomImg::where('merchant_id',$data['merchant_id'])->update(['img'=>json_encode($arr)]);
+            }else{
+                //只有一张图片
+//                dump(json_decode($file_img['img']));die;
+                $arr[]=json_decode($file_img['img']);
+                $arr[]=$img;
+//                dump($arr);die;
+                IncomImg::where('merchant_id',$data['merchant_id'])->update(['img'=>json_encode($arr)]);
+            }
+//            $file_img=$file_img['img'].$img;
             return_msg(200,'success',['merchant_id'=>$data['merchant_id']]);
         }else{
             return_msg(400,'failure');
