@@ -31,7 +31,7 @@ class Member extends Controller
             //显示当前商户下所有会员
             $data=MerchantMember::field('id,member_head,member_phone,member_name,money')
                 ->where('merchant_id',$this->merchant_id)
-                ->whereTime('register_time','>','yesterday')
+//                ->whereTime('register_time','>','yesterday')
                 ->select();
             return_msg(200,'success',$data);
         }elseif(empty($this->merchant_id) && !empty($this->user_id)){
@@ -39,7 +39,7 @@ class Member extends Controller
             //显示当前门店下所有会员
             $data=MerchantMember::field('id,member_head,member_phone,member_name,money')
                 ->where('shop_id',$info['shop_id'])
-                ->whereTime('register_time','>','yesterday')
+//                ->whereTime('register_time','>','yesterday')
                 ->select();
             return_msg(200,'success',$data);
         }
@@ -54,6 +54,7 @@ class Member extends Controller
     public function search()
     {
         $search=request()->param('search');
+        $search='高';
         if(is_numeric($search)){
             //电话搜索
             $data=MerchantMember::field('id,member_head,member_phone,member_name,money')->where('member_phone','like',$search.'%')->select();
@@ -73,7 +74,7 @@ class Member extends Controller
         //获取会员id
         $id=$request->param('id');
         $id=1;//测试
-        $data=MerchantMember::field('id,member_head,recharge_money,consumption_money,member_name,member_phone,money,consume_number,register_time')
+        $data=MerchantMember::field('id,member_head,recharge_money,consumption_money,member_name,member_phone,money,consump_number,register_time')
             ->where('id',$id)
             ->find();
         return_msg(200,'success',$data);
@@ -92,9 +93,9 @@ class Member extends Controller
         $member_id=1;//测试
         $data=Order::field('id,order_money,pay_type,status,create_time')
             ->where('member_id',$member_id)
-            ->whereTime('pay_time','month')
+            ->whereTime('pay_time','>',time()-7776000)
             ->select();
-        $data['member_id']=$member_id;
+//        $data['member_id']=$member_id;
         return_msg(200,'success',$data);
     }
 
@@ -106,13 +107,13 @@ class Member extends Controller
      */
     public function order_detail(Request $request)
     {
-        //获取会员id
-        $member_id=$request->param('member_id');
-        $member_id=1;
+        //获取会员订单id
+        $id=$request->param('id');
+        $id=1;
         $data=Order::alias('a')
             ->field('a.received_money,a.order_money,a.discount,a.cashier,a.pay_time,a.pay_type,a.order_remark,a.order_number,a.status,a.authorize_number,a.prove_number,a.give_money,b.shop_name')
             ->join('cloud_merchant_shop b','a.shop_id=b.id')
-            ->where('a.member_id',$member_id)
+            ->where('a.id',$id)
             ->find();
         return_msg(200,'success',$data);
     }
@@ -137,6 +138,24 @@ class Member extends Controller
                 $recharge_money=MerchantMember::field('recharge_money')->where('id',$data['id'])->find();
                 $recharge_total=$recharge_money['recharge_money']+$data['money'];
                 MerchantMember::where('id',$data['id'])->update(['recharge_money'=>$recharge_total]);
+                //查询商户id
+                $merchant=MerchantMember::field('merchant_id')->where('id',$data['id'])->find();
+                //查询门店id
+                $shop=MerchantMember::field('shop_id')->where('id',$data['id'])->find();
+                //加入订单表
+                $arr=[
+                    'status'=>3,
+                    'order_money'=>$info['money'],
+                    'received_money'=>$info['money'],
+                    'pay_time'=>time(),
+                    'pay_type'=>'cash',
+                    'order_number'=>generate_order_no($data['id']),
+                    'merchant_id'=>$merchant['merchant_id'],
+                    'give_money'=>$data['give_money'],
+                    'member_id'=>$data['id'],
+                    'shop_id'=>$shop['shop_id']
+                ];
+                Order::create($arr,true);
                 return_msg(200,'充值成功');
             }else{
                 return_msg(400,'充值失败');
@@ -144,10 +163,18 @@ class Member extends Controller
         }else{
             //取出所有会员充值送活动
                 //取出永久充值送活动
-                $data[]=ShopActiveRecharge::field('recharge_money,give_money')->where(['recharge_time'=>0])->select();
+            if(!empty($this->merchant_id)){
+                $data[]=ShopActiveRecharge::field('recharge_money,give_money')->where(['active_time'=>0,'merchant_id'=>$this->merchant_id])->select();
                 //取出未过期充值送活动
-                $data[]=ShopActiveRecharge::field('recharge_money,give_money')->where(['recharge_time'=>1])->whereTime('end_time','>',time())->select();
-               return_msg(200,'success',$data);
+                $data[]=ShopActiveRecharge::field('recharge_money,give_money')->where(['active_time'=>1,'merchant_id'=>$this->merchant_id])->whereTime('end_time','>',time())->select();
+                return_msg(200,'success',$data);
+            }elseif(empty($this->merchant_id) && !empty($this->user_id)){
+                $info=MerchantUser::field('merchant_id')->where('id',$this->user_id)->find();
+                $data[]=ShopActiveRecharge::field('recharge_money,give_money')->where(['active_time'=>0,'merchant_id'=>$info['merchant_id']])->select();
+                //取出未过期充值送活动
+                $data[]=ShopActiveRecharge::field('recharge_money,give_money')->where(['active_time'=>1,'merchant_id'=>$info['merchant_id']])->whereTime('end_time','>',time())->select();
+                return_msg(200,'success',$data);
+            }
 
         }
     }
@@ -213,9 +240,9 @@ class Member extends Controller
         $result=MerchantMemberCart::insertGetId($data,true);
         if($result){
             MerchantMember::update('card_id',$result);
-            return_msg(200,'success','设置成功');
+            return_msg(200,'设置成功');
         }else{
-            return_msg(400,'failure','设置失败');
+            return_msg(400,'设置失败');
         }
     }
 }
