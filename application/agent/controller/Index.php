@@ -381,14 +381,17 @@ class Index extends Controller
      */
     public function search_deal(Request $request)
     {
+      return  strtotime(date("Y-m-d",strtotime("-6 days")));
         //获取商户|联系人|联系方式
         $name = $request->param('keyword');
         //获取合伙人id
-        $partner_id = $request->param('partner_id');
+        $partner_id = $request->param('partner_id') ? $request->param('partner_id') : 0;
         //获取是否交易
         $deal = $request->param('deal');
-        $pay_time = strtotime($request->param('pay_time'));
-        $end_time = strtotime($request->param('yesterday'));
+
+        $pay_time=$request->param('pay_time') ?  $request->param('pay_time') : 1531011563;
+        $yesterday=$request->param('yesterday') ? $request->param('yesterday'):2133999048;
+
 
         //如果$deal=1是有交易用户，$deal=2是无交易用户
         $nodeal = 'between';
@@ -406,7 +409,7 @@ class Index extends Controller
             ->join('cloud_order', 'a.id=cloud_order.merchant_id', 'left')
             ->where('a.abbreviation|a.contact|a.phone', 'like', "%$name%")
             ->where('a.partner_id', $symbol, $partner_id)
-            ->where('cloud_order.pay_time', $nodeal, [$pay_time, $end_time])
+            ->where('cloud_order.pay_time', $nodeal, [$pay_time, $yesterday])
             ->group('a.id')
             ->count('a.id');
 
@@ -416,7 +419,7 @@ class Index extends Controller
             ->join('cloud_order', 'a.id=cloud_order.merchant_id', 'left')
             ->where('a.abbreviation|a.contact|a.phone', 'like', "%$name%")
             ->where('a.partner_id', $symbol, $partner_id)
-            ->where('cloud_order.pay_time', $nodeal, [$pay_time, $end_time])
+            ->where('cloud_order.pay_time', $nodeal, [$pay_time, $yesterday])
             ->group('a.id')
             ->limit($pages['offset'], $pages['limit'])
             ->select();
@@ -478,13 +481,14 @@ class Index extends Controller
         //获取商户|联系人|联系方式
         $name = $request->param('keyword');
         //获取合伙人id
-        $partner_id = $request->param('partner_id');
-        //获取是否交易
-        $deal = $request->param('deal');
-
+        $partner_id = $request->param('partner_id') ? $request->param('partner_id') :0;
+        //获取是否交易 $deal=1是有交易用户，$deal=2是无交易用户
+        $deal = $request->param('deal') ;
+        $total = Db::name('total_merchant')->count('id');
+        $pay_time=$request->param('pay_time') ?  $request->param('pay_time') : strtotime('-8 days')-1;
+            $yesterday=$request->param('create_time') ? $request->param('create_time'):mktime(0,0,0,date('m'),date('d')+1,date('Y'))-1;;
         //如果$deal=1是有交易用户，$deal=2是无交易用户
         $nodeal = 'between';
-        $total = Db::name('total_merchant')->count('id');
         if ($deal == 2) {
             $nodeal = 'not between';
         }
@@ -499,17 +503,17 @@ class Index extends Controller
             ->join('cloud_agent_partner', 'a.partner_id=cloud_agent_partner.id')
             ->where('a.abbreviation|a.contact|a.phone', 'like', "%$name%")
             ->where('a.partner_id', $symbol, $partner_id)
-            ->whereTime('cloud_order.pay_time', $nodeal, [$request->param('pay_time'), $request->param('yesterday')])
+            ->whereTime('cloud_order.pay_time', $nodeal, [$pay_time, $yesterday])
             ->group('a.id')
             ->count('a.id');
         $pages = page($rows);
         $data['list'] = TotalMerchant::alias('a')
-            ->field('a.abbreviation,a.contact,a.phone,cloud_order.received_money,cloud_order.cashier,cloud_agent_partner.partner_name')
+            ->field('a.channel,a.address,a.name,a.id,a.contact,a.phone,cloud_order.received_money,cloud_order.cashier,cloud_agent_partner.partner_name')
             ->join('cloud_order', 'a.id=cloud_order.merchant_id')
             ->join('cloud_agent_partner', 'a.partner_id=cloud_agent_partner.id')
             ->where('a.abbreviation|a.contact|a.phone', 'like', "%$name%")
             ->where('a.partner_id', $symbol, $partner_id)
-            ->whereTime('cloud_order.pay_time', $nodeal, [$request->param('pay_time'), $request->param('yesterday')])
+            ->whereTime('cloud_order.pay_time', $nodeal, [$pay_time, $yesterday])
             ->group('a.id')
             ->limit($pages['offset'], $pages['limit'])
             ->select();
@@ -699,9 +703,16 @@ class Index extends Controller
         //服务商的状态，1启用 0停用 3全部
         $status = $request->param('status');
         //代理区域    0代表全部区域
-        $agent_area = $request->param('agent_area');
+        $agent_area = $request->param('agent_area') ? $request->param('agent_area') : '0';
+        //时间
+        $create_time = $request->param('create_time') ? $request->param('create_time') : 1507424363;
+        $end_time = $request->param('end_time') ? $request->param('end_time') +3600*24-1: 1917651563;
+        //服务商
+        if($status!=0 && $status!=1){
+            $status=3;
+        }
         $agent_ateabol = 'eq';
-        if ($agent_area == 0) {
+        if ($agent_area == '0') {
             $agent_ateabol = '<>';
         }
         $statusbol = 'eq';
@@ -722,7 +733,7 @@ class Index extends Controller
             'parent_id' => [$symbol, $parent_id],
             'agent_area' => [$agent_ateabol, $agent_area],
             'status' => [$statusbol, $status]
-            , 'create_time' => ['between time', [$request->param('create_time'), $request->param('end_time')]]
+            , 'create_time' => ['between time', [$create_time, $end_time]]
         ])
             ->count('id');
         $pages = page($rows);
@@ -757,23 +768,30 @@ class Index extends Controller
     public function facilitator_tenant(Request $request)
     {
         $name = $request->param('keyword');
+        //0关闭 1开启
         $status = $request->param('status');
-        $agent_id = $request->param('agent_id');
+        //合伙人id 0全部
+        $agent_id = $request->param('agent_id') ? $request->param('agent_id') :0;
         $status_symbol = 'eq';
-        if ($status == 2) {
+        if($status!=0 && $status!=1){
+            $status=2;
             $status_symbol = '<>';
+        }
+        $agentsyom='eq';
+        if($agent_id==0){
+            $agentsyom='<>';
         }
         $total = Db::name('total_agent')->count('id');
 
         $rows = Db::name('total_merchant')
-            ->where(['abbreviation|contact|phone' => ['like', "%$name%"],
-                'status' => [$status_symbol, $status], 'agent_id' => ['eq', $agent_id]])
+            ->where(['name|contact|phone' => ['like', "%$name%"],
+                'status' => [$status_symbol, $status], 'agent_id' => [$agentsyom, $agent_id]])
             ->count('id');
         $pages = page($rows);
 
         $data['list'] = Db::name('total_merchant')
-            ->where(['abbreviation|contact|phone' => ['like', "%$name%"],
-                'status' => [$status_symbol, $status], 'agent_id' => ['eq', $agent_id]])
+            ->where(['name|contact|phone' => ['like', "%$name%"],
+                'status' => [$status_symbol, $status], 'agent_id' => [$agentsyom, $agent_id]])
             ->field(['id', 'agent_name', 'address', 'status', 'abbreviation', 'opening_time'])
             ->limit($pages['offset'], $pages['limit'])
             ->select();

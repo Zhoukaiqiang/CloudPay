@@ -5,6 +5,7 @@ namespace app\merchant\controller;
 use app\admin\model\MerchantIncom;
 use app\merchant\model\MerchantShop;
 use think\Controller;
+use think\Db;
 use think\Exception;
 use think\exception\DbException;
 use think\Request;
@@ -22,36 +23,123 @@ class Shop extends Controller
 
     /**
      * 门店进件
-     *
-     * @return \think\Response
-     * @RETURN bool
+     * @param Request $request
+     * @throws DbException
+     * @throws Exception
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\PDOException
      */
     public function shop_incom(Request $request)
     {
-        if ($request->isPost()) {
-            /** @var  $param [int] 需包含商户ID */
-            $param = $request->param();
+        //tranTyps 交易类型 suptDbfreeFlg免密免签 cardTyp卡种（银行
+        //卡必选） stl_sign结算标志 orgNo机构号 stl_oac结算账户 bnk_acnm户名 icrp_id_no结算人身份
+        //证号 crp_exp_dt_tmp结算人身份证有限期  wc_lbnk_no开户行  mailbox联系人邮箱 alipay_flg扫码产品
+        //  yhkpay_flg银行卡产品 fee_rat_scan扫码费率(%) fee_rat1_scan银联二维码费率 fee_rat2_scan银联标准费率
+        //fee_rat借记卡费率(%)  max_fee_amt借记卡封顶(元） fee_rat1贷记卡费率（%）
+        $datatel = $request->post();
+        $data=$datatel;
 
-            if (empty($param['id'])) {
-                return false;
+
+        //查询商户的log_no流水号、mercId识别号    stl_sign结算标志 1对私 2对公
+        $log_no = Db::name('merchant_incom')->where('merchant_id', $data[ 'merchant_id' ])
+            ->field('mercId,log_no,status,suptDbfreeFlg,cardTyp,alipay_flg, yhkpay_flg,
+           fee_rat_scan,fee_rat3_scan,fee_rat1_scan,fee_rat2_scan, fee_rat,max_fee_amt,fee_rat1')
+            ->select();
+
+        //status判断商户状态是否是注册未完成、修改未完成
+        if (in_array($log_no[ 0 ][ 'status' ], [1, 2])) {
+
+
+            //存入门店数据
+            $result=$log_no[0];
+            $result= array_merge($result,$datatel);
+            $result=array_diff_key($result,['mercId'=>1,'log_no'=>2,'status'=>3]);
+
+            $create_id = Db::name('merchant_shop')->insertGetId($result);
+            if (!$create_id) {
+                return_msg(400, '数据不正确');
             }
 
-            /* 储存所有字段到merchant_incom */
-            $res = MerchantIncom::create($param);
-            if ( !empty($res->toArray()['id']) ) {
-                /** 储存成功发送星post进件 */
-                $res = curl_request($this->url, true, $param, true);
+            $data[ 'mercId' ] = $log_no[ 0 ][ 'mercId' ];
+            $data[ 'log_no' ] = $log_no[ 0 ][ 'log_no' ];
 
-                /** json转成数组 */
-                $res = json_decode($res, true);
-                $check = $this->check_sign_value($param['signValue'], $res);
-                /** 根据返回参数返回消息并把结果存入数据库 */
-                if ($check) {
-                    //TODO
+            $data[ 'serviceId' ] = 6060602;
+            $data[ 'version' ] = 'V1.0.1';
+
+            $sign_value = sign_ature(0000, $data);
+            $data[ 'signValue' ] = $sign_value;
+
+            //向新大陆接口发送请求信息
+            $shop_api = curl_request($this->url, true, $data, true);
+            $shop_api = json_decode($shop_api, true);
+            //获取签名域
+            $return_sign = sign_ature(1111, $shop_api);
+            if ($shop_api[ 'msg_cd' ] === 000000) {
+                if ($shop_api[ 'signValue' ] == $return_sign) {
+                    $datle = ['id' => $create_id, 'stoe_id' => $shop_api[ 'stoe_id'],'log_no'=>$shop_api['log_no']];
+                    Db::name('merchant_incom')->where('merchant_id',$data['merchant_id'])->update(['status'=>0]);
+                    //返回成功
+                    Db::name('merchant_shop')->update($datle);
+                    return_msg(200, 'success',$shop_api['msg_dat']);
+
+                } else {
+                    return_msg(400, 'error',$shop_api['msg_dat']);
                 }
+            } else {
+                return_msg(500, 'error',$shop_api['msg_dat']);
             }
+        }else{
+            return_msg(100,'error','请先申请商户修改');
         }
     }
+    /**
+     * 新增门店页面展示及mcc码查询
+     * @param Request $request
+     * @return string
+     * @throws DbException
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     */
+    public function shop_query(Request $request)
+    {
+        if($request->post()){
+            $name=$request->param('name');
+            $data=Db::name('cloud_mcc')->where('name|comment|explain','like',"%$name%")->select();
+            return json_encode($data);
+        }else if($request->get()){
+            $merchant_id=\session('merchant_id');
+            $merchant_id=1;
+            //stl_oac结算账户 bnk_acnm户名 icrp_id_no结算人身份证号
+            // crp_exp_dt_tmp结算人身份证有限期  wc_lbnk_no开户行
+            $data=Db::name('merchant_incom')->where('merchant_id',$merchant_id)
+                ->field('stl_sign,stl_oac,bnk_acnm,icrp_id_no,crp_exp_dt_tmp,wc_lbnk_no')
+                ->find();
+            $data=array_merge($data,[1=>'对私',0=>'对公']);
+            if($data['stl_sign']==1){
+                $data=[1=>'对私'];
+            }
+            return json_encode($data);
+        }
+    }
+    /**
+     * 上传图片
+     * @param Request $request
+     * @return string
+     */
+    public function image_uplode(Request $request)
+    {
+        $file=$request->file('image');
+        $a=substr($file->getMime(),0,5);
+
+        if ($a==='image') {
+            return image_thumbnail($file);
+        }else{
+            return_msg(400,'error','图片类型错误');
+        }
+    }
+
+
 
     /**
      * 显示当前商户门店

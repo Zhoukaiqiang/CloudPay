@@ -353,10 +353,11 @@ if (!function_exists('upload_logo')) {
 }
 
 //图片上传
-/*if (!function_exists('upload_pics')) {
+if (!function_exists('upload_pics')) {
     function upload_pics($file){
         //移动图片
         $info=$file->validate(['size'=>5*1024*1024,'ext'=>'jpg,png,gif,jpeg'])->move(ROOT_PATH.'public'.DS.'uploads');
+
         if($info){
             //文件上传成功,生成缩略图
             //获取文件路径
@@ -368,7 +369,7 @@ if (!function_exists('upload_logo')) {
             $this->error($error);
         }
     }
-}*/
+}
 
 /**
  * 发送短信到手机
@@ -404,5 +405,43 @@ function send_msg_to_phone($phone, $msg)
     }
 
 }
+/**
+ * 图片缩略图
+ * @param Request $request
+ * @return string
+ */
+if(!function_exists('image_thumbnail')) {
+
+     function image_thumbnail($file, $width = 150, $height = 150)
+    {
+
+        $image = \think\Image::open($file);
+//                var_dump($image);die;
+
+        $type = $image->type();
+
+        //判断是否是图片格式
+        if(in_array($type,['jpg','png'])){
+            $date_path = 'uploads/thumb/' . date('Ymd');
+
+            if (!file_exists($date_path)) {
+                mkdir($date_path, 0777, true);
+            }
+            list($usec, $sec) = explode(" ", microtime());
+            $times = str_replace('.', '', $usec + $sec);
+
+            $thumb_path = $date_path . '/' . $times . '.' . $type;
+
+            $image->thumb($width, $height)->save($thumb_path);
+            return $thumb_path;
+        }else{
+            return 9;
+        }
+
+
+
+    }
+}
+
 
 
