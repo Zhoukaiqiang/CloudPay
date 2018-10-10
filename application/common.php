@@ -334,7 +334,7 @@ if (!function_exists('sign_ature')) {
 
 //批量上传图片
 if (!function_exists('upload_logo')) {
-    function upload_logo($files){
+    function upload_pics($files){
         $goods_pics=[];
         foreach($files as $file){
             $info=$file->validate(['size'=>500*1024*1024,'ext'=>'jpg,jpeg,gif,png'])->move(ROOT_PATH.'public'.DS.'uploads');

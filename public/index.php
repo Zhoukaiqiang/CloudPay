@@ -14,7 +14,7 @@
 // 定义应用目录
 
 define("KEY", "7B7B64051113E3EB09725CBD69A55E79");
-
+define('ORG_NO', "27573");
 
 define('APP_PATH', __DIR__ . '/../application/');
 

@@ -3,6 +3,8 @@
 namespace app\agent\controller;
 
 use app\admin\controller\Incom;
+use app\admin\model\AreaCode;
+use app\admin\model\Mcc;
 use app\agent\model\AgentCategory;
 use app\agent\model\AgentPartner;
 use app\agent\model\MerchantGroup;
@@ -243,11 +245,11 @@ class Merchant extends Incom
 
 //            $data['channel']=3;//表示间联
             //验证
-            //$validate = Loader::validate('AgentValidate');
-//            if (!$validate->scene('add_middle')->check($data)) {
-//                $error = $validate->getError();
-//                return_msg(400, 'failure', $error);
-//            }
+            $validate = Loader::validate('AgentValidate');
+            if (!$validate->scene('add_middle')->check($data)) {
+                $error = $validate->getError();
+                return_msg(400, 'failure', $error);
+            }
             //上传图片
 //            $data['attachment']=$this->upload_logo();
 //            $data['agent_id']=$agent_id;
@@ -279,11 +281,7 @@ class Merchant extends Incom
                 $arr['stoe_nm']=$data['address'].$data['name'];//签购单名称=省市+门店名
                 $arr['mcc_cd']=$data['mcc_cd'];//mcc码
                 $arr['stoe_area_cod']=$data['stoe_area_cod'];//地区码
-                $arr['trm_rec']=5;//终端数量
-                $arr['alipay_flg']="Y";//扫码产品
-                $arr['yhkpay_flg']="Y";//银行卡产品
-                $arr['tranTyps']="C1";//交易类型
-                $arr['orgNo']="27573";//合作商机构号
+                $arr['orgNo']=ORG_NO;//合作商机构号
                 $arr['crp_nm']=$data['contact'];//法人姓名
                 MerchantIncom::insert($arr,true);
                 $this->merchant_incom($insert_id);
@@ -295,7 +293,10 @@ class Merchant extends Incom
             //取出当前代理商下所有合伙人
             $data['list']=AgentPartner::field(['id','partner_name'])->where('agent_id',$agent_id)->select();
             //显示所有一级分类
-            $data['category']=AgentCategory::where('pid',0)->select();
+//            $data['category']=AgentCategory::where('pid',0)->select();
+            $data['category']=Mcc::field('sup_mcc_cd,sup_mcc_nm')->group('sup_mcc_cd')->select();
+            //取出所有省份和省份名称
+            $data['province']=AreaCode::field('merc_prov,prov_nm')->group('merc_prov')->select();
             return_msg(200,'success',$data);
         }
     }
@@ -340,11 +341,38 @@ class Merchant extends Incom
     //获取二级分类和三级分类
     public function getCatePid()
     {
-        $id=request()->param('pid');
-        $data=AgentCategory::where('pid',$id)->select();
+        $sup_mcc_cd=request()->param('sup_mcc_cd');
+        $data=Mcc::field('mcc_nm,mcc_cd')->where('sup_mcc_cd',$sup_mcc_cd)->select();
         return_msg(200,'success',$data);
     }
 
+    /**
+     * 取出省下的城市
+     *
+     * @param  \think\Request  $request
+     * @param  int  $id
+     * @return \think\Response
+     */
+    public function city()
+    {
+        $merc_prov=request()->param('merc_prov');
+        $data=AreaCode::field('merc_city,city_nm')->where('merc_prov',$merc_prov)->select();
+        return_msg(200,'success',$data);
+    }
+
+    /**
+     * 取出城市下的区县
+     *
+     * @param  \think\Request  $request
+     * @param  int  $id
+     * @return \think\Response
+     */
+    public function area()
+    {
+        $merc_city=request()->param('merc_city');
+        $data=AreaCode::field('area_nm,merc_area')->where('merc_city',$merc_city)->select();
+        return_msg(200,'success',$data);
+    }
     /**
      * 会员互通
      *
