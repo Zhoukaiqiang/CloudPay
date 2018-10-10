@@ -21,8 +21,8 @@ class User extends Controller
         //获取商户id和店长id
         $merchant_id=session('merchant_id') ? session('merchant_id') : null;
         $user_id=session('user_id') ? session('user_id') : null;
-//        $merchant_id=1;
-        $user_id=1;
+        $merchant_id=1;//测试
+//        $user_id=1;//测试
         if(!empty($merchant_id)){
             //取出所有门店
             $data['shop']=MerchantShop::field('id,shop_name')->where('merchant_id',$merchant_id)->select();
@@ -101,24 +101,47 @@ class User extends Controller
         $merchant_id=session('merchant_id') ? session('merchant_id') : null;
         $user_id=session('user_id') ? session('user_id') : null;
         if($request->isPost()){
-            //传入门店id
-            $data=$request->post();
-            //验证
-            //查询手机号是否存在
-            $info=MerchantUser::where('phone',$data['phone'])->find();
-            if($info){
-                return_msg(400,'failure','手机号已经存在');
+            if(!empty($merchant_id)){
+                //传入门店id
+                $data=$request->post();
+                $data['merchant_id']=$merchant_id;
+                //验证
+                //查询手机号是否存在
+                $info=MerchantUser::where('phone',$data['phone'])->find();
+                if($info){
+                    return_msg(400,'failure','手机号已经存在');
+                }
+                $data['password']=addslashes(encrypt_password($data['password'],$data['phone']));
+                $result=MerchantUser::insert($data,true);
+                if($result){
+                    return_msg(200,'添加成功');
+                }else{
+                    return_msg(400,'添加失败');
+                }
+            }elseif(empty($merchant_id) && !empty($user_id)){
+                //传入门店id
+                $data=$request->post();
+                //查询店长所属商户id
+                $merchant=MerchantUser::field('merchant_id')->where('id',$user_id)->find();
+                $data['merchant_id']=$merchant['merchant_id'];
+                //验证
+                //查询手机号是否存在
+                $info=MerchantUser::where('phone',$data['phone'])->find();
+                if($info){
+                    return_msg(400,'failure','手机号已经存在');
+                }
+                $data['password']=addslashes(encrypt_password($data['password'],$data['phone']));
+                $result=MerchantUser::insert($data,true);
+                if($result){
+                    return_msg(200,'添加成功');
+                }else{
+                    return_msg(400,'添加失败');
+                }
             }
-            $data['password']=addslashes(encrypt_password($data['password'],$data['phone']));
-            $result=MerchantUser::insert($data,true);
-            if($result){
-                return_msg(200,'添加成功');
-            }else{
-                return_msg(400,'添加失败');
-            }
+
         }else{
-//            $merchant_id=1;
-            $user_id=1;
+            $merchant_id=1;
+//            $user_id=1;
             if(!empty($merchant_id)){
                 //取出所有门店信息
                 $data=MerchantShop::field(['id','shop_name'])->where('merchant_id',$merchant_id)->select();
@@ -147,9 +170,9 @@ class User extends Controller
             $data['password']=addslashes(encrypt_password($data['password'],$data['phone']));
             $result=MerchantUser::update($data);
             if($result){
-                return_msg(200,'success','修改成功');
+                return_msg(200,'修改成功');
             }else{
-                return_msg(400,'failure','修改失败');
+                return_msg(400,'修改失败');
             }
         }else{
             $id=$request->param('id');

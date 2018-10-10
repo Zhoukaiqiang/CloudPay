@@ -17,7 +17,7 @@ class Receipt extends Controller
     public $user_id;
     public function __construct()
     {
-        $this->merchant_id=session('merchant_id') ? session('merchant_id') : 1;
+        $this->merchant_id=session('merchant_id') ? session('merchant_id') : null;
         $this->user_id=session('user_id') ? session('user_id') : 1;
     }
     /**
@@ -28,7 +28,12 @@ class Receipt extends Controller
     public function receipt_detail(Request $request)
     {
         $id=$request->param('id');
-        $data=Order::field('id,status,received_money,order_money,discount,received_store,cashier,pay_time,pay_type,order_remark,order_number,status,authorize_number,prove_number,give_money')->where('id',$id)->find();
+        $id=1;//测试
+        $data=Order::alias('a')
+            ->field('a.id,a.status,a.received_money,a.order_money,a.discount,b.shop_name,a.cashier,a.pay_time,a.pay_type,a.order_remark,a.order_number,a.status,a.authorize_number,a.prove_number,a.give_money')
+            ->join('cloud_merchant_shop b','a.shop_id=b.id','left')
+            ->where('a.id',$id)
+            ->find();
         return_msg(200,'success',$data);
     }
 
@@ -50,13 +55,13 @@ class Receipt extends Controller
                 return_msg(400,'密码不正确');
             }
             //取出订单号
-            $order=Order::field('orderNo')->where('id',$param['id'])->find();
+            $order=Order::field('order_no')->where('id',$param['id'])->find();
             $order=$order->toArray($order);
             //发给新大陆
             $result = curl_request($this->url, true, $order, true);
             $result = json_decode($result, true);
             if($result['result']=='S'){
-                return_msg(200,'退款成功');
+                return_msg(200,'退款中');
             }else{
                 return_msg(400,'退款失败');
             }
@@ -70,7 +75,7 @@ class Receipt extends Controller
                 return_msg(400,'密码不正确');
             }
             //取出订单号
-            $order=Order::field('orderNo')->where('id',$param['id'])->find();
+            $order=Order::field('order_no')->where('id',$param['id'])->find();
             $order=$order->toArray($order);
             //发给新大陆
             $result = curl_request($this->url, true, $order, true);
@@ -96,7 +101,7 @@ class Receipt extends Controller
             //显示当前商户下所有账单
             $data['list']=Order::field('id,status,order_money,pay_type,create_time')
                 ->where('merchant_id',$this->merchant_id)
-                ->whereTime('create_time','yesterday')
+//                ->whereTime('create_time','yesterday')
                 ->select();
             return_msg(200,'success',$data);
         }elseif(empty($this->merchant_id) && !empty($this->user_id)){
@@ -107,7 +112,7 @@ class Receipt extends Controller
             //显示当前门店下所有账单
             $data['list']=Order::field('id,status,order_money,pay_type,create_time')
                 ->where('shop_id',$info['shop_id'])
-                ->whereTime('create_time','yesterday')
+//                ->whereTime('create_time','yesterday')
                 ->select();
             return_msg(200,'success',$data);
         }
@@ -115,12 +120,12 @@ class Receipt extends Controller
     }
 
     /**
-     * 账单搜索
+     * 筛选(需要把门店和状态传过来)
      *
      * @param  \think\Request  $request
      * @return \think\Response
      */
-    public function search(Request $request)
+    public function filter(Request $request)
     {
         $data['today']=$request->param('today') ? $request->param('today') : null;
         $data['week']=$request->param('week') ? $request->param('week') : null;
@@ -179,14 +184,37 @@ class Receipt extends Controller
     }
 
     /**
-     * 显示编辑资源表单页.
+     * 选择门店和选择状态搜索
      *
      * @param  int  $id
      * @return \think\Response
      */
-    public function edit($id)
+    public function search(Request $request)
     {
-        //
+        $data['shop_id']=$request->param('shop_id') ? $request->param('shop_id') : null;
+        $data['status']=$request->param('status') ? $request->param('status') : null;
+        if(!empty($data['shop_id']) && empty($data['status'])){
+            //显示当前门店下所有账单
+            $data=Order::field('id,status,order_money,pay_type,create_time')
+                ->where('shop_id',$data['shop_id'])
+                ->order('create_time desc')
+                ->select();
+            return_msg(200,'success',$data);
+        }elseif(!empty($data['shop_id']) && !empty($data['status'])){
+            //取出当前门店下所有状态
+            $data=Order::field('id,status,order_money,pay_type,create_time')
+                ->where(['shop_id'=>$data['shop_id'],'status'=>$data['status']])
+                ->order('create_time desc')
+                ->select();
+            return_msg(200,'success',$data);
+        }elseif(empty($data['shop_id']) && !empty($data['status'])){
+            //当前商户下所有状态
+            $data=Order::field('id,status,order_money,pay_type,create_time')
+                ->where(['merchant_id'=>$this->merchant_id,'status'=>$data['status']])
+                ->order('create_time desc')
+                ->select();
+            return_msg(200,'success',$data);
+        }
     }
 
     /**

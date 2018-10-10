@@ -5,9 +5,11 @@ namespace app\agent\controller;
 use app\admin\controller\Incom;
 use app\agent\model\AgentCategory;
 use app\agent\model\AgentPartner;
+use app\agent\model\MerchantGroup;
 use app\agent\model\MerchantIncom;
 use app\agent\model\TotalAgent;
 use app\agent\model\TotalMerchant;
+use app\agent\model\TotalMerchantMember;
 use think\Controller;
 use think\Exception;
 use think\Loader;
@@ -342,6 +344,123 @@ class Merchant extends Incom
         $data=AgentCategory::where('pid',$id)->select();
         return_msg(200,'success',$data);
     }
+
+    /**
+     * 会员互通
+     *
+     * @param  \think\Request  $request
+     * @param  int  $id
+     * @return \think\Response
+     */
+    public function merchant_group()
+    {
+        $data=MerchantGroup::select();
+        foreach($data as &$v){
+            $v['merchant_id'] = explode(',',$v['merchant_id']);
+            $res = TotalMerchant::field('name')->where('id','in',$v['merchant_id'])->select();
+            $res = collection($res)->toArray();
+            $v['merchant_id']=$res;
+        }
+        return_msg(200,'success',$data);
+    }
+
+    /**
+     * 添加会员互通
+     *
+     * @param  \think\Request  group_id 分组id
+     * @param  int  $id 商户id
+     * @return \think\Response
+     */
+    public function add_group(Request $request)
+    {
+        $agent_id=Session::get('username_')['id'];
+        $agent_id=1;//测试
+        if($request->isPost()){
+            //获取分组id和当前商户id
+            $data=$request->post();
+            $info=MerchantGroup::where('id',$data['group_id'])->find();
+            $arr=explode(',',$info['merchant_id']);
+            $arr[]=$data['id'];
+            $merchant_id=implode(',',$arr);
+            $result=MerchantGroup::where('id',$data['group_id'])->update(['merchant_id'=>$merchant_id]);
+            if($result){
+                return_msg(200,'操作成功');
+            }else{
+                return_msg(400,'操作失败');
+            }
+        }else{
+            //取出代理商下所有商户
+            //分页
+            $count=TotalMerchant::where('agent_id',$agent_id)->count();
+            $pages=page($count);
+            $data['list']=TotalMerchant::field('id,name')
+                ->where('agent_id',$agent_id)
+                ->limit($pages['offset'],$pages['limit'])
+                ->select();
+            $data['page']=$pages;
+            return_msg(200,'success',$data);
+        }
+
+    }
+
+    /**
+     * 搜索商户
+     *
+     * @param  \think\Request  $request
+     * @param  int  $id
+     * @return \think\Response
+     */
+    public function search(Request $request)
+    {
+        $agent_id=Session::get('username_')['id'];
+        $agent_id=1;//测试
+        //获取商户名
+        $name=$request->param('name');
+        //搜索商户
+        $data=TotalMerchant::field('id,name')
+                ->where(['agent_id'=>$agent_id,'name'=>['like',$name.'%']])
+                ->select();
+        return_msg(200,'success',$data);
+    }
+
+    /**
+     * 删除商户
+     *
+     * @param  \think\Request  $request
+     * @param  int  $id
+     * @return \think\Response
+     */
+    public function del(Request $request)
+    {
+        $group_id=$request->param('group_id');
+        $group_id=1;//测试
+        if($request->isPost()){
+            //获取商户id
+            $id=$request->post('id');
+            //取出分组数据
+            $data=MerchantGroup::where('id',$group_id)->find();
+            $arr=explode(',',$data['merchant_id']);
+            for($i=0;$i<count($arr);$i++){
+                if($arr[$i]==$id){
+                    unset($arr[$i]);
+                }
+            }
+            $merchant_id=implode(',',$arr);
+            $info=MerchantGroup::where('id',$group_id)->update(['merchant_id'=>$merchant_id]);
+            if($info){
+                return_msg(200,'删除成功');
+            }else{
+                return_msg(400,'删除失败');
+            }
+        }else{
+            $data=MerchantGroup::where('id',$group_id)->find();
+            $data['merchant_id']=explode(',',$data['merchant_id']);
+            $info=TotalMerchant::field('id,name')->where('id','in',$data['merchant_id'])->select();
+            $info=collection($info)->toArray();
+            return_msg(200,'success',$info);
+        }
+
+    }
     /**
      * 新增直联商户
      *
@@ -373,6 +492,7 @@ class Merchant extends Incom
 //            return_msg(200,'success',$data);
 //        }
 //    }
+
 
 
     //上传图片

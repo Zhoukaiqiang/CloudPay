@@ -558,32 +558,21 @@ class Waiter extends Controller
     }
 
     /**
-     * 属性的删除与新增  首页面展示 新增属性
+     * 菜品属性
      * @param Request $request
      * @throws \think\Exception
      * @throws \think\exception\PDOException
      */
     public function add_attribute(Request $request)
     {
-        if($request->post()){
-            if($request->param('norm_id')){
-                $resu=Db::table('merchant_dish_norm')->delete($request->param('norm_id'));
-                if($resu){
-                    return_msg(200,'success','删除属性成功');
-                }else{
-                    return_msg(400,'error','删除属性失败');
-                }
-            }else{
-                $result=Db::name('merchant_dish_norm')->insert($request->post());
-                if($result){
-                    return_msg(200,'success','添加属性成功');
-                }else{
-                    return_msg(400,'error','添加属性失败');
-                }
-            }
-        }else{
-            $data=Db::name('merchant_dish_norm')->where('parent_id',0)->select();
-            return json_encode($data);
+
+        //id 菜品id
+        $id=$request->param('id');
+        if($id){
+            $data=MerchantDish::where('id',$id)->field('dish_attr')->find();
+            $data=explode(',',$data['dish_attr']);
+            
+            return_msg(200,'success',json_encode($data));
         }
 
     }
