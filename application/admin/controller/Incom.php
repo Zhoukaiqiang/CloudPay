@@ -13,7 +13,7 @@ use think\Request;
 class Incom extends Controller
 {
 
-   public $url = 'http://sandbox.starpos.com.cn/emercapp';
+   public $url = 'https://gateway.starpos.com.cn/emercapp';
 
 
 
@@ -266,18 +266,16 @@ class Incom extends Controller
      */
     public function merchant_incom($merchant_id)
     {
-        $data = MerchantIncom::field('incom_type,stl_typ,stl_sign,stl_oac,bnk_acnm,wc_lbnk_no,bus_lic_no,bse_lice_nm,crp_nm,mercAdds,bus_exp_dt,crp_id_no,crp_exp_dt,stoe_nm,stoe_cnt_nm,stoe_cnt_tel,mcc_cd,stoe_area_cod,stoe_adds,trm_rec,mailbox,yhkpay_flg,alipay_flg,orgNo,cardTyp,suptDbfreeFlg,tranTyps,crp_exp_dt_tmp,icrp_id_no,fee_rat,max_fee_amt,fee_rat1')->where('merchant_id', $merchant_id)->find();
-//        $data=request()->post();
+
+        $data = MerchantIncom::field('fee_rat1_scan,fee_rat3_scan,fee_rat_scan, incom_type,stl_typ,stl_sign,stl_oac,bnk_acnm,wc_lbnk_no,bus_lic_no,bse_lice_nm,crp_nm,mercAdds,bus_exp_dt,crp_id_no,crp_exp_dt,stoe_nm,stoe_cnt_nm,stoe_cnt_tel,mcc_cd,stoe_area_cod,stoe_adds,trm_rec,mailbox,yhkpay_flg,alipay_flg,orgNo,cardTyp,suptDbfreeFlg,tranTyps,crp_exp_dt_tmp,icrp_id_no,fee_rat,max_fee_amt,fee_rat1')->where('merchant_id', $merchant_id)->find();
         $data['serviceId'] = 6060601;
         $data['version'] = 'V1.0.3';
         $data['cardTyp']='01';
         //获取商户id
 //        $data['merchant_id']=11;
-//        dump($data);die;
 //        $info=MerchantIncom::insert($data);
         $data=$data->toArray();
         $data['signValue'] = sign_ature(0000, $data);
-//        dump($data);die;
 //        var_dump(json_encode($data));die;
 //        dump($data);die;
 //        var_dump(json_encode($data));die;
@@ -325,16 +323,20 @@ class Incom extends Controller
         $merchant_id=$request->post('merchant_id');
         //取出数据表中数据
         $data=MerchantIncom::where('merchant_id',$merchant_id)->field('mercId,log_no,orgNo')->find();
+        $data = $data->toArray();
         $data['serviceId']='6060603';
         $data['version']='V1.0.1';
-        $data=$data->toArray();
-//        dump($data);die;
-        $data['signValue']=sign_ature(0000,$data);
+
+        $data['signValue'] = sign_ature(0000,$data);
+
         $result=curl_request($this->url,true,$data,true);
         $result=json_decode($result,true);
+        if (!empty($result)) {
+            return_msg(400, $result);
+        }
         //生成签名
-        $signValue=sign_ature(1111,$result);
-        if($result['msg_cd']==000000 && $signValue==$result['signValue']){
+        $signValue = sign_ature(1111,$result);
+        if( $signValue == $result['signValue'] ){
             if(isset($result['check_flag'])){
                 //修改数据表状态
                 $res=MerchantIncom::where('merchant_id',$merchant_id)->update(['check_flag'=>$result['check_flag']]);
@@ -357,7 +359,7 @@ class Incom extends Controller
      */
     public function img_upload(Request $request)
     {
-//        $insert_id=3;
+
         $info=$request->post();
         //取出当前商户信息
         $data=MerchantIncom::where('merchant_id',$info['merchant_id'])->field('mercId,orgNo,log_no,stoe_id')->find();
@@ -366,12 +368,15 @@ class Incom extends Controller
         $data['imgTyp']=$info['imgTyp'];
         $data['imgNm']=$info['imgNm'];
         $data['merchant_id']=$info['merchant_id'];
-        $data=$data->toArray();
-        $file=$request->file('imgFile');
-        $data['imgFile']=bin2hex($file);
-        $img=$this->upload_pics($file);
-        $this->send($data,$img);
+        $data = $data->toArray();
+        $file = $request->file('imgFile');
+        /** 转为二进制 */
 
+        $data['imgFile'] = bin2hex(file_get_contents($file->getRealPath()));
+
+        $img = $this->upload_pics($file);
+
+        $this->send($data,$img);
     }
 
     /**
@@ -386,12 +391,33 @@ class Incom extends Controller
         $data['signValue']=sign_ature(0000,$data);
         //发送给新大陆
         $result=json_decode(curl_request($this->url,true,$data,true),true);
+        if ($result['msg_cd'] !== '000000') {
+            return_msg(400, $result["msg_dat"]);
+        }
         //生成签名
         $signValue=sign_ature(1111,$result);
         if($result['msg_cd']=='000000' && $result['signValue']==$signValue){
-            //将图片存入数据库
-            $data['img']=$img;
-            IncomImg::create($data,true);
+            //取出数据库中的图片
+            $file_img = IncomImg::field('img')->where('merchant_id',$data['merchant_id'])->find();
+            if($file_img == null){
+                //没有图片
+                $data['img']=json_encode($img);
+                IncomImg::create($data,true);
+            }elseif(is_array(json_decode($file_img['img']))){
+                //有多张图片
+
+                $arr=json_decode($file_img['img']);
+                $arr[]=$img;
+                IncomImg::where('merchant_id',$data['merchant_id'])->update(['img'=>json_encode($arr)]);
+            }else{
+                //只有一张图片
+
+                $arr[]=json_decode($file_img['img']);
+                $arr[]=$img;
+
+                IncomImg::where('merchant_id',$data['merchant_id'])->update(['img'=>json_encode($arr)]);
+            }
+//            $file_img=$file_img['img'].$img;
             return_msg(200,'success',['merchant_id'=>$data['merchant_id']]);
         }else{
             return_msg(400,'failure');
@@ -400,13 +426,13 @@ class Incom extends Controller
 
     public function upload_pics(){
         //移动图片
-        $file=request()->file('imgFile');
-        $info=$file->validate(['size'=>5*1024*1024,'ext'=>'jpg,png,gif,jpeg'])->move(ROOT_PATH.'public'.DS.'uploads');
+        $file = request()->file('imgFile');
+        $info = $file->validate(['size'=>5*1024*1024,'ext'=>'jpg,png,gif,jpeg'])->move(ROOT_PATH.'public'.DS.'uploads');
         if($info){
             //文件上传成功,生成缩略图
             //获取文件路径
-            $goods_logo=DS.'uploads'.DS.$info->getSaveName();
-            $goods_logo=str_replace('\\','/',$goods_logo);
+            $goods_logo = DS.'uploads'.DS.$info->getSaveName();
+            $goods_logo = str_replace('\\','/',$goods_logo);
             return $goods_logo;
         }else{
             $error=$file->getError();
@@ -549,13 +575,13 @@ class Incom extends Controller
         //向新大陆接口发送请求信息
         $par= curl_request($this->url,true,$data,true);
         $par=json_decode($par,true);
-        dump($par);die;
+
         //获取签名域
-        $return_sign=sign_ature(1111,$par);
+        $return_sign = sign_ature(1111,$par);
         if ($par['msg_cd']==000000){
-            if($par['signValue']==$return_sign){
+            if($par['signValue'] == $return_sign){
                 Db::name('merchant_incom')->where('merchant_id',$id)->update(['status'=>0]);
-                return_msg(200,'success',$par['msg_dat']);
+                return_msg(200,'success',$par);
             }else{
                 return_msg(400,'error',$par['msg_dat']);
             }

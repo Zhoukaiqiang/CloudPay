@@ -13,7 +13,7 @@
 
 // 定义应用目录
 
-define("KEY", "9773BCF5BAC01078C9479E67919157B8");
+define("KEY", "7B7B64051113E3EB09725CBD69A55E79");
 
 
 define('APP_PATH', __DIR__ . '/../application/');
