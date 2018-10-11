@@ -19,8 +19,7 @@ class Service extends Controller
     public function service_list(Request $request)
     {
         //获取上级代理商id
-        $id = $request->param("id");
-
+        $id =  Session::get("username_")['id'];
         //获取所有行数
         $rows = TotalAgent::where('parent_id', $id)->count();
         $pages = page($rows);
@@ -95,17 +94,20 @@ class Service extends Controller
     {
         //
         if (request()->isPost()) {
-            //获取上级代理商id
+            //获取子代id
             $data = request()->post();
-            $data['parent_id'] = session('agent_id');
             //验证
+            $validate = Loader::validate('AgentValidate');
+            if (!$validate->scene('agent_detail')->check($data)) {
+                $error = $validate->getError();
+                return_msg(400, 'failure', $error);
+            }
             //判断是否上传新图片
-            $file = request()->file('contract_picture');
-            if (!empty($file)) {
-
+            if (!empty($data['contract_picture'])) {
                 $data['contract_picture'] = json_encode($data['contract_picture']);
             }
-            $result = TotalAgent::update($data, true);
+            $data['json']=json_encode($data['json']);
+            $result = TotalAgent::where('id',$data['id'])->update($data, true);
             if ($result) {
                 return_msg(200, '修改成功');
             } else {
@@ -115,9 +117,9 @@ class Service extends Controller
             //获取子代id
             $id = request()->param('id');
             //通过子代id查询子代信息
-            $data = TotalAgent::get($id);
-            $data = $data->toArray();
-            unset($data['password']);
+            $data = TotalAgent::where('id',$id)->find();
+//            $data = collection($data['data'])->toArray();
+            $data['json']=json_decode($data['json']);
             //解析图片
             $data['contract_picture'] = json_decode($data['contract_picture']);
 
@@ -141,11 +143,17 @@ class Service extends Controller
         if (request()->isPost()) {
             $data = request()->post();
             //获取上级代理商id
-            $data['parent_id'] = Session::get('username_');
+            $data['parent_id'] = Session::get('username_')['id'];
             $data['create_time']  = time();
             //验证
+            $validate = Loader::validate('AgentValidate');
+            if (!$validate->scene('agent_detail')->check($data)) {
+                $error = $validate->getError();
+                return_msg(400, 'failure', $error);
+            }
             //上传图片
-            $data['contract_picture'];
+            $data['contract_picture']=json_encode($data['contract_picture']);
+            $data['json']=json_encode($data['json']);
             //保存
             $info = TotalAgent::insert($data);
             if ($info) {

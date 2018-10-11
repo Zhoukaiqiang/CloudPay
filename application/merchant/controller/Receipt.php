@@ -61,6 +61,7 @@ class Receipt extends Controller
             $result = curl_request($this->url, true, $order, true);
             $result = json_decode($result, true);
             if($result['result']=='S'){
+
                 return_msg(200,'退款中');
             }else{
                 return_msg(400,'退款失败');

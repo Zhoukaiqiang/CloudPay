@@ -29,13 +29,42 @@ class AgentValidate extends Validate
         ['law_name', 'require', '请填写法人姓名'],
         ['phone', 'require|regex:/^1[3-9]\d{9}$/|unique:phone', '请填写手机号|手机号格式不正确|手机号已存在'],
 
+        //新增子代
+        ['agent_name', 'require', '请输入代理商名称'],
+        ['contact_person', 'require', '请输入联系人'],
+        ['detailed_address', 'require', '请填写详细地址'],
+        ['username', 'require', '请填写登录账号'],
+        ['password', 'email', '请填写登录密码'],
+        ['open_bank', 'require', '请填写开户行名称'],
+        ['open_bank_branche', 'require', '请填写开户行网点'],
+        ['home', 'require', '请填写开户行所在地'],
+        ['account', 'require', '请填写账户号'],
+        ['account_name', 'require', '请填写账户名'],
+        ['account_no', 'require', '请填写账户号'],
+        ['agent_level', 'require', '请选择代理等级'],
+        ['agent_area', 'require', '请输入代理范围'],
+        ['agent_money', 'require', '请输入代理费用'],
+        ['contract_time', 'require', '请选择合同期限'],
+        ['agent_rate', 'require', '请填写费率'],
+        ['contract_picture', 'require', '请上传合同图片'],
+
+        //新增合伙人
+        ['partner_name', 'require', '请输入合伙人姓名'],
+        ['commission', 'require', '请选择佣金计算'],
+        ['partner_phone', 'require', '请输入合伙人电话'],
+        ['password', 'email', '请填写登录密码'],
+        ['model', 'require', '请选择分佣模式'],
     ];
 
     //命名规则 控制器_函数名称
     protected $scene = [
         //新增商户
         'add_middle' => ['merchants_type', 'name', 'address', 'detail_address', 'email', 'partner_id', 'category_id', 'merchant_rate', 'account_type', 'account_name', 'account_no', 'open_bank', 'id_card', 'law_name', 'id_card_time', 'contact', 'business_license', 'license_time', 'law_name', 'phone'],
-
+        //子代详情
+        'agent_detail'=>[
+            'agent_name', 'contact_person', 'detailed_address', 'username', 'password', 'open_bank', 'open_bank_branche', 'home', 'account', 'account_name', 'account_no', 'agent_level', 'agent_area', 'agent_money', 'contract_time', 'agent_rate', 'contract_picture'
+        ],
+        //新增合伙人
     ];
 
 }
