@@ -1350,7 +1350,7 @@ received_money 订单金额
 }
 ```
 
-## 34 管理分类
+## 34 添加管理分类
 
 `post`http://www.domain.com/merchant/Waiter/add_type
 
@@ -1367,6 +1367,14 @@ received_money 订单金额
 <td>菜品分类名称</td>
 </tr>
 
+<tr>
+<td>shop_id</td>
+<td>int</td>
+<td>必选</td>
+<td>无</td>
+<td>门店id</td>
+</tr>
+
 </table>
 
 ```
@@ -1376,6 +1384,76 @@ received_money 订单金额
 "data" : []
 }
 ```
+
+## 34 编辑管理分类
+
+`post`http://www.domain.com/merchant/Waiter/set_type
+
+<table>
+<tr>
+<th>参数</th><th>类型</th><th>必选/可选</th><th>默认</th><th>描述</th>
+</tr>
+
+<tr>
+<td>dish_norm</td>
+<td>string</td>
+<td>必选</td>
+<td>无</td>
+<td>菜品分类名称</td>
+</tr>
+
+<tr>
+<td>shop_id</td>
+<td>int</td>
+<td>必选</td>
+<td>无</td>
+<td>门店id</td>
+</tr>
+
+</table>
+
+```
+{
+"code": 200,
+"msg" : "success",
+"data" : []
+}
+```
+
+## 
+
+## 34 删除管理分类
+
+`post`http://www.domain.com/merchant/Waiter/delete_type
+
+<table>
+<tr>
+<th>参数</th><th>类型</th><th>必选/可选</th><th>默认</th><th>描述</th>
+</tr>
+
+<tr>
+<td>id</td>
+<td>string</td>
+<td>必选</td>
+<td>无</td>
+<td>菜品分类id</td>
+</tr>
+
+
+
+</table>
+
+```
+{
+"code": 200,
+"msg" : "success",
+"data" : []
+}
+```
+
+## 
+
+
 
 ## 35 新增菜品首页面
 

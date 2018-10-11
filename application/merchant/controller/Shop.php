@@ -32,10 +32,11 @@ class Shop extends Controller
      */
     public function shop_incom(Request $request)
     {
+        //stl_typ 结算类型
         //tranTyps 交易类型 suptDbfreeFlg免密免签 cardTyp卡种（银行
         //卡必选） stl_sign结算标志 orgNo机构号 stl_oac结算账户 bnk_acnm户名 icrp_id_no结算人身份
         //证号 crp_exp_dt_tmp结算人身份证有限期  wc_lbnk_no开户行  mailbox联系人邮箱 alipay_flg扫码产品
-        //  yhkpay_flg银行卡产品 fee_rat_scan扫码费率(%) fee_rat1_scan银联二维码费率 fee_rat2_scan银联标准费率
+        //  yhkpay_flg银行卡产品 fee_rat_scan扫码费率(%) fee_rat1_scan银联二维码费率 fee_rat2 _scan银联标准费率
         //fee_rat借记卡费率(%)  max_fee_amt借记卡封顶(元） fee_rat1贷记卡费率（%）
         $datatel = $request->post();
         $data=$datatel;
@@ -43,12 +44,13 @@ class Shop extends Controller
 
         //查询商户的log_no流水号、mercId识别号    stl_sign结算标志 1对私 2对公
         $log_no = Db::name('merchant_incom')->where('merchant_id', $data[ 'merchant_id' ])
-            ->field('mercId,log_no,status,suptDbfreeFlg,cardTyp,alipay_flg, yhkpay_flg,
-           fee_rat_scan,fee_rat3_scan,fee_rat1_scan,fee_rat2_scan, fee_rat,max_fee_amt,fee_rat1')
+            ->field('wc_lbnk_no,stl_oac,icrp_id_no,crp_exp_dt_tmp,bnk_acnm ,mercId,log_no,status,suptDbfreeFlg,cardTyp,alipay_flg, yhkpay_flg,
+           fee_rat_scan,fee_rat3_scan,fee_rat1_scan,fee_rat,max_fee_amt,fee_rat1')
             ->select();
+//        dump($log_no);die;
 
         //status判断商户状态是否是注册未完成、修改未完成
-        if (in_array($log_no[ 0 ][ 'status' ], [1, 2])) {
+//        if (in_array($log_no[ 0 ][ 'status' ], [1, 2])) {
 
 
             //存入门店数据
@@ -74,6 +76,7 @@ class Shop extends Controller
             $shop_api = curl_request($this->url, true, $data, true);
             $shop_api = json_decode($shop_api, true);
             //获取签名域
+        var_dump($shop_api);die;
             $return_sign = sign_ature(1111, $shop_api);
             if ($shop_api[ 'msg_cd' ] === 000000) {
                 if ($shop_api[ 'signValue' ] == $return_sign) {
@@ -89,9 +92,9 @@ class Shop extends Controller
             } else {
                 return_msg(500, 'error',$shop_api['msg_dat']);
             }
-        }else{
-            return_msg(100,'error','请先申请商户修改');
-        }
+//        }else{
+//            return_msg(100,'error','请先申请商户修改');
+//        }
     }
     /**
      * 新增门店页面展示及mcc码查询

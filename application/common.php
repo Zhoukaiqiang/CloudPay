@@ -444,4 +444,37 @@ if(!function_exists('image_thumbnail')) {
 }
 
 
+if(!function_exists('tailor_img')) {
+
+    function tailor_img($file, $width = 200, $height = 200)
+    {
+
+        $image = \think\Image::open($file);
+//                var_dump($image);die;
+
+        $type = $image->type();
+
+
+        //判断是否是图片格式
+        if(in_array($type,['jpg','jpeg','png'])){
+            $date_path = 'uploads/thumb/' . date('Ymd');
+
+            if (!file_exists($date_path)) {
+                mkdir($date_path, 0777, true);
+            }
+            list($usec, $sec) = explode(" ", microtime());
+            $times = str_replace('.', '', $usec + $sec);
+
+            $thumb_path = $date_path . '/' . $times . '.' . $type;
+
+            $image->thumb($width, $height,\think\Image::THUMB_CENTER)->save($thumb_path);
+            return $thumb_path;
+        }else{
+            return 0;
+        }
+
+
+
+    }
+}
 

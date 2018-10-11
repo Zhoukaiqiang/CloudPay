@@ -10,8 +10,10 @@ namespace app\merchant\controller;
 
 
 use app\agent\model\Order;
+use app\merchant\model\MerchantDishNorm;
 use app\merchant\model\MerchantShop;
 use app\merchant\model\MerchantUser;
+use app\merchant\model\ShopActiveDiscount;
 use app\merchant\model\ShopTable;
 use think\Controller;
 use think\Db;
@@ -21,6 +23,8 @@ use app\merchant\model\MerchantDish;
 
 class Waiter extends Controller
 {
+    public $array=[4=>'十分推荐',3=>'推荐',5=>'强烈推荐',6=>'新品上市',7=>'人气热销',8=>'本店招牌',9=>'爆款'];
+
     /**
      * 店小二首页面
      * @return string
@@ -97,19 +101,33 @@ class Waiter extends Controller
 
         if(Request::instance()->isGet()){
             //取出所有属性
-            $shop_id=$request->param(['shop_id']);
-            $data=Db::name('merchant_dish_norm')->select();
+            $shop_id=$request->param('shop_id');
+            $data=[];
+            $data['data']=Db::name('merchant_dish_norm')->where(['parent_id'=>['in',[1,2]]])->select();
+            $data['type']=Db::name('merchant_dish_norm')->where('shop_id',$shop_id)->field('id,dish_norm')->select();
             $data['shop_id']=$shop_id;
             return json_encode($data);
         }else if(Request::instance()->isPost()){
             $data=$request->post();
-            $file=$request->file('img');
+            //标签 []
+
+//            $data['dish_label']=explode(',',$data['dish_label']);
+//            dump($data['dish_label']);die;
+//            $data['dish_attr']=implode(',',explode(',',$data['dish_attr']));
+            $file=$request->file('dish_img');
+            //裁剪200*200图
+            $tailor=tailor_img($file);
+            if(!$tailor){
+                return_msg(400,'success','图片格式不正确');
+            }
+//            var_dump($tailor);die;
+            //原图
             $file=upload_pics($file);
-            $data['img']=$file;
-            $dish=new MerchantDish();
-            $dish->data;
-            $resu=$dish->save();
-            if($resu){
+           $file=$tailor.','.$file;
+            $data['dish_img']=$file;
+            $dish=Db::name('merchant_dish')->insert($data);
+
+            if($dish){
                 return_msg(200,'success','增加菜品成功');
             }else{
                 return_msg(400,'success','增加菜品失败');
@@ -131,8 +149,15 @@ class Waiter extends Controller
         $post=$request->post();
         //判断是否修改图片
         if($request->file('dish_img')){
+            $file=$request->file('dish_img');
+            //裁剪200*200图
+            $tailor=tailor_img($file);
+            if(!$tailor){
+                return_msg(400,'success','图片格式不正确');
+            }
             $file=upload_pics($request->file('dish_img'));
-            $post['dish_img']=$file;
+            $file=$tailor.','.$file;
+            $data['dish_img']=$file;
         }
 
         $data=MerchantDish::where('id',$id)->update($post);
@@ -178,6 +203,10 @@ class Waiter extends Controller
         echo '<img src="helloweixin.png">';
     }
 
+
+    /**
+     * //生成二维码
+     */
     public function qrcode2(){
         header("content-type:text/html;charset=utf-8");
         Vendor('phpqrcode.phpqrcode');
@@ -191,7 +220,8 @@ class Waiter extends Controller
         $fileName = $path.$time;//1.命名生成的二维码文件
 //        dump($fileName);die;
         $file_name = iconv("utf-8","gb2312",$time);
-        $file_path = $_SERVER['DOCUMENT_ROOT'].'/'.$fileName;
+//        var_dump($fileName);die;
+        $file_path = $_SERVER['DOCUMENT_ROOT'].$fileName;
 
         $data = "https://www.baidu.com";//2.生成二维码的数据(扫码显示该数据)
         $level = 'L';  //3.纠错级别：L、M、Q、H
@@ -201,15 +231,16 @@ class Waiter extends Controller
         \QRcode::png($data, $file_path, $level, $size);
         //文件名转码
         //生成桌位編號
-        return $file_path;
-
+//        return $file_path;
+        return_msg(200,'success',$file_path);
         $code=$this->unique_rand(10000000,99999999,1);
 
 
         //當前時間
         $date=time();
 
-        $resu=ShopTable::create(['create_time'=>$date,'code'=>$code[0],'img'=>$file_path]);
+        $resu=ShopTable::insert(['create_time'=>$date,'code'=>$code[0],'image'=>$file_path]);
+        var_dump($resu);die;
         //获取下载文件的大小
         $file_size = filesize($file_path);
 
@@ -229,6 +260,26 @@ class Waiter extends Controller
         exit ();
     }
 
+    /**
+     * 保存桌码  二维码
+     * @param Request $request
+     */
+    public function save_code(Request $request)
+    {
+       $data= $request->post();
+        list($usec, $sec) = explode(" ", microtime());
+        $times=str_replace('.','',$usec + $sec);
+        //當前時間
+        $date=time();
+
+        //入库
+        $resu=ShopTable::insert(['create_time'=>$date,'code'=>$times,'image'=>$data['image'],'name'=>$data['name'],'shop_id'=>$data['shop_id']]);
+        if($resu){
+            return_msg(200,'success','保存桌码成功');
+        }else{
+            return_msg(400,'error','保存桌码失败');
+        }
+    }
     /**
      * 生成隨機數
      * @param $min
@@ -275,7 +326,7 @@ class Waiter extends Controller
     }
 
     /**
-     * 删除桌位号
+     * 删除桌位号 删除桌码
      * @param Request $request
      * @throws \think\Exception
      * @throws \think\exception\PDOException
@@ -292,6 +343,8 @@ class Waiter extends Controller
 
     /**
      * 餐具费设置
+     * istableware 餐具是否收费 1收费 0不收费
+     * tableware_money 餐具收费金额
      * @param Request $request
      * @throws \think\Exception
      * @throws \think\exception\PDOException
@@ -309,7 +362,7 @@ class Waiter extends Controller
     }
 
     /**
-     * 菜品设置
+     * 菜品设置  点菜
      * @param Request $request
      * @return string
      * @throws \think\db\exception\DataNotFoundException
@@ -321,13 +374,49 @@ class Waiter extends Controller
         $shop_id = $request->param('shop_id');
         if(Request::instance()->isGET()) {
 
-            $data = MerchantDish::where('shop_id', $shop_id)->field(['shop_id','dish_name', 'dish_introduce', 'money', 'dish_categery', 'dish_img', 'id'])->select();
+            $data = MerchantDish::where(['shop_id'=>$shop_id,'status'=>1])->field(['dish_label,shop_id','dish_name','norm_id', 'dish_introduce', 'money','dish_img', 'id'])->select();
+//            var_dump($data);
+            $type=MerchantDishNorm::where(['shop_id'=>$shop_id])->select();
+
             //菜品分类
-            $type=Db::name('merchant_dish_norm')->where('parent_id',8)->select();
-            return json_encode([$data,$type]);
+
+            $array=$this->array;
+            //菜品推荐 菜品标签
+            foreach ($data as $a=>&$v){
+                $arr=explode(',',$v['dish_label']);
+
+
+                $v['dish_label']='';
+
+                    for ($i=0;$i<count($arr);$i++){
+
+                        $v['dish_label'].=$array[$arr[$i]].',';
+                    }
+
+                $v['dish_label']=rtrim($v['dish_label'],',');
+                $v['dish_introduce']=$array[$v['dish_introduce']];
+
+            }
+            //菜品分类名称
+            $rew=[];
+            foreach ($data as $k=>&$v){
+                foreach ($type as $it=>$val){
+
+                    if($val['id']==$v['norm_id']){
+                        $v['norm_id']=$val['dish_norm'];
+                    }
+                }
+                $rew[]=$v['norm_id'];
+
+            }
+            $data['rew']=array_unique($rew);
+//            $rew=array_filter(array_unique(explode(',',$rew)));
+
+
+            return json_encode($data);
         }else if($request->param('dish_name')){
             $dish_name=$request->param('dish_name');
-            $data=MerchantDish::where(['dish_name'=>['like','%'.$dish_name.'%'],'shop_id'=>$shop_id])->select();
+            $data=MerchantDish::where(['dish_name'=>['like','%'.$dish_name.'%'],'shop_id'=>$shop_id,'status'=>1])->select();
             if($data){
                 return_msg(200,'success',json_encode($data));
             }else{
@@ -363,23 +452,20 @@ class Waiter extends Controller
     public function manage_type(Request $request)
     {
         $shop_id=$request->param('shop_id');
-        $data=MerchantDish::alias('a')
-            ->field('b.dish_norm,b.id')
-            ->join('cloud_merchant_dish_norm b','b.id=a.norm_id')
-            ->where('shop_id',$shop_id)
-            ->group('a.norm_id')
-            ->select();
+        $data=MerchantDishNorm::where('shop_id',$shop_id)->select();
+
         return json_encode($data);
     }
 
     /**
      * 添加菜品分类  新增管理分类
+     * dish_norm  分类名称
+     * shop_id   门店id
      * @param Request $request
      */
     public function add_type(Request $request)
     {
         $data=$request->post();
-        $data['parent_id']=8;
         //dish_norm 菜品分类名称
         $result=Db::name('merchant_dish_norm')->insert($data);
         if($result){
@@ -389,6 +475,45 @@ class Waiter extends Controller
         }
     }
 
+    /**
+     * 编辑菜品分类  修改菜品分类
+     * @param Request $request
+     */
+    public function set_type(Request $request)
+    {
+        $shop_id=$request->param('shop_id');
+        $name=$request->param('dish_norm');
+
+        //dish_norm 菜品分类名称
+        $result=Db::name('merchant_dish_norm')->where('shop_id',$shop_id)->update(['dish_norm'=>$name]);
+        if($result){
+            return_msg(200,'success','菜品分类修改成功');
+        }else{
+            return_msg(400,'error','菜品分类修改失败');
+        }
+    }
+
+    /**
+     * 删除菜品分类
+     * @param Request $request
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function delete_type(Request $request)
+    {
+        $id=$request->param('id');
+
+        $data=MerchantDish::where('norm_id',$id)->select();
+        if(!$data){
+            $resu=MerchantDishNorm::where('id',$id)->delete();
+            if($resu){
+                return_msg(200,'success','菜品分类删除成功');
+            }else{
+                return_msg(400,'error','菜品分类删除失败');
+            }
+        }
+    }
     /**
      * 今日订单数据
      * @param Request $request
@@ -400,11 +525,16 @@ class Waiter extends Controller
     public function Today_order(Request $request)
     {
         $shop_id=$request->param('shop_id');
-        $data=Order::where('shop_id',$shop_id)->field(['received_money','table_name','create_time','status','id'])->select();
+        $data=Order::alias('a')
+            ->field(['sum(b.money) money','a.received_money','a.table_name','a.create_time','a.status','a.id'])
+            ->join('shop_comestible b','a.id=b.order_id','left')
+            ->where('a.shop_id',$shop_id)->whereTime('a.create_time','d')
+            ->group('a.id')
+            ->select();
         if($data){
             return json_encode($data);
         }else{
-            return_msg(400,'error','没有订单');
+            return_msg(400,'error','今日没有订单');
         }
     }
 
@@ -419,25 +549,56 @@ class Waiter extends Controller
     {
         //订单ID
         $order_id=$request->param('id');
+        //status 支付状态 0未支付 1已支付 2已关闭 3会员充值
+        //已支付订单详情
         if($request->param('status')==1){
             $data=Order::alias('a')
-                ->field(['a.table_name','a.order_number','a.meal_number','a.order_money','a.discount','a.received_money','a.create_time','b.name','b.order_person','b.money','b.deal','a.status'])
-                ->join('cloud_shop_comestible b','a.order_number=b.order_number','left')
+                ->field(['c.istableware','c.tableware_money','a.order_number','a.table_name','a.id','a.meal_number','a.order_money','a.discount','a.received_money','a.create_time','b.name','a.order_person','sum(b.money*b.deal) money','b.deal','a.status'])
+                ->join('shop_comestible b','a.id=b.order_id','left')
+                ->join('merchant_shop c','a.shop_id=c.id')
                 ->where(['a.id'=>['=',$order_id]])
+                ->group('b.id')
                 ->select();
+            if(!$data){
+                return_msg(400,'success','此订单出现意外');
+            }
+            //餐具是否收费
+            if($data[0]['istableware']!=0){
+                //meal_number 用餐人数
+                $data[]=['name'=>'餐具','deal'=>$data[0]['meal_number'],'money'=>$data[0]['tableware_money']*$data[0]['meal_number']];
+            }
+            $res=0;
+            foreach ($data as $k=>$v){
+               $res+=$v['money'];
+            }
+            $data['summoney']=$res;
             return json_encode($data);
         }else{
+            //非支付状态
             $data=Order::alias('a')
-                ->field(['a.table_name','a.order_number','b.create_time','b.order_person','a.meal_number','a.create_time','b.name','b.order_person','b.money','b.deal','a.status'])
-                ->join('cloud_shop_comestible b','a.order_number=b.order_number','left')
+                ->field(['sum(b.money*b.deal) money','c.istableware','c.tableware_money','a.order_number','a.table_name','a.id','b.create_time','a.order_person','a.meal_number','a.create_time','b.name', 'b.deal','a.status'])
+                ->join('shop_comestible b','a.id=b.order_id','left')
+                ->join('merchant_shop c','a.shop_id=c.id')
                 ->where(['a.id'=>['=',$order_id]])
+                ->group('b.id')
                 ->select();
+            if(!$data){
+                return_msg(400,'success','此订单出现意外');
+            }
+            //餐具是否收费
+            if($data[0]['istableware']!=0){
+                //meal_number 用餐人数
+                $data[]=['name'=>'餐具','deal'=>$data[0]['meal_number'],'money'=>$data[0]['tableware_money']*$data[0]['meal_number']];
+            }
             $sum=0;
             foreach ($data as $k=>$v)
             {
                 $sum+=$v['money'];
             }
+            //总金额
             $data['sum_money']=$sum;
+            //计算优惠金额
+
             return json_encode($data);
         }
 
@@ -482,8 +643,9 @@ class Waiter extends Controller
     public function serve_list(Request $request)
     {
         $id=$request->param('shop_id');
+        $user_id=$request->param('user_id') ? $request->param('user_id') : 0;
         //获取数据
-        $data=$this->serve_public($id);
+        $data=$this->serve_public($id,$user_id);
         if($data){
             return json_encode($data);
         }else{
@@ -506,7 +668,7 @@ class Waiter extends Controller
             $syemo='<>';
         }
         $data=Order::alias('a')
-            ->field(['b.name','count(a.id) as countid','a.user_id'])
+            ->field(['b.name','count(a.id) as countid','a.user_id','b.image'])
             ->join('cloud_merchant_user b','a.user_id=b.id')
             ->where(['a.shop_id'=>['=',$shop_id],'a.user_id'=>[$syemo,$user_id]])
             ->whereTime('create_time', 'today')
@@ -578,21 +740,40 @@ class Waiter extends Controller
     }
 
     /**
-     *  点菜 --服务端桌位展示
+     *  点菜 --服务端桌位展示   桌位搜索
      * @return string
      * @throws \think\db\exception\DataNotFoundException
      * @throws \think\db\exception\ModelNotFoundException
      * @throws \think\exception\DbException
      */
-    public function choose_table()
+    public function choose_table(Request $request)
     {
-        $user_id=session('user_id');
-        $user_id=1;
-        $shop_id=MerchantUser::where('id',$user_id)->field(['shop_id'])->find();
-        $shop_id=$shop_id['shop_id'];
-        $table=Db::name('shop_table')->where('shop_id',$shop_id)->field(['id','name','shop_id'])->select();
+        if($request->isGet()){
+            $user_id=session('user_id');
+            $user_id=1;
+            $shop_id=MerchantUser::where('id',$user_id)->field(['shop_id'])->find();
+            $shop_id=$shop_id['shop_id'];
+            $table=Db::name('shop_table')->where('shop_id',$shop_id)->field(['id','name','shop_id'])->select();
+            if(empty($table)){
+                return false;
+            }
+            return json_encode($table);
+        }elseif ($request->isPost()){
+            //桌位搜索
+            $name=$request->param(['name']);
+            $user_id=session('user_id');
+            $user_id=1;
+            $shop_id=MerchantUser::where('id',$user_id)->field(['shop_id'])->find();
+            $shop_id=$shop_id['shop_id'];
+            $table=Db::name('shop_table')->where(['shop_id'=>$shop_id,'name'=>['=',$name]])->field(['id','name','shop_id'])->select();
+            if($table){
+                return_msg(200,'success',json_encode($table)) ;
+            }else{
+                return_msg(400,'error','没有此桌位') ;
+            }
 
-        return json_encode($table);
+        }
+
 
     }
 
@@ -604,12 +785,17 @@ class Waiter extends Controller
     public function place_order(Request $request)
     {
         $data=$request->post();
+        //istableware餐具是否收费 1收取餐具费 0不收取
+        $number=MerchantShop::where('id',$data['shop_id'])->field('istableware,tableware_money')->find();
+
         //订单总金额
         $count_money=0;
         foreach ($data as $k=>$v){
             $count_money+=$v['money'];
+
         }
         $data['count_money']=$count_money;
+
         return json_encode($data);
     }
 
@@ -739,5 +925,49 @@ class Waiter extends Controller
             $v['count']=$ids;
         }
         return json_encode($arr);
+    }
+
+    /**
+     * 下载二维码
+     * @param Request $request
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function  proceeds(Request $request)
+    {
+        $id=$request->param('id');
+        $url=ShopTable::where('id',$id)->field('image')->find();
+//        return $url->image;
+        return $this->download($url->image);
+    }
+
+    /**
+     * 下载二维码
+     * @param $file_url
+     * @param string $new_name
+     */
+   public function download($file_url,$new_name=''){
+
+        if(!file_exists($file_url)){ //检查文件是否存在
+            echo '404';
+        }
+
+        $file_name=basename($file_url);
+        $file_type=explode('.',$file_url);
+        $file_type=$file_type[count($file_type)-1];
+        $file_name=trim($new_name=='')?$file_name:urlencode($new_name);
+//       var_dump($file_name);die;
+        $file_type=fopen($file_url,'r'); //打开文件
+        //输入文件标签
+        header("Content-type: application/octet-stream");
+        header("Accept-Ranges: bytes");
+        header("Accept-Length: ".filesize($file_url));
+        header("Content-Disposition: attachment; filename=".$file_name);
+
+        //输出文件内容
+        echo fread($file_type,filesize($file_url));
+
+        fclose($file_type);
     }
 }
