@@ -245,20 +245,21 @@ class Merchant extends Incom
 
 //            $data['channel']=3;//表示间联
             //验证
-            $validate = Loader::validate('AgentValidate');
-            if (!$validate->scene('add_middle')->check($data)) {
-                $error = $validate->getError();
-                return_msg(400, 'failure', $error);
-            }
+//            $validate = Loader::validate('AgentValidate');
+//            if (!$validate->scene('add_middle')->check($data)) {
+//                $error = $validate->getError();
+//                return_msg(400, 'failure', $error);
+//            }
             //上传图片
 //            $data['attachment']=$this->upload_logo();
 //            $data['agent_id']=$agent_id;
 //            $data['attachment']=json_encode($data['attachment']);
 
-            $insert_id=TotalMerchant::insertGetId($data,true);
+            $insert_id = TotalMerchant::insertGetId($data,true);
+
             $arr=[];
             if($insert_id){
-                $arr['merchant_id']=$insert_id;//商户id
+                $arr['merchant_id'] = $insert_id;//商户id
                 $arr['stl_sign']=$data['account_type'];//账户类型
                 $arr['stl_oac']=$data['account_no'];//账户号
                 $arr['bnk_acnm']=$data['account_name'];//账户名
@@ -267,7 +268,7 @@ class Merchant extends Incom
                 $arr['stoe_cnt_tel']=$data['phone'];//联系电话
                 $arr['stoe_adds']=$data['detail_address'];//详细地址
                 $arr['mailbox']=$data['email'];//邮箱
-                $arr['incom_type']=$data['merchants_type'];//商户类型 1个人 2企业
+                $arr['incom_type']=$data['merchants_type']; //商户类型 1个人 2企业
                 $arr['icrp_id_no']=$data['id_card'];//结算人身份证号
                 $arr['crp_exp_dt_tmp']=$data['id_card_time'];//结算人身份证到期日
                 $arr['crp_id_no']=$data['id_card'];//法人身份证号
@@ -276,7 +277,7 @@ class Merchant extends Incom
                 $arr['fee_rat3_scan']=$data['merchant_rate'];//
                 $arr['bus_lic_no']=$data['business_license'];//营业执照号
                 $arr['bus_exp_dt']=$data['license_time'];//营业执照有限期
-                $arr['bse_lice_nm']=$data['name'];//营业执照名
+                $arr['bse_lice_nm']=$data['license_name'];//营业执照名
                 $arr['mercAdds']=$data['address'];//营业执照地址
                 $arr['stoe_nm']=$data['address'].$data['name'];//签购单名称=省市+门店名
                 $arr['mcc_cd']=$data['mcc_cd'];//mcc码

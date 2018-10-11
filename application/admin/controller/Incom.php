@@ -367,7 +367,7 @@ class Incom extends Controller
         $data['signValue'] = sign_ature(0000,$data);
 
         $result=curl_request($this->url,true,$data,true);
-        $result=json_decode($result,true);
+        $result = json_decode($result,true);
         if (!empty($result)) {
             return_msg(400, $result);
         }
@@ -376,7 +376,11 @@ class Incom extends Controller
         if( $signValue == $result['signValue'] ){
             if(isset($result['check_flag'])){
                 //修改数据表状态
-                $res=MerchantIncom::where('merchant_id',$merchant_id)->update(['check_flag'=>$result['check_flag']]);
+                $res = MerchantIncom::where('merchant_id',$merchant_id)->update(['check_flag'=>$result['check_flag'],
+                    'key' => $result["key"],
+                    'rec' => $result['REC']
+                    ]);
+
                 if($res){
                     return_msg(200,'success');
                 }else{

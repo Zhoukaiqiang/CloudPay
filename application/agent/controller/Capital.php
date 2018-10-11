@@ -76,7 +76,7 @@ class Capital extends Controller
                 //"b.agent_id" => $agent_id,     //属于当前代理商的 合伙人
             ])
             ->group('a.id')
-            ->limit($pages["limit"], $pages["offset"])
+            ->limit($pages["offset"], $pages["limit"])
             ->select();
 
         if (!count($data['list'])) {
@@ -162,6 +162,156 @@ class Capital extends Controller
         return_msg(200, 'success', $data);
     }
 
+
+    /**
+     * 已结算记录
+     * @param [query]  $time $status 0-未结款 1-已结款 2-暂缓处理
+     * @param Request $request
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function get_list(Request $request)
+    {
+        if ($request->isGet()) {
+            $id = $request->param("id") ? $request->param("id") : Session::get("username_")["id"];
+            if (empty($id)) {
+                return_msg(400, "请登录");
+            }
+            /**  时间查询 $rows */
+            $time = $request->param("time");
+            $status = $request->param("status");
+
+            /** 搜索条件 */
+            if (empty($time)) {
+                $time_flag = ">";
+                $time = 0;
+            } else {
+                $time_flag = "between";
+                $firstday = (int)$time;
+                $lastday = strtotime(date("Y-m-d", $firstday) . ' +1 month -1 day');
+                $time = [$firstday, $lastday];
+            }
+
+            if ($status == null) {
+                $status_flag = "<>";
+                $status = -2;
+            } else {
+                $status_flag = "eq";
+            }
+            /** @var [array] 准备查询条件 $query */
+            $query = [
+                "status" => [$status_flag, $status],
+                "settlement_start" => [$time_flag, $time],
+            ];
+            $rows = TotalCapital::where("agent_id=$id")
+                ->where($query)
+                ->count("id");
+            $pages = page($rows);
+            $data["list"] = TotalCapital::where("agent_id=$id")
+                ->where($query)
+                ->limit($pages["offset"], $pages["limit"])
+                ->select();
+
+            $data["pages"] = $pages;
+            $data["pages"]["rows"] = $rows;
+            /** 已申请佣金 */
+            $data["count"]["applied"] = $this->get_agent_sum($id, 0);
+            /** 已结算佣金 */
+            $data["count"]["settled"] = $this->get_agent_sum($id, 1);
+            /** 待结算佣金 */
+            $data["count"]["unsettle"] = $this->get_agent_sum($id, 2);
+            if (count($data["list"])) {
+                return_msg(200, "success", $data);
+            } else {
+                return_msg(400, "no data");
+            }
+
+        }
+
+
+    }
+
+    /**
+     * 子代结算记录
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function child_list(Request $request)
+    {
+        if ($request->isGet()) {
+            $id = Session::get("username_")["id"];
+            /** @var [string] 获取查询参数 $time */
+            $time = $request->param("time");
+            $keywords = $request->param("keywords");
+            /** 搜索条件 */
+            if (empty($time)) {
+                $time_flag = ">";
+                $time = 0;
+            } else {
+                $time_flag = "between";
+                $firstday = (int)$time;
+                $lastday = strtotime(date("Y-m-d", $firstday) . ' +1 month -1 day');
+                $time = [$firstday, $lastday];
+            }
+
+            if ($keywords == null) {
+                $keywords_flag = "<>";
+                $keywords = -2;
+            } else {
+                $keywords_flag = "LIKE";
+            }
+            /** @var [array] 准备查询条件 $query */
+            $query = [
+                "a.agent_name" => [$keywords_flag, $keywords . "%"],
+                "cap.settlement_start" => [$time_flag, $time],
+            ];
+            $rows = TotalAgent::alias("a")->where("a.parent_id", $id)
+                ->where($query)
+                ->join("cloud_total_capital cap", "cap.agent_id = a.id", "RIGHT")
+                ->count("a.id");
+            $pages = page($rows);
+            $data["list"] = TotalAgent::alias("a")->where("a.parent_id", $id)
+                ->join("cloud_total_capital cap", "cap.agent_id = a.id", "RIGHT")->where($query)
+                ->where($query)
+                ->limit($pages["offset"], $pages["limit"])
+                ->select();
+
+            $data["pages"] = $pages;
+            $data["pages"]["rows"] = $rows;
+            /** 已申请佣金 */
+            $data["count"]["applied"] = $this->get_agent_sum($id, 0, 2);
+            /** 已结算佣金 */
+            $data["count"]["settled"] = $this->get_agent_sum($id, 1, 2);
+            /** 待结算佣金 */
+            $data["count"]["unsettle"] = $this->get_agent_sum($id, 2, 2);
+
+
+            if (count($data["list"])) {
+                return_msg(200, "success", $data);
+            } else {
+                return_msg(400, "no data");
+            }
+        }
+    }
+
+    protected function get_agent_sum($id, $status, $level = 1)
+    {
+        if ($level = 1) {
+            $res = TotalCapital::where("agent_id = $id")
+                ->where("status = $status")
+                ->sum("settlement_money");
+        } else {
+            $res = TotalAgent::alias("a")->where("a.parent_id", $id)
+                ->join("cloud_total_capital cap", "cap.agent_id = a.id", "RIGHT")
+                ->sum("cap.settlement_money");
+        }
+
+
+        return $res;
+    }
+
     /**
      * 时间查询
      * @param  [int]  $time  时间戳
@@ -214,7 +364,7 @@ class Capital extends Controller
             ])
             ->whereTime("pay_time", $time_flag, $time)
             ->group('a.id')
-            ->limit($pages["limit"], $pages["offset"])
+            ->limit($pages["offset"], $pages["limit"])
             ->select();
 
 
@@ -551,16 +701,18 @@ class Capital extends Controller
         $pages = page($rows);
         $data["list"] = AgentPartner::where(["agent_id" => $id])
             ->field("id,partner_name,model,proportion,rate")
-            ->limit($pages["limit"], $pages["offset"])
+            ->limit($pages["offset"], $pages["limit"])
             ->select();
 
         if (!count($data["list"])) {
             return_msg(400, "no data");
         }
 
-        $commission = 0; $partner_money = 0;$money = 0; $count = 0;
+        $commission = 0;
+        $partner_money = 0;
+        $money = 0;
+        $count = 0;
         foreach ($data["list"] as &$v) {
-
 
 
             /** 获取商户微信交易额 */
@@ -574,7 +726,6 @@ class Capital extends Controller
 
             /** 获取商户支付宝交易量 */
             $merchant["mer_ali_num"] = $this->get_partner_num($v["id"], "alipay");
-
 
 
             $raw_data = TotalMerchant::where(["partner_id" => $v["id"]])->field("merchant_rate, id")->select();
@@ -632,9 +783,10 @@ class Capital extends Controller
             $index_commission += $val["commission"];
             $index_deserve += $val["partner_money"];
         }
-        $data["list"]["count"]["commission"] = $index_commission;
-        $data["list"]["count"]["deserve"] = $index_deserve;
-        $data["list"]["pages"] = $pages;
+        $data["count"]["commission"] = $index_commission;
+        $data["count"]["deserve"] = $index_deserve;
+        $data["pages"] = $pages;
+
         return_msg(200, "success", $data);
     }
 
@@ -685,7 +837,7 @@ class Capital extends Controller
         $data["list"] = TotalAgent::alias("a")->where(["a.parent_id" => $agent_id])
             ->field("a.id,a.agent_name,a.agent_rate")
             ->join($join)
-            ->limit($pages["limit"], $pages["offset"])
+            ->limit($pages["offset"], $pages["limit"])
             ->whereTime("pay_time", $time_flag, $time)
             ->select();
 
@@ -772,7 +924,7 @@ class Capital extends Controller
         /** 获取所有子代理商 */
         $data["list"] = TotalAgent::where(["parent_id" => $agent_id])
             ->field("id,agent_name,agent_rate")
-            ->limit($pages["limit"], $pages["offset"])
+            ->limit($pages["offset"], $pages["limit"])
             ->select();
 
         if (!count($data["list"])) {

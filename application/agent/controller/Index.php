@@ -108,6 +108,7 @@ class Index extends Controller
      */
     public function get_diagram(Request $request) {
         if ($request->isGet()) {
+            $id = Session::get("username_")["id"];
             /* 接受参数 */
             $pay_type = $request->param('pay_type');
 
@@ -127,18 +128,27 @@ class Index extends Controller
             /** 默认展示7天数据 */
 
             while($i < 0) {
-                $past = date('Y-m-d', strtotime($i .' days'));
-                $data['chartData'][] = Db::name('order')
+                $morning = strtotime(date('Y-m-d 00:00:00', strtotime($i .' days')));
+                $night = strtotime(date('Y-m-d 23:59:59', strtotime($i .' days')));
+                $date = [$morning, $night];
+                $data['chartData'][] = TotalMerchant::alias("mer")
+                    ->join("cloud_order o", "o.merchant_id = mer.id")
+                    ->where("mer.agent_id", $id)
                     ->where("pay_type", $pay_type_flag, $pay_type)
-                    ->whereTime('pay_time', $past)
-                    ->sum("received_money");
-                $sum[] = Db::name("order")
+                    ->whereTime('pay_time', "between", $date)
+                    ->sum("o.received_money");
+
+                $sum[] = TotalMerchant::alias("mer")
+                    ->join("cloud_order o", "o.merchant_id = mer.id")
+                    ->where("mer.agent_id", $id)
                     ->where("pay_type", $pay_type_flag, $pay_type)
-                    ->whereTime('pay_time', $past)
-                    ->count("id");
+                    ->whereTime('pay_time', "between", $date)
+                    ->count("o.id");
 
                 $i++;
             }
+
+
             foreach($data["chartData"] as $k => $v) {
                 $filted_data[] = [
                     "amount" => $v,
