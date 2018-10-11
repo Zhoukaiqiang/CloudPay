@@ -37,6 +37,7 @@ class Active extends Controller
                         if($k==$k1){
                             //判断是永久还是设置时间
                             if($data['active_time']==0){
+                                check_params('recharge',$data,'MerchantValidate');
                                 $arr=[
                                     'recharge_money'=>$v,
                                     'give_money'=>$v1,
@@ -47,6 +48,7 @@ class Active extends Controller
                                     'create_time'=>time()
                                 ];
                             }elseif($data['active_time']==1){
+                                check_params('new_recharge',$data,'MerchantValidate');
                                 $arr=[
                                     'recharge_money'=>$v,
                                     'give_money'=>$v1,
@@ -75,9 +77,11 @@ class Active extends Controller
                 }
             }else{
                 //验证
+                check_params('recharge',$data,'MerchantValidate');
                 $data['status']=1;
                 $data['create_time']=time();
                 $data['merchant_id']=$this->merchant_id;
+
                 $result=ShopActiveRecharge::insert($data,true);
                 if($result){
                     return_msg(200,'操作成功');

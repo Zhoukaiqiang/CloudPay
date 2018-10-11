@@ -266,35 +266,71 @@ class Incom extends Controller
 
     }
 
+    /**
+     *bank_query 支行名称模糊查询
+     * @param Request $request
+     * @return bool
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function bank_query($open_branch=null) {
+        if(empty($open_branch)){
+            $branch=request()->param('open_branch');
+            $str_len=strlen($branch)/3;
+            if($str_len<10){
+                return_msg(400,'长度不能低于10位');
+            }
+            $query = [
+                'serviceId' => "6060208",
+                'version' => "V1.0.1",
+                'lbnk_nm' => $branch,  //最少输入不低于5个字
+                'orgNo' => ORG_NO,
+            ];
+            $query['signValue'] = sign_ature(0000, $query);
+//        halt($query);
+            $res = curl_request($this->url, true, $query, true);
+            /** json转成数组 */
+            $res = json_decode($res, true);
+            if($res['msg_cd']==000000){
+                $check = $this->check_sign_value($res['signValue'], $res);
+                if($check==true){
+                    return_msg(200,'success',$res['REC']);
+                }
+            }else{
+                return_msg(400,$res['msg_dat']);
+            }
+        }else{
+            //用户自己输入支行名称
+            $query = [
+                'serviceId' => "6060208",
+                'version' => "V1.0.1",
+                'lbnk_nm' => $open_branch,  //最少输入不低于5个字
+                'orgNo' => ORG_NO,
+            ];
+            $query['signValue'] = sign_ature(0000, $query);
+//        halt($query);
+            $res = curl_request($this->url, true, $query, true);
+            /** json转成数组 */
+            $res = json_decode($res, true);
+            if($res['msg_cd']==000000){
+                $check = $this->check_sign_value($res['signValue'], $res);
+                if($check==true){
+                    return $res['REC'][0]['wc_lbnk_no'];
+                }
+            }else{
+                return_msg(400,$res['msg_dat']);
+            }
+        }
 
-    public function bank_query(Request $request) {
-
-
-        $arr = $request->param();
+        /*$arr = $request->param();
         $id = $request->param("merchant_id");
         if (empty($id)) {
             return false;
         }
-        $result = MerchantIncom::where("merchant_id=$id")->field("orgNo")->find();
-        $query = [
-            'serviceId' => "6060208",
-            'version' => "V1.0.1",
-            'lbnk_nm' => $arr['lbnk_nm'],  //最少输入不低于5个字
-            'orgNo' => $result->getData('orgNo'),
-        ];
-        $query['signValue'] = sign_ature(0000, $query);
+        $result = MerchantIncom::where("merchant_id=$id")->field("orgNo")->find();*/
 
-        $res = curl_request($this->url, true, $query, true);
 
-        /** json转成数组 */
-        $res = json_decode($res, true);
-        $check = $this->check_sign_value($query['signValue'], $res);
-
-        $data['wc_lbnk_no'] = $res['wc_lbnk_no'];
-        $data['lbnk_nm'] = $res['lbnk_nm'];
-        if ($check === true) {
-            return_msg(200,"查询成功",$data);
-        }
     }
     /**
      * 商户进件
@@ -338,8 +374,10 @@ class Incom extends Controller
             } else {
                 return_msg(400, 'failure');
             }
-        } else {
+        }else {
             //审核未通过
+            MerchantIncom::where('merchant_id',$merchant_id)->delete();
+            TotalMerchant::where('id',$merchant_id)->delete();
             return_msg(400, 'failure', $result['msg_dat']);
         }
 //        }else{
