@@ -242,7 +242,7 @@ class Merchant extends Incom
         $agent_id=Session::get("username_")["id"];
         if(request()->isPost()){
             $data=request()->post();
-
+            $data['agent_id']=$agent_id;
 //            $data['channel']=3;//表示间联
             //验证
 //            $validate = Loader::validate('AgentValidate');
