@@ -6,6 +6,7 @@ use app\agent\model\AgentPartner;
 use app\agent\model\Order;
 use app\agent\model\TotalAgent;
 use app\agent\model\TotalMerchant;
+use Phinx\Seed\SeedInterface;
 use think\Controller;
 use think\Db;
 use think\Exception;
@@ -46,9 +47,193 @@ class Index extends Controller
     /**
      * 登出
      */
-    public function logout() {
+    public function logout()
+    {
         Session::clear();
     }
+
+
+    /**
+     * 获取当前代理商的二级代理商
+     * @param Request $request
+     * @throws DbException
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     */
+    public function get_second_agent (Request $request) {
+        if ($request->isGet()) {
+            $id = Session::get("username_")["id"];
+            $res = TotalAgent::where("parent_id", $id)->field("agent_name,id")->select();
+
+            if (count($res)) {
+                return_msg(200, "success", $res);
+            }else {
+                return_msg(400, "no data" );
+            }
+        }
+    }
+
+    /**
+     * 首页--- 统计数据
+     * @param [int]   $time 7/30
+     * @param [int] $id 二级代理商ID
+     * @param Request $request
+     * @method GET
+     */
+    public function get_count_data(Request $request)
+    {
+        if ($request->isGet()) {
+            $id = $request->param("id") ? $request->param("id") : Session::get("username_")["id"];
+            /** 当前代理商下所有直属商户交易额 --  微信/支付宝/银行卡  */
+            $time = $request->param("time") ? $request->param("time") : 0;
+            $data["ali_amount"] = $this->get_type_amount($id, 'alipay', $time);
+            $data["wx_amount"] = $this->get_type_amount($id, 'wxpay', $time);
+            $data["bank_amount"] = $this->get_type_amount($id, 'etc', $time);
+
+            /** 当前代理商下所有直属商户交易量 --  微信/支付宝/银行卡  */
+            $data["ali_num"] = $this->get_type_num($id, "alipay", $time);
+            $data["wx_num"] = $this->get_type_num($id, "wxpay", $time);
+            $data["bank_num"] = $this->get_type_num($id, "etc" , $time);
+
+            return_msg(200, "success", $data);
+        }
+    }
+
+
+    /**
+     * 首页---- 图表
+     * @param [int] $time 7/30
+     * @method GET
+     * @param Request $request
+     */
+    public function get_diagram(Request $request) {
+        if ($request->isGet()) {
+            $id = Session::get("username_")["id"];
+            /* 接受参数 */
+            $pay_type = $request->param('pay_type');
+
+            $time = $request->param("time") ? $request->param("time") : 0;
+            $i = -7;
+            if ($time == 30) {
+                $i = -30;
+            }
+            if (empty($pay_type)) {
+                $pay_type_flag = "<>";
+                $pay_type = '-2';
+            } else {
+                $pay_type_flag = "eq";
+            }
+
+             $sum = [];
+            /** 默认展示7天数据 */
+
+            while($i < 0) {
+                $morning = strtotime(date('Y-m-d 00:00:00', strtotime($i .' days')));
+                $night = strtotime(date('Y-m-d 23:59:59', strtotime($i .' days')));
+                $date = [$morning, $night];
+                $data['chartData'][] = TotalMerchant::alias("mer")
+                    ->join("cloud_order o", "o.merchant_id = mer.id")
+                    ->where("mer.agent_id", $id)
+                    ->where("pay_type", $pay_type_flag, $pay_type)
+                    ->whereTime('pay_time', "between", $date)
+                    ->sum("o.received_money");
+
+                $sum[] = TotalMerchant::alias("mer")
+                    ->join("cloud_order o", "o.merchant_id = mer.id")
+                    ->where("mer.agent_id", $id)
+                    ->where("pay_type", $pay_type_flag, $pay_type)
+                    ->whereTime('pay_time', "between", $date)
+                    ->count("o.id");
+
+                $i++;
+            }
+
+
+            foreach($data["chartData"] as $k => $v) {
+                $filted_data[] = [
+                    "amount" => $v,
+                    "count"    => $sum[$k],
+                    "pay_time" => date('Y-m-d', strtotime($i + $k . ' days')),
+                ];
+            }
+
+
+            if (count($filted_data)) {
+               return_msg(200, '成功取出数据', $filted_data);
+            } else {
+                return_msg(400, '没有数据');
+            }
+        }
+    }
+    /**
+     * 首页--商户数据
+     * @param [int] $id 二级代理商ID
+     * @throws DbException
+     * @return [json]
+     */
+    public function get_merchant_data(Request $request)
+    {
+        if ($request->isGet()) {
+            $id = $request->param("id") ? $request->param("id") : Session::get("username_")["id"];
+            /** 昨日活跃商户 */
+            $data["active_mer"] = TotalMerchant::alias("mer")
+                ->where("mer.agent_id = $id")
+                ->join("cloud_order o ", "o.merchant_id = mer.id")
+                ->whereTime("pay_time", "yesterday")
+                ->group("o.merchant_id")
+                ->count("o.id");
+            /** 昨日新增商户 */
+
+            $data["new_come"] = TotalMerchant::where("agent_id = $id")
+                ->whereTime("create_time", "yesterday")
+                ->count("id");
+
+            /** 总商户 */
+            $data["total_mer"] = collection(TotalMerchant::all(["agent_id" => $id]))->count('id');
+            /** 审核中商户 */
+            $data["checking_mer"] = TotalMerchant::where(["status" => 0, "agent_id" => $id])->count("id");
+            /** 已驳回商户 */
+            $data["refuse_mer"] = TotalMerchant::where(["status" => 3, "agent_id" => $id])->count("id");
+            /** 7日无交易商户 */
+            $data["inactive_mer"] = TotalMerchant::alias("mer")
+                ->where("mer.agent_id = $id")
+                ->join("cloud_order o ", "o.merchant_id = mer.id")
+                ->whereTime("pay_time", "<", strtotime("-7 days"))
+                ->group("o.merchant_id")
+                ->count("mer.id");
+
+            return_msg(200, "success", $data);
+        }
+    }
+
+    /**
+     * 获取对应类型的交易额
+     * @param $id
+     * @param $type
+     * @return float|int
+     */
+    protected function get_type_amount($id, $type, $time = 0)
+    {
+        $time_flag = ">";
+        if ($time == 7) {
+            $time = strtotime("-7 days");
+        }elseif ($time == 30) {
+            $time = strtotime("-30 days");
+        }elseif ($time != 0) {
+            $time = [$time];
+            $time_flag = "between";
+        }
+        $res = TotalMerchant::alias("mer")
+            ->join("cloud_order o", "o.merchant_id = mer.id")
+            ->where([
+                "mer.agent_id" => $id,
+                "o.pay_type" => $type
+            ])
+            ->whereTime("pay_time", $time_flag, $time)
+            ->sum("o.received_money");
+        return $res;
+    }
+
 
 
     /**
@@ -81,8 +266,8 @@ class Index extends Controller
             ->group('a.id')
             ->limit($pages['offset'], $pages['limit'])
             ->select();
-        $parent=AgentPartner::where('agent_id',$agent_id)->field('partner_name,id')->select();
-        $data['parent']=$parent;
+        $parent = AgentPartner::where('agent_id', $agent_id)->field('partner_name,id')->select();
+        $data['parent'] = $parent;
         //取出商户支付宝和微信交易额交易量
         foreach ($data['list'] as &$v) {
             $where = [
@@ -205,7 +390,7 @@ class Index extends Controller
         $data['pages'] = $pages;
         if (count($data["list"])) {
             return_msg(200, 'success', $data);
-        }else {
+        } else {
             return_msg(400, "no data");
         }
     }
@@ -230,7 +415,7 @@ class Index extends Controller
         $data['list'] = TotalMerchant::alias('a')
             ->field('a.id,a.name,a.address,a.phone,b.partner_name')
             ->join('cloud_agent_partner b', 'a.partner_id=b.id', 'left')
-            ->whereTime('a.opening_time',  'yesterday')
+            ->whereTime('a.opening_time', 'yesterday')
             ->where(['a.agent_id' => $agent_id, 'a.status' => 1])
             ->limit($pages['offset'], $pages['limit'])
             ->select();
@@ -381,7 +566,7 @@ class Index extends Controller
      */
     public function search_deal(Request $request)
     {
-      return  strtotime(date("Y-m-d",strtotime("-6 days")));
+        return strtotime(date("Y-m-d", strtotime("-6 days")));
         //获取商户|联系人|联系方式
         $name = $request->param('keyword');
         //获取合伙人id
@@ -389,8 +574,8 @@ class Index extends Controller
         //获取是否交易
         $deal = $request->param('deal');
 
-        $pay_time=$request->param('pay_time') ?  $request->param('pay_time') : 1531011563;
-        $yesterday=$request->param('yesterday') ? $request->param('yesterday'):2133999048;
+        $pay_time = $request->param('pay_time') ? $request->param('pay_time') : 1531011563;
+        $yesterday = $request->param('yesterday') ? $request->param('yesterday') : 2133999048;
 
 
         //如果$deal=1是有交易用户，$deal=2是无交易用户
@@ -481,12 +666,12 @@ class Index extends Controller
         //获取商户|联系人|联系方式
         $name = $request->param('keyword');
         //获取合伙人id
-        $partner_id = $request->param('partner_id') ? $request->param('partner_id') :0;
+        $partner_id = $request->param('partner_id') ? $request->param('partner_id') : 0;
         //获取是否交易 $deal=1是有交易用户，$deal=2是无交易用户
-        $deal = $request->param('deal') ;
+        $deal = $request->param('deal');
         $total = Db::name('total_merchant')->count('id');
-        $pay_time=$request->param('pay_time') ?  $request->param('pay_time') : strtotime('-8 days')-1;
-            $yesterday=$request->param('create_time') ? $request->param('create_time'):mktime(0,0,0,date('m'),date('d')+1,date('Y'))-1;;
+        $pay_time = $request->param('pay_time') ? $request->param('pay_time') : strtotime('-8 days') - 1;
+        $yesterday = $request->param('create_time') ? $request->param('create_time') : mktime(0, 0, 0, date('m'), date('d') + 1, date('Y')) - 1;;
         //如果$deal=1是有交易用户，$deal=2是无交易用户
         $nodeal = 'between';
         if ($deal == 2) {
@@ -537,35 +722,35 @@ class Index extends Controller
     public function merchant_list(Request $request)
     {
         //获取商户|联系人|联系方式
-        $agent_id=Session::get('username_');
+        $agent_id = Session::get('username_');
 
         $name = $request->param('keyword');
         //获取合伙人id
-        $partner_id = $request->param('partner_id') ? $request->param('partner_id') :0;
+        $partner_id = $request->param('partner_id') ? $request->param('partner_id') : 0;
         //获取是否交易
 //        $deal=$request->param('deal');
         //状态0开启 1关闭
-        $status = $request->param('status') ? $request->param('status') :3;
+        $status = $request->param('status') ? $request->param('status') : 3;
         $create_time = $request->param('opening_time') ? $request->param('opening_time') : 0;
-        $end_time = $create_time+60*60*24-1;
-        $address=$request->param('address') ? $request->param('address') : '0';
+        $end_time = $create_time + 60 * 60 * 24 - 1;
+        $address = $request->param('address') ? $request->param('address') : '0';
 
-        $statusxyom='eq';
-        if($status==3){
-            $statusxyom='<>';
+        $statusxyom = 'eq';
+        if ($status == 3) {
+            $statusxyom = '<>';
         }
-        if($status==2){
-            $status=0;
+        if ($status == 2) {
+            $status = 0;
         }
-        $addresssyom='=';
-        if($address=='0'){
-            $addresssyom='<>';
+        $addresssyom = '=';
+        if ($address == '0') {
+            $addresssyom = '<>';
         }
 
-        $nodeal='between';
+        $nodeal = 'between';
 
-        if($create_time==0){
-            $nodeal='not between';
+        if ($create_time == 0) {
+            $nodeal = 'not between';
         }
         $symbol = '=';
         if ($partner_id == 0) {
@@ -578,7 +763,7 @@ class Index extends Controller
             ->join('cloud_agent_partner', 'a.partner_id=cloud_agent_partner.id')
             ->where('a.abbreviation|a.contact|a.phone', 'like', "%$name%")
             ->where('a.partner_id', $symbol, $partner_id)
-            ->where(['a.status'=>[$statusxyom,$status],'a.agent_id'=>['=',$agent_id],'a.address'=>[$addresssyom,$address]])
+            ->where(['a.status' => [$statusxyom, $status], 'a.agent_id' => ['=', $agent_id], 'a.address' => [$addresssyom, $address]])
             ->whereTime('a.opening_time', $nodeal, [$create_time, $end_time])
             ->group('a.id')
             ->count('a.id');
@@ -590,7 +775,7 @@ class Index extends Controller
             ->join('cloud_agent_partner', 'a.partner_id=cloud_agent_partner.id')
             ->where('a.name|a.contact|a.phone', 'like', "%$name%")
             ->where('a.partner_id', $symbol, $partner_id)
-            ->where(['a.status'=>[$statusxyom,$status],'a.agent_id'=>['=',$agent_id],'a.address'=>[$addresssyom,$address]])
+            ->where(['a.status' => [$statusxyom, $status], 'a.agent_id' => ['=', $agent_id], 'a.address' => [$addresssyom, $address]])
             ->whereTime('a.opening_time', $nodeal, [$create_time, $end_time])
             ->group('a.id')
             ->limit($pages['offset'], $pages['limit'])
@@ -615,47 +800,47 @@ class Index extends Controller
     public function merchant_deal(Request $request)
     {
         //获取商户|联系人|联系方式
-        $name=$request->param('keyword');
+        $name = $request->param('keyword');
         //获取合伙人id
-        $partner_id=$request->param('partner_id') ? $request->param('partner_id') :0 ;
+        $partner_id = $request->param('partner_id') ? $request->param('partner_id') : 0;
         //获取是否交易 //如果$deal=1是有交易用户，$deal=2是无交易用户
-        $deal=$request->param('deal') ? $request->param('deal') :0;
+        $deal = $request->param('deal') ? $request->param('deal') : 0;
 
         $create_time = $request->param('pay_time') ? $request->param('pay_time') : 1507424363;
-        $end_time = $request->param('pay_time') ? $request->param('pay_time') +3600*24-1 : 1917651563;
+        $end_time = $request->param('pay_time') ? $request->param('pay_time') + 3600 * 24 - 1 : 1917651563;
 
         //是否交易
-        $nodeal='between';
-        if($deal==2){
-            $nodeal='not between';
+        $nodeal = 'between';
+        if ($deal == 2) {
+            $nodeal = 'not between';
         }
         //合伙人
-        $symbol='<>';
-        if($partner_id >0){
-            $symbol='eq';
+        $symbol = '<>';
+        if ($partner_id > 0) {
+            $symbol = 'eq';
         }
         $total = Db::name('total_merchant')->count('id');
 
-        $rows=TotalMerchant::alias('a')
+        $rows = TotalMerchant::alias('a')
             ->field('a.abbreviation,a.contact,a.phone,cloud_order.received_money,cloud_order.cashier')
-            ->join('cloud_order','a.id=cloud_order.merchant_id','left')
-            ->join('cloud_agent_partner','cloud_agent_partner.id=a.partner_id')
-            ->where('a.abbreviation|a.contact|a.phone','like',"%$name%")
-            ->where('a.partner_id',$symbol,$partner_id)
-            ->whereTime('cloud_order.pay_time',$nodeal,[$create_time,$end_time])
+            ->join('cloud_order', 'a.id=cloud_order.merchant_id', 'left')
+            ->join('cloud_agent_partner', 'cloud_agent_partner.id=a.partner_id')
+            ->where('a.abbreviation|a.contact|a.phone', 'like', "%$name%")
+            ->where('a.partner_id', $symbol, $partner_id)
+            ->whereTime('cloud_order.pay_time', $nodeal, [$create_time, $end_time])
             ->group('a.id')
             ->count('a.id');
         $pages = page($rows);
 
-        $data['list']=TotalMerchant::alias('a')
+        $data['list'] = TotalMerchant::alias('a')
             ->field('a.name,a.address,cloud_agent_partner.partner_name,a.id,a.abbreviation,a.contact,a.phone,cloud_order.received_money,cloud_order.cashier')
-            ->join('cloud_order','a.id=cloud_order.merchant_id','left')
-            ->join('cloud_agent_partner','cloud_agent_partner.id=a.partner_id')
-            ->where('a.name|a.contact|a.phone','like',"%$name%")
-            ->where('a.partner_id',$symbol,$partner_id)
-            ->whereTime('cloud_order.pay_time',$nodeal,[$create_time,$end_time])
+            ->join('cloud_order', 'a.id=cloud_order.merchant_id', 'left')
+            ->join('cloud_agent_partner', 'cloud_agent_partner.id=a.partner_id')
+            ->where('a.name|a.contact|a.phone', 'like', "%$name%")
+            ->where('a.partner_id', $symbol, $partner_id)
+            ->whereTime('cloud_order.pay_time', $nodeal, [$create_time, $end_time])
             ->group('a.id')
-            ->limit($pages['offset'],$pages['limit'])
+            ->limit($pages['offset'], $pages['limit'])
             ->select();
 
         foreach ($data['list'] as &$v) {
@@ -683,15 +868,16 @@ class Index extends Controller
         $data['pages'] = $pages;
         $data['pages']['rows'] = $rows;
         $data['pages']['total_row'] = $total;
-        if(count($data)!==0){
+        if (count($data) !== 0) {
 
-            return_msg(200,'success',$data);
+            return_msg(200, 'success', $data);
 
-        }else{
+        } else {
 
-            return_msg(400,'没有数据');
+            return_msg(400, '没有数据');
         }
     }
+
     /**
      * 服务商列表-筛选搜索
      * @param Request $request
@@ -701,7 +887,7 @@ class Index extends Controller
      */
     public function facilitator_list(Request $request)
     {
-        $parent_id=$request->param('id');
+        $parent_id = $request->param('id');
         //服务商名称|联系人|联系方式
         $name = $request->param('keyword');
         //服务商的状态，1启用 0停用 3全部
@@ -710,10 +896,10 @@ class Index extends Controller
         $agent_area = $request->param('agent_area') ? $request->param('agent_area') : '0';
         //时间
         $create_time = $request->param('create_time') ? $request->param('create_time') : 1507424363;
-        $end_time = $request->param('end_time') ? $request->param('end_time') +3600*24-1: 1917651563;
+        $end_time = $request->param('end_time') ? $request->param('end_time') + 3600 * 24 - 1 : 1917651563;
         //服务商
-        if($status!=0 && $status!=1){
-            $status=3;
+        if ($status != 0 && $status != 1) {
+            $status = 3;
         }
         $agent_ateabol = 'eq';
         if ($agent_area == '0') {
@@ -775,15 +961,15 @@ class Index extends Controller
         //0关闭 1开启
         $status = $request->param('status');
         //合伙人id 0全部
-        $agent_id = $request->param('agent_id') ? $request->param('agent_id') :0;
+        $agent_id = $request->param('agent_id') ? $request->param('agent_id') : 0;
         $status_symbol = 'eq';
-        if($status!=0 && $status!=1){
-            $status=2;
+        if ($status != 0 && $status != 1) {
+            $status = 2;
             $status_symbol = '<>';
         }
-        $agentsyom='eq';
-        if($agent_id==0){
-            $agentsyom='<>';
+        $agentsyom = 'eq';
+        if ($agent_id == 0) {
+            $agentsyom = '<>';
         }
         $total = Db::name('total_agent')->count('id');
 
@@ -836,6 +1022,34 @@ class Index extends Controller
     }
 
     /**
+     * 获取对应类型的交易量
+     * @param $id
+     * @param $type
+     * @return int|string
+     */
+    protected function get_type_num($id, $type, $time = 0)
+    {
+        $time_flag = ">";
+        if ($time == 7) {
+            $time = strtotime("-7 days");
+        }elseif ($time == 30) {
+            $time = strtotime("-30 days");
+        }elseif ($time != 0) {
+            $time = [$time];
+            $time_flag = "between";
+        }
+        $res = TotalMerchant::alias("mer")
+            ->join("cloud_order o", "o.merchant_id = mer.id")
+            ->where([
+                "mer.agent_id" => $id,
+                "o.pay_type" => $type
+            ])
+            ->whereTime("pay_time", $time_flag, $time)
+            ->count("o.id");
+        return $res;
+    }
+
+    /**
      * 检验账号是存在数据库
      * @param $value
      * @param string $type
@@ -844,7 +1058,7 @@ class Index extends Controller
      * @throws \think\db\exception\ModelNotFoundException
      * @throws \think\exception\DbException
      */
-    public function check_exist($value, $type = 'phone', $exist)
+    protected function check_exist($value, $type = 'phone', $exist)
     {
         $type_num = $type == 'phone' ? 2 : 4;
         $flag = $type_num + $exist;

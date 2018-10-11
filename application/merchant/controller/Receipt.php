@@ -30,7 +30,7 @@ class Receipt extends Controller
         $id=$request->param('id');
         $id=1;//测试
         $data=Order::alias('a')
-            ->field('a.id,a.status,a.received_money,a.order_money,a.discount,b.shop_name,a.cashier,a.pay_time,a.pay_type,a.order_remark,a.order_number,a.status,a.authorize_number,a.prove_number,a.give_money')
+            ->field('a.id,a.status,a.received_money,a.order_money,a.discount,b.shop_name,a.cashier,a.pay_time,a.cashier,a.pay_type,a.order_remark,a.order_number,a.status,a.authorize_number,a.prove_number,a.give_money')
             ->join('cloud_merchant_shop b','a.shop_id=b.id','left')
             ->where('a.id',$id)
             ->find();
@@ -61,6 +61,7 @@ class Receipt extends Controller
             $result = curl_request($this->url, true, $order, true);
             $result = json_decode($result, true);
             if($result['result']=='S'){
+
                 return_msg(200,'退款中');
             }else{
                 return_msg(400,'退款失败');

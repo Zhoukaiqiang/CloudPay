@@ -2,9 +2,12 @@
 
 namespace app\admin\controller;
 
+use app\admin\model\AreaCode;
+use app\admin\model\Mcc;
 use app\admin\model\MerchantIncom;
 use app\admin\model\TotalMerchant;
 use app\admin\model\IncomImg;
+use app\agent\model\AgentCategory;
 use think\Controller;
 use think\Db;
 use think\Exception;
@@ -94,12 +97,10 @@ class Incom extends Controller
 
         /** 得到当前请求的签名，用于和返回参数验证 */
         $query['signValue'] = sign_ature(0000, $query);
-
         /** 获取返回结果 */
         $res = curl_request($this->url, true, $query, true);
         /** json转成数组 */
         $res = json_decode($res, true);
-
         $check = $this->check_sign_value($query['signValue'], $res);
 
         if ($check == true) {
@@ -139,27 +140,41 @@ class Incom extends Controller
      */
     public function merchant_MCC(Request $request)
     {
-
-        $id = $request->param('id');
-        if (empty($id)) {
-            return false;
-        }
-        $arr = MerchantIncom::where("merchant_id = $id")->field("orgNo")->find();
-
         $query = [
             'serviceId' => "6060203",
             'version' => "V1.0.1",
-            'orgNo' => $arr->getData("orgNo"),
+            'orgNo' => ORG_NO,
         ];
         $query['signValue'] = sign_ature(0000, $query);
 
         $res = curl_request($this->url, true, $query, true);
 
         /** json转成数组 */
+//
         $res = json_decode($res, true);
+//        halt($res);
+        if($res['msg_cd']==000000){
+            foreach($res['REC'] as $v){
+                $data=Mcc::where('mcc_cd',$v['mcc_cd'])->find();
+                if(empty($data)){
+                    //可能修改也可能新增
+                    $info=Mcc::where('mcc_nm',$v['mcc_nm'])->find();
+                    if(empty($info)){
+                        //新增
+                        Mcc::insert($v);
+                    }else{
+                        //修改
+                        Mcc::where('mcc_nm',$v['mcc_nm'])->update(['mcc_cd'=>$v['mcc_cd']]);
+                    }
+                }
+            }
+            return_msg(200,'success');
+        }else{
+            return_msg(400,$res['msg_dat']);
+        }
 
-        $check = $this->check_sign_value($query['signValue'], $res);
-
+//        halt($res['REC']);
+        /*$check = $this->check_sign_value($query['signValue'], $res);
         if ($check === true) {
             $where = [
                 "merchant_id" => $id,
@@ -173,9 +188,9 @@ class Incom extends Controller
                 'mcc_typ' => $res['mcc_typ'],
                 'mcc_typ_nm' => $res['mcc_typ_nm'],
             ];
-            /** 检验无误插入数据库 */
+
             $this->insert_to_incom_table("cloud_merchant_incom", $where, $data);
-        }
+        }*/
 
     }
 
@@ -189,31 +204,54 @@ class Incom extends Controller
      */
     public function merchant_area_code(Request $request)
     {
-        $id = $request->param("merchant_id");
+        /*$id = $request->param("merchant_id");
         if (empty($id)) {
             return false;
         }
-        $arr = Db::name("area_code")->where("merchant_id = $id")->field("orgNo,prov_nm,city_nm")->find();
+        $arr = Db::name("area_code")->where("merchant_id = $id")->field("orgNo,prov_nm,city_nm")->find();*/
         $query = [
             'serviceId' => "6060206",
             'version' => "V1.0.1",
-            'orgNo' => $arr->getData("orgNo"),
+            'orgNo'=>ORG_NO
+            /*'orgNo' => $arr->getData("orgNo"),
             'prov_nm' => $arr->getData("prov_nm"),
-            'city_nm' => $arr->getData("city_nm"),
+            'city_nm' => $arr->getData("city_nm"),*/
         ];
         $query['signValue'] = sign_ature(0000, $query);
 
         $res = curl_request($this->url, true, $query, true);
-
         /** json转成数组 */
         $res = json_decode($res, true);
-        $check = $this->check_sign_value($query['signValue'], $res);
+        /*for($i=0;$i<count($res['REC']);$i++){
+            AreaCode::insert($res['REC'][$i]);
+
+        }*/
+        if($res['msg_cd']==000000){
+            foreach($res['REC'] as $v){
+                $data=AreaCode::where('merc_area',$v['merc_area'])->find();
+                if(empty($data)){
+                    //可能修改也可能新增
+                    $info=AreaCode::where('area_nm',$v['area_nm'])->find();
+                    if(empty($info)){
+                        //新增
+                        AreaCode::insert($v);
+                    }else{
+                        //修改
+                        AreaCode::where('area_nm',$v['area_nm'])->update(['merc_area'=>$v['merc_area']]);
+                    }
+                }
+            }
+            return_msg(200,'success');
+        }else{
+            return_msg(400,$res['msg_dat']);
+        }
+        /*$check = $this->check_sign_value($query['signValue'], $res);
 
         if ($check === true) {
             $where = [
                 "merchant_id" => $id,
             ];
-            /** @var array 要更新/插入的数据 $data */
+
             $data = [
                 'merc_area' => $res['merc_area'],
                 'area_nm' => $res['area_nm'],
@@ -222,41 +260,77 @@ class Incom extends Controller
                 'merc_city' => $res['merc_city'],
                 'city_nm' => $res['city_nm'],
             ];
-            /** 检验无误插入数据库 */
+
             $this->insert_to_incom_table("cloud_area_code",$where, $data);
-        }
+        }*/
 
     }
 
+    /**
+     *bank_query 支行名称模糊查询
+     * @param Request $request
+     * @return bool
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function bank_query($open_branch=null) {
+        if(empty($open_branch)){
+            $branch=request()->param('open_branch');
+            $str_len=strlen($branch)/3;
+            if($str_len<10){
+                return_msg(400,'长度不能低于10位');
+            }
+            $query = [
+                'serviceId' => "6060208",
+                'version' => "V1.0.1",
+                'lbnk_nm' => $branch,  //最少输入不低于5个字
+                'orgNo' => ORG_NO,
+            ];
+            $query['signValue'] = sign_ature(0000, $query);
+//        halt($query);
+            $res = curl_request($this->url, true, $query, true);
+            /** json转成数组 */
+            $res = json_decode($res, true);
+            if($res['msg_cd']==000000){
+                $check = $this->check_sign_value($res['signValue'], $res);
+                if($check==true){
+                    return_msg(200,'success',$res['REC']);
+                }
+            }else{
+                return_msg(400,$res['msg_dat']);
+            }
+        }else{
+            //用户自己输入支行名称
+            $query = [
+                'serviceId' => "6060208",
+                'version' => "V1.0.1",
+                'lbnk_nm' => $open_branch,  //最少输入不低于5个字
+                'orgNo' => ORG_NO,
+            ];
+            $query['signValue'] = sign_ature(0000, $query);
+//        halt($query);
+            $res = curl_request($this->url, true, $query, true);
+            /** json转成数组 */
+            $res = json_decode($res, true);
+            if($res['msg_cd']==000000){
+                $check = $this->check_sign_value($res['signValue'], $res);
+                if($check==true){
+                    return $res['REC'][0]['wc_lbnk_no'];
+                }
+            }else{
+                return_msg(400,$res['msg_dat']);
+            }
+        }
 
-    public function bank_query(Request $request) {
-
-
-        $arr = $request->param();
+        /*$arr = $request->param();
         $id = $request->param("merchant_id");
         if (empty($id)) {
             return false;
         }
-        $result = MerchantIncom::where("merchant_id=$id")->field("orgNo")->find();
-        $query = [
-            'serviceId' => "6060208",
-            'version' => "V1.0.1",
-            'lbnk_nm' => $arr['lbnk_nm'],  //最少输入不低于5个字
-            'orgNo' => $result->getData('orgNo'),
-        ];
-        $query['signValue'] = sign_ature(0000, $query);
+        $result = MerchantIncom::where("merchant_id=$id")->field("orgNo")->find();*/
 
-        $res = curl_request($this->url, true, $query, true);
 
-        /** json转成数组 */
-        $res = json_decode($res, true);
-        $check = $this->check_sign_value($query['signValue'], $res);
-
-        $data['wc_lbnk_no'] = $res['wc_lbnk_no'];
-        $data['lbnk_nm'] = $res['lbnk_nm'];
-        if ($check === true) {
-            return_msg(200,"查询成功",$data);
-        }
     }
     /**
      * 商户进件
@@ -270,7 +344,6 @@ class Incom extends Controller
         $data = MerchantIncom::field('fee_rat1_scan,fee_rat3_scan,fee_rat_scan, incom_type,stl_typ,stl_sign,stl_oac,bnk_acnm,wc_lbnk_no,bus_lic_no,bse_lice_nm,crp_nm,mercAdds,bus_exp_dt,crp_id_no,crp_exp_dt,stoe_nm,stoe_cnt_nm,stoe_cnt_tel,mcc_cd,stoe_area_cod,stoe_adds,trm_rec,mailbox,yhkpay_flg,alipay_flg,orgNo,cardTyp,suptDbfreeFlg,tranTyps,crp_exp_dt_tmp,icrp_id_no,fee_rat,max_fee_amt,fee_rat1')->where('merchant_id', $merchant_id)->find();
         $data['serviceId'] = 6060601;
         $data['version'] = 'V1.0.3';
-        $data['cardTyp']='01';
         //获取商户id
 //        $data['merchant_id']=11;
 //        $info=MerchantIncom::insert($data);
@@ -301,8 +374,10 @@ class Incom extends Controller
             } else {
                 return_msg(400, 'failure');
             }
-        } else {
+        }else {
             //审核未通过
+            MerchantIncom::where('merchant_id',$merchant_id)->delete();
+            TotalMerchant::where('id',$merchant_id)->delete();
             return_msg(400, 'failure', $result['msg_dat']);
         }
 //        }else{
@@ -330,7 +405,7 @@ class Incom extends Controller
         $data['signValue'] = sign_ature(0000,$data);
 
         $result=curl_request($this->url,true,$data,true);
-        $result=json_decode($result,true);
+        $result = json_decode($result,true);
         if (!empty($result)) {
             return_msg(400, $result);
         }
@@ -339,7 +414,11 @@ class Incom extends Controller
         if( $signValue == $result['signValue'] ){
             if(isset($result['check_flag'])){
                 //修改数据表状态
-                $res=MerchantIncom::where('merchant_id',$merchant_id)->update(['check_flag'=>$result['check_flag']]);
+                $res = MerchantIncom::where('merchant_id',$merchant_id)->update(['check_flag'=>$result['check_flag'],
+                    'key' => $result["key"],
+                    'rec' => $result['REC']
+                    ]);
+
                 if($res){
                     return_msg(200,'success');
                 }else{
@@ -418,7 +497,11 @@ class Incom extends Controller
                 IncomImg::where('merchant_id',$data['merchant_id'])->update(['img'=>json_encode($arr)]);
             }
 //            $file_img=$file_img['img'].$img;
-            return_msg(200,'success',['merchant_id'=>$data['merchant_id']]);
+            $res=[
+                'merchant_id'=>$data['merchant_id'],
+                'img'=>$img
+            ];
+            return_msg(200,'success',$res);
         }else{
             return_msg(400,'failure');
         }

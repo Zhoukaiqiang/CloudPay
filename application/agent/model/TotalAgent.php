@@ -8,6 +8,6 @@ class TotalAgent extends Model
 {
     protected $autoWriteTimestamp = true;
     protected $updateTime = false;
-    protected $createTime = true;
+    protected $createTime = 'create_time';
 
 }

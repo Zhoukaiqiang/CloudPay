@@ -5,6 +5,7 @@ namespace app\merchant\controller;
 use app\merchant\model\MerchantShop;
 use app\merchant\model\MerchantUser;
 use think\Controller;
+use think\Loader;
 use think\Request;
 
 class User extends Controller
@@ -98,7 +99,7 @@ class User extends Controller
      */
     public function add(Request $request)
     {
-        $merchant_id=session('merchant_id') ? session('merchant_id') : null;
+        $merchant_id=session('merchant_id') ? session('merchant_id') : 1;
         $user_id=session('user_id') ? session('user_id') : null;
         if($request->isPost()){
             if(!empty($merchant_id)){
@@ -106,6 +107,11 @@ class User extends Controller
                 $data=$request->post();
                 $data['merchant_id']=$merchant_id;
                 //验证
+                $validate=Loader::validate('MerchantValidate');
+                if(!$validate->scene('add_user')->check($data)){
+                    $error=$validate->getError();
+                    return_msg(400,$error);
+                }
                 //查询手机号是否存在
                 $info=MerchantUser::where('phone',$data['phone'])->find();
                 if($info){
@@ -125,6 +131,11 @@ class User extends Controller
                 $merchant=MerchantUser::field('merchant_id')->where('id',$user_id)->find();
                 $data['merchant_id']=$merchant['merchant_id'];
                 //验证
+                $validate=Loader::validate('MerchantValidate');
+                if(!$validate->scene('add_user')->check($data)){
+                    $error=$validate->getError();
+                    return_msg(400,$error);
+                }
                 //查询手机号是否存在
                 $info=MerchantUser::where('phone',$data['phone'])->find();
                 if($info){
