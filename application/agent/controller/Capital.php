@@ -545,62 +545,72 @@ class Capital extends Controller
     {
 
         $id = Session::get("username_")["id"];
+        $rate = TotalAgent::get($id)->toArray()["agent_rate"];
+
+        $rows = $data["list"] = AgentPartner::where(["agent_id" => $id])->count("id");
+        $pages = page($rows);
         $data["list"] = AgentPartner::where(["agent_id" => $id])
             ->field("id,partner_name,model,proportion,rate")
+            ->limit($pages["limit"], $pages["offset"])
             ->select();
 
         if (!count($data["list"])) {
             return_msg(400, "no data");
         }
 
-        $commission = 0;
+        $commission = 0; $partner_money = 0;$money = 0; $count = 0;
         foreach ($data["list"] as &$v) {
 
-            dump($v["id"]);
+
+
+            /** 获取商户微信交易额 */
+            $merchant["mer_wx_amount"] = $this->get_partner_amount($v["id"], "wxpay");
+
+            /** 获取商户支付宝交易额 */
+            $merchant["mer_ali_amount"] = $this->get_partner_amount($v["id"], "alipay");
+
+            /** 获取商户微信交易量 */
+            $merchant["mer_wx_num"] = $this->get_partner_num($v["id"], "wxpay");
+
+            /** 获取商户支付宝交易量 */
+            $merchant["mer_ali_num"] = $this->get_partner_num($v["id"], "alipay");
+
+
+
+            $raw_data = TotalMerchant::where(["partner_id" => $v["id"]])->field("merchant_rate, id")->select();
+
+            $merchant_rate = collection($raw_data)->toArray();
             /** 获取商户数量 */
-            $merchant["mer_num"] = TotalMerchant::where("partner_id", $v["id"])->count("id");
+            $merchant["mer_num"] = count($merchant_rate);
 
+            if ($v['model'] == 0) {
+                //按比例
+                foreach ($merchant_rate as $j) {
+                    /** 该合伙人下1个商户总交易额 */
+                    $money = Order::where(["merchant_id" => $j["id"]])->sum("received_money");
 
-//            /** 获取商户微信交易额 */
-//            $merchant["mer_wx_amount"] = $this->get_type_amount($v["id"], "wxpay");
-//
-//            /** 获取商户支付宝交易额 */
-//            $merchant["mer_ali_amount"] = $this->get_type_amount($v["id"], "alipay");
-//
-//            /** 获取商户微信交易量 */
-//            $merchant["mer_wx_num"] = $this->get_type_num($v["id"], "wxpay");
-//
-//            /** 获取商户支付宝交易量 */
-//            $merchant["mer_ali_num"] = $this->get_type_num($v["id"], "alipay");
-//
-//
-//            $raw_data = TotalMerchant::where(["agent_id" => $v["id"]])->field("merchant_rate,id")->select();
-//
-//            $merchant_rate = collection($raw_data)->toArray();
-//
-//
-//            if ($v['model'] == 0) {
-//                //安比例
-//
-//                foreach ($merchant_rate as $j) {
-//                    $money = Order::where(["merchant_id" => $j["id"]])->sum("received_money");
-//                    $commission += $money * $v["proportion"] / 100;
-//                }
-//
-//            } elseif ($v['model'] == 1) {
-//                //按费率
-//                foreach ($merchant_rate as $j) {
-//                    $money = Order::where(["merchant_id" => $j["id"]])->sum("received_money");
-//                    $commission += $money * ($j['merchant_rate'] - $v["rate"]) / 100;
-//                }
-//            }
+                    $partner_money += $money * ($j["merchant_rate"] - $v["proportion"]) / 100;
+                    $count += $money;
+                }
+                $commission = $count * ($v["proportion"] - $rate) / 100;
+            } elseif ($v['model'] == 1) {
+                //按费率
+                foreach ($merchant_rate as $j) {
+                    $money = Order::where(["merchant_id" => $j["id"]])->sum("received_money");
 
-            die;
+                    $partner_money += $money * ($j['merchant_rate'] - $v["rate"]) / 100;
+                    $count += $money;
+                }
+                $commission = $count * ($v["rate"] - $rate) / 100;
+            }
+
             /** 商户总交易额 */
 
             $v["mer_amount"] = $merchant["mer_ali_amount"] + $merchant["mer_wx_amount"];
 
-            //所得佣金数
+            /** 合伙人佣金 */
+            $v["partner_money"] = $partner_money;
+            /** 所得佣金数 */
             $v["commission"] = $commission;
             /** 商户数 */
             $v["mer_num"] = $merchant["mer_num"];
@@ -613,7 +623,19 @@ class Capital extends Controller
             /** 支付宝交易额 */
             $v["mer_ali_amount"] = $merchant["mer_ali_amount"];
 
+
         }
+
+        $index_commission = 0;
+        $index_deserve = 0;
+        foreach ($data["list"] as $val) {
+            $index_commission += $val["commission"];
+            $index_deserve += $val["partner_money"];
+        }
+        $data["list"]["count"]["commission"] = $index_commission;
+        $data["list"]["count"]["deserve"] = $index_deserve;
+        $data["list"]["pages"] = $pages;
+        return_msg(200, "success", $data);
     }
 
 
@@ -827,6 +849,29 @@ class Capital extends Controller
             ->join("cloud_total_merchant mer", "mer.agent_id = ag.id")
             ->join("cloud_order o", "o.merchant_id = mer.id")
             ->where("ag.id", $id)
+            ->where("o.pay_type", $type)
+            ->sum("received_money");
+        return $res;
+
+    }
+
+    protected function get_partner_num($id, $type)
+    {
+        $res = TotalAgent::alias("ap")
+            ->join("cloud_total_merchant mer", "mer.partner_id = ap.id")
+            ->join("cloud_order o", "o.merchant_id = mer.id")
+            ->where("ap.id", $id)
+            ->where("o.pay_type", $type)
+            ->count("o.id");
+        return $res;
+    }
+
+    protected function get_partner_amount($id, $type)
+    {
+        $res = AgentPartner::alias("ap")
+            ->join("cloud_total_merchant mer", "mer.partner_id = ap.id")
+            ->join("cloud_order o", "o.merchant_id = mer.id")
+            ->where("ap.id", $id)
             ->where("o.pay_type", $type)
             ->sum("received_money");
         return $res;
