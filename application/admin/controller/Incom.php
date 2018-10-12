@@ -547,7 +547,7 @@ class Incom extends Controller
     }
 
 
-    /**
+    /*
      * 商户修改申请
      * 商户审核通过后，修改商户为修改未完成状态
      * @param Request $request
@@ -559,8 +559,9 @@ class Incom extends Controller
         $serviceId=6060605;
         $version='V1.0.1';
         $data=Db::name('merchant_incom')->where('merchant_id',$id)->field('mercId,orgNo,check_flag')->select();
+
         //商户是否通过审核
-        if($data[0]['check_flag']==1) {
+//        if($data[0]['check_flag']==1) {
             $resul = ['serviceId' => $serviceId, 'version' => $version, 'mercId' => $data[ 0 ][ 'mercId' ], 'orgNo' => $data[ 0 ][ 'orgNo' ]];
             //获取签名域
             $resul_age = sign_ature(0000, $resul);
@@ -571,7 +572,8 @@ class Incom extends Controller
             $bbntu = json_decode($par, true);
             $return_sign = sign_ature(1111, $resul);
 
-//              dump($bbntu);die;
+              dump($bbntu);die;
+
             if ($bbntu[ 'msg_cd' ] === 000000) {
                 if ($return_sign == $bbntu[ 'signValue' ]) {
                     //商户状态修改为修改未完成
@@ -584,9 +586,9 @@ class Incom extends Controller
             } else {
                 return_msg(500, 'error',$bbntu['msg_dat']);
             }
-        }else{
-            return_msg(100,'error','商户审核未通过');
-        }
+//        }else{
+//            return_msg(100,'error','商户审核未通过');
+//        }
 
     }
 

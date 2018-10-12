@@ -37,6 +37,7 @@ class Active extends Controller
                         if($k==$k1){
                             //判断是永久还是设置时间
                             if($data['active_time']==0){
+                                //验证
                                 check_params('recharge',$data,'MerchantValidate');
                                 $arr=[
                                     'recharge_money'=>$v,
@@ -76,8 +77,6 @@ class Active extends Controller
                     return_msg(200,'操作成功');
                 }
             }else{
-                //验证
-                check_params('recharge',$data,'MerchantValidate');
                 $data['status']=1;
                 $data['create_time']=time();
                 $data['merchant_id']=$this->merchant_id;
@@ -102,6 +101,12 @@ class Active extends Controller
         if($request->isPost()){
             $data=$request->post();
             if(is_array($data['shop_id'])){
+                if($data['active_time']==0){
+                    //验证
+                    check_params('discount',$data,'MerchantValidate');
+                }elseif($data['active_time']==1){
+                    check_params('new_discount',$data,'MerchantValidate');
+                }
                 foreach($data['shop_id'] as $k=>$v){
                     $data['shop_id']=$v;
                     $data['status']=1;
@@ -109,7 +114,6 @@ class Active extends Controller
                     //获取商户id
                     $info=MerchantShop::field('merchant_id')->where('id',$data['shop_id'])->find();
                     $data['merchant_id']=$info['merchant_id'];
-                    //验证
                     $result=ShopActiveDiscount::insert($data,true);
                     if($result){
                         $res[]=200;
@@ -123,12 +127,17 @@ class Active extends Controller
                     return_msg(200,'操作成功');
                 }
             }else{
+                if($data['active_time']==0){
+                    //验证
+                    check_params('discount',$data,'MerchantValidate');
+                }elseif($data['active_time']==1){
+                    check_params('new_discount',$data,'MerchantValidate');
+                }
                 $data['status']=1;
                 $data['create_time']=time();
                 //获取商户id
                 $info=MerchantShop::field('merchant_id')->where('id',$data['shop_id'])->find();
                 $data['merchant_id']=$info['merchant_id'];
-                //验证
                 $result=ShopActiveDiscount::insert($data,true);
                 if($result){
                     return_msg(200,'操作成功');
@@ -160,13 +169,15 @@ class Active extends Controller
     public function exclusive (Request $request)
     {
         $data=$request->post();
-        $data['status']=1;
+        $data['status']=1;//测试
         $data['create_time']=time();
         $data['consump_number']=$request->post('consump_number') ? $request->post('consump_number') : -1;
         $data['last_consump']=$request->post('last_consump') ? $request->post('last_consump') : -1;
         $data['recharge_total']=$request->post('recharge_total') ? $request->post('recharge_total') : -1;
         $data['consump_total']=$request->post('consump_total') ? $request->post('consump_total') : -1;
         $data['merchant_id']=$this->merchant_id;
+        //验证
+        check_params('exclusive',$data,'MerchantValidate');
         $insertid=ShopActiveExclusive::insertGetId($data,true);
         if($insertid){
             //判断会员是否符合条件
@@ -245,6 +256,8 @@ class Active extends Controller
     {
         if($request->isPost()){
             $data=$request->post();
+            //验证
+            check_params('share',$data,'MerchantValidate');
             if(is_array($data['shop_id'])){
                 foreach($data['shop_id'] as $k=>$v){
                     $data['shop_id']=$v;
@@ -253,7 +266,7 @@ class Active extends Controller
                     //获取商户id
                     $info=MerchantShop::field('merchant_id')->where('id',$data['shop_id'])->find();
                     $data['merchant_id']=$info['merchant_id'];
-                    //验证
+
                     $result=ShopActiveShare::insert($data,true);
                     if($result){
                         $res[]=200;

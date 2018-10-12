@@ -219,7 +219,7 @@ class Reconciliation extends Controller
     }
 
     /**
-     * 日周月账单筛选查询
+     * 日周月账单筛选查询 上一天下一天查询  周月
      * @param Request $request
      * @return string
      */
@@ -259,7 +259,7 @@ class Reconciliation extends Controller
     public function tuensfisddds(Request $request)
     {
         $shops=$request->post();
-        //判断是否是全部门店
+        //判断是否是商户
         if($shops['shop_id']==0){
             $merchant_id=session('merchant_id');
             $merchant_id=1;
