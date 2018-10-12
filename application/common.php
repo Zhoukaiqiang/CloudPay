@@ -205,10 +205,10 @@ if (!function_exists('page')) {
 }
 
 /**
- * 验证
+ * 参数验证
  */
 if (!function_exists("check_params")) {
-    function check_params($scene, $param,$validate="AdminValidate") {
+    function check_params($scene, $param, $validate="AdminValidate") {
         $validate = \think\Loader::validate($validate);
         $check = $validate->scene($scene)->check($param);
         if (!$check) {
@@ -441,10 +441,6 @@ if(!function_exists('image_thumbnail')) {
             return 9;
         }
 
-
-
     }
+
 }
-
-
-

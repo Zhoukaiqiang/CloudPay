@@ -17,6 +17,7 @@ class AdminValidate extends Validate{
         ['detailed_address','require','请填写详细地址'],
         ['admin_id'      ,'require','请选择运营人员'],
         ['username'      ,'require','请填写登录账号'],
+        ['phone','require|regex:/^1[3-9]\d{9}$/|length:11','请填写联系电话|联系电话格式不正确|电话必须为11位'],
         ['password'      ,'require|length:6','请填写密码|密码必须为6位数'],
         ['open_bank'     ,'require','请填写开户行名称'],
         ['open_bank_branche','require','请填写开户行网点'],
@@ -40,7 +41,6 @@ class AdminValidate extends Validate{
         ['address','require','请选择地址信息'],
         ['detail_address','require','请输入详细地址'],
         ['contact','require','请填写联系人'],
-        ['phone','require|regex:/^1[3-9]\d{9}$/','请填写联系电话|联系电话格式不正确'],
         ['category','require','请选择经营类目'],
         ['account_type','require','请选择账户类型'],
         ['account_name','require','请输入账户名'],
@@ -75,7 +75,7 @@ class AdminValidate extends Validate{
         "agent_login"   => ["phone", "password"],
         "agent_add_partner" => ["partner_phone", "password", "agent_id", "partner_name", "model","commission"],
         //商户登录验证
-        "merchant_login" => ['phone','password'],
+        "merchant_login" => ['phone', 'password'],
         "merchant_get_profile" => ['phone'],
         "merchant_change_pwd"  => ['phone', 'password'],
 

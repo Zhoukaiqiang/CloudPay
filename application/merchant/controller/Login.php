@@ -13,6 +13,7 @@ namespace app\Merchant\controller;
 use app\admin\controller\Common;
 use app\admin\model\TotalMerchant;
 use app\merchant\model\MerchantUser;
+use think\Controller;
 use think\Db;
 use think\Exception;
 use think\Loader;
@@ -24,24 +25,12 @@ use think\Validate;
  * Class User
  * @package app\index\controller
  */
-class Login extends Common
+class Login extends Controller
 {
     /**
      * 前置操作（调用某个方法时先调用设置的前置方法）
      * @var array
      */
-    protected $beforeActionList = [
-        //'bbb' => ['only' => 'test']
-    ];
-
-    protected $rules = [
-        'Login' => [
-            "login" => [
-                ['phone','require|length:11', '账号必须填写|手机号长度为11'],
-                ['password', 'require', '密码必须填写'],
-            ],
-        ],
-    ];
 
     /**
      * @throws Exception
@@ -55,48 +44,57 @@ class Login extends Common
     }
 
     /**
+     * 密码生成  ----（*上线删除*）
+     * @return string
+     */
+    function encrypt_password()
+    {
+        $password = request()->param("password");
+        $phone = request()->param("phone");
+        return md5('$ysf' . md5($password) . $phone);
+    }
+
+    /**
      * 用户登录 -- 可以 商户登录 / 门店店员登录
      * @param [strin]   user_name 用户名（电话）
      * @param [stirng]  password  用户密码
+     * @method POST
      * @return [json] 返回信息
      * @throws Exception
      */
     public function login()
     {
         if (request()->isPost()) {
-            $data = $this->request;
+            $data = \request()->post();
             $user_name_type = 'phone';
             /** 检验参数 */
 
-            $this->check_params($data);
-            //mark
+            check_params("merchant_login", $data);
 
             $this->check_exist($data['phone'], 'phone', 1);
-            $db_res = TotalMerchant::where("phone",$data['phone'])->field("id,contact,phone,password,status")->find();
+            $db_res = MerchantUser::where("phone",$data['phone'])->field("id,name,phone,role,password")->find();
 
             if (!$db_res) {
-                $db_res = MerchantUser::where("phone",$data['phone'])->field("id,name,phone,role,password")->find();
+                $db_res = TotalMerchant::where("phone",$data['phone'])->field("id,contact,phone,password,status")->find();
             }
 
             $res = $db_res->toArray();
 
-            /** ((((((((((((((((((mark))))))))))))))))) */
-//            $db_res['password'] !== $this->encrypt_password($data['password'], $data["phone"])
-            if ($res['password'] !== $data['password']) {
-                $this->return_msg(400, '用户密码不正确！');
+
+            if ($db_res['password'] !== encrypt_password($data['password'], $data["phone"])) {
+
+                return_msg(400, '用户密码不正确！');
             } else {
 
                 /** 登录成功设置session */
-
 
                 if (empty($res['role'])) {
                     Session::set("username_", [ "id" => $res['id'] , "role" => -1 ], 'app');
                 }else {
                     Session::set("username_", [ "id" => $res['id'],  "role" => $res["role"] ], 'app');
                 }
-
                 unset($res['password']); //密码不返回
-                $this->return_msg(200, '登录成功！', $res);
+                return_msg(200, '登录成功！', $res);
             }
         }
 
@@ -107,7 +105,11 @@ class Login extends Common
      * @param Request $request
      */
     public function logout (Request $request) {
-        Session::clear();
+        Session::clear("app");
+        if (!Session::get("username_" , "app")) {
+            return_msg(200, "退出成功");
+        }
+
     }
 
     /**
@@ -132,10 +134,10 @@ class Login extends Common
         $result = TotalAdmin::create($data);
 
         if (!$result) {
-            $this->return_msg(400, '插入新成员失败!');
+            return_msg(400, '插入新成员失败!');
         } else {
             unset($result['password']);
-            $this->return_msg(200, '插入新成员成功！', $result);
+            return_msg(200, '插入新成员成功！', $result);
         }
 
     }
@@ -153,7 +155,7 @@ class Login extends Common
     {
         $result = Db::table('cloud_total_admin')->where('phone', $phone)->find();
         if ($result) {
-            return $this->return_msg(400, '用户已存在！');
+            return return_msg(400, '用户已存在！');
         }
     }
 
@@ -165,9 +167,9 @@ class Login extends Common
         }
         $result = Db::table('cloud_total_admin')->delete($id);
         if ($result) {
-            $this->return_msg(200, '删除成功');
+            return_msg(200, '删除成功');
         } else {
-            $this->return_msg(400, '删除失败');
+            return_msg(400, '删除失败');
         }
     }
 
@@ -191,9 +193,9 @@ class Login extends Common
 
         $result = Db::table('cloud_total_admin')->where('id', $id)->update($data);
         if (!$result) {
-            $this->return_msg(400, '修改新成员失败!');
+            return_msg(400, '修改新成员失败!');
         } else {
-            $this->return_msg(200, '修改新成员成功！', $result);
+            return_msg(200, '修改新成员成功！', $result);
         }
 
     }
@@ -225,15 +227,15 @@ class Login extends Common
         /* 判断原始密码是否正确 */
         $db_ini_pwd = db('total_admin')->where($where)->value('password');
         if ($db_ini_pwd !== $data['ini_pwd']) {
-            $this->return_msg(400, '密码错误!');
+            return_msg(400, '密码错误!');
         }
 
         /* 把新的密码存入数据库 */
         $res = db('total_admin')->where($where)->setField('password', $this->encrypt_password($data['password'], $data['phone']));
         if ($res !== false) {
-            $this->return_msg(200, '密码修改成功！');
+            return_msg(200, '密码修改成功！');
         } else {
-            $this->return_msg(400, '密码修改失败！');
+            return_msg(400, '密码修改失败！');
         }
     }
 
@@ -266,9 +268,9 @@ class Login extends Common
         /* 修改数据库 */
         $res = db('total_admin')->where($where)->setField('password', $this->encrypt_password($data['password'], $data['phone']));
         if ($res !== false) {
-            $this->return_msg(200, '密码修改成功！');
+            return_msg(200, '密码修改成功！');
         } else {
-            $this->return_msg(400, '密码修改失败！');
+            return_msg(400, '密码修改失败！');
         }
     }
 
@@ -289,9 +291,9 @@ class Login extends Common
         /* 修改数据库 */
         $res = db('total_admin')->where('id', $data['user_id'])->setField('email', $data['email']);
         if ($res !== false) {
-            $this->return_msg(200, '邮箱绑定成功！');
+            return_msg(200, '邮箱绑定成功！');
         } else {
-            $this->return_msg(400, '邮箱绑定失败！');
+            return_msg(400, '邮箱绑定失败！');
         }
     }
 
@@ -322,25 +324,25 @@ class Login extends Common
             /* 2+0 phone need no exist */
             case 2:
                 if ($phone_res) {
-                    $this->return_msg(400, '手机号已经被占用');
+                    return_msg(400, '手机号已经被占用');
                 }
                 break;
             /*  2+1 phone need exist */
             case 3:
                 if (!$phone_res) {
-                    $this->return_msg(400, '手机号不存在！');
+                    return_msg(400, '手机号不存在！');
                 }
                 break;
             /* 4+0 email need no exist */
             case 4:
                 if ($email_res) {
-                    $this->return_msg(400, '此邮箱已经被占用！');
+                    return_msg(400, '此邮箱已经被占用！');
                 }
                 break;
             /* 4+1 email need exist */
             case 5:
                 if (!$email_res) {
-                    $this->return_msg(400, '此邮箱不存在！');
+                    return_msg(400, '此邮箱不存在！');
                 }
                 break;
 
@@ -363,7 +365,7 @@ class Login extends Common
         /* 验证参数并返回错误 */
         $this->validater = new Validate($rule);
         if (!$this->validater->check($arr)) {
-            $this->return_msg(400, $this->validater->getError());
+            return_msg(400, $this->validater->getError());
         }
 
         return $arr;
