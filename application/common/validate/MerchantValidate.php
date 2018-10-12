@@ -15,8 +15,8 @@ class MerchantValidate extends Validate
         ['shop_id', 'require', '请选择门店'],
 
         //充值送
-        ['recharge_money', 'require|number', '请选择充值金额|充值金额必须为数字'],
-        ['give_money', 'require|number', '请选择赠送金额|充值金额必须为数字'],
+        ['recharge_money', 'require', '请设置充值金额'],
+        ['give_money', 'require', '请设置赠送金额'],
         ['active_time', 'require', '请设置活动时间'],
         ['start_time', 'require', '请选择开始时间'],
         ['end_time', 'require', '请选择结束时间'],
@@ -47,11 +47,11 @@ class MerchantValidate extends Validate
         'add_user' => ['name', 'phone', 'password', 'role', 'shop_id'],
         //充值送
         'recharge'=>[
-            'recharge_money', 'give_money', 'active_time'
+            'recharge_money', 'give_money', 'active_time,shop_id'
         ],
         //选择时间充值送
         'new_recharge'=>[
-            'recharge_money', 'give_money', 'active_time','start_time','end_time'
+            'recharge_money', 'give_money', 'active_time','start_time','end_time,shop_id'
         ],
         //折扣
         'discount'=>[

@@ -109,7 +109,7 @@ class Member extends Controller
     {
         //获取会员订单id
         $id=$request->param('id');
-        $id=1;
+        $id=1;//测试
         $data=Order::alias('a')
             ->field('a.received_money,a.order_money,a.discount,a.cashier,a.pay_time,a.pay_type,a.order_remark,a.order_number,a.status,a.authorize_number,a.prove_number,a.give_money,b.shop_name')
             ->join('cloud_merchant_shop b','a.shop_id=b.id')
@@ -179,6 +179,86 @@ class Member extends Controller
         }
     }
 
+    /**
+     * 扫码收款
+     *
+     * @param  status 支付状态 0未支付 1已支付 2已关闭 3会员充值
+     * @param  int  $id
+     * @return \think\Response
+     */
+    public function scan_code(Request $request)
+    {
+        if(!empty($this->merchant_id)){
+            //获取会员id
+            $data=$request->post();
+            //发送给新大陆
+            $result = curl_request($this->url, true, $data, true);
+            if($result['Result']=="S"){
+                $arr=[
+                    'LogNo'=>$result['LogNo'],
+                    'order_no'=>$result['orderNo'],
+                    'received_money'=>$result['Amount']/100,
+                    'order_money'=>$result['total_amount']/100,
+                    'member_id'=>$data['id'],
+                    'prove_number'=>$data['authCode'],
+                    'pay_type'=>$data['payChannel'],
+                    'status'=>3,
+                    'create_time'=>time(),
+                    'pay_time'=>time(),
+                    'merchant_id'=>$this->merchant_id
+                ];
+                $res=Order::insert($arr);
+                if($res){
+                    return_msg(200,'交易成功');
+                }else{
+                    return_msg(200,'交易失败');
+                }
+            }else{
+                return_msg(400,'交易失败');
+            }
+        }elseif(empty($this->merchant_id) && !empty($this->user_id)){
+            //获取会员id
+            $data=$request->post();
+            //发送给新大陆
+            $result = curl_request($this->url, true, $data, true);
+            if($result['Result']=="S"){
+                $arr=[
+                    'LogNo'=>$result['LogNo'],
+                    'order_no'=>$result['orderNo'],
+                    'received_money'=>$result['Amount']/100,
+                    'order_money'=>$result['total_amount']/100,
+                    'member_id'=>$data['id'],
+                    'prove_number'=>$data['authCode'],
+                    'pay_type'=>$data['payChannel'],
+                    'status'=>3,
+                    'create_time'=>time(),
+                    'pay_time'=>time(),
+                    'merchant_id'=>$this->user_id
+                ];
+                $res=Order::insert($arr);
+                if($res){
+                    return_msg(200,'交易成功');
+                }else{
+                    return_msg(200,'交易失败');
+                }
+            }else{
+                return_msg(400,'交易失败');
+            }
+        }
+
+    }
+
+    /**
+     * 银联收款
+     *
+     * @param  status 支付状态 0未支付 1已支付 2已关闭 3会员充值
+     * @param  int  $id
+     * @return \think\Response
+     */
+    public function union_pay()
+    {
+        
+    }
     /**
      * 会员数据
      *

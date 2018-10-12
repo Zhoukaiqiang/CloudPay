@@ -222,6 +222,7 @@ class Incom extends Controller
         $res = curl_request($this->url, true, $query, true);
         /** json转成数组 */
         $res = json_decode($res, true);
+        halt($res);
         /*for($i=0;$i<count($res['REC']);$i++){
             AreaCode::insert($res['REC'][$i]);
 
