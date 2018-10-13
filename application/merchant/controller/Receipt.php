@@ -68,7 +68,7 @@ class Receipt extends Controller
             }
         }elseif(empty($this->merchant_id) && !empty($this->user_id)){
             //取出用户手机和密码
-            $data=MerchantUser::field('phone,password')->where('id',$this->user_id)
+            $data = MerchantUser::field('phone,password')->where('id',$this->user_id)
                 ->find();
             $param['password']=encrypt_password($param['password'],$data['phone']);
             //判断
