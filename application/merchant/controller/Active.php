@@ -14,16 +14,8 @@ use think\Controller;
 use think\Request;
 use think\Session;
 
-class Active extends Controller
+class Active extends Common
 {
-    public $merchant_id;
-    public $user_id;
-    public function __construct()
-    {
-//        $data=Session::get('username_');
-        $this->merchant_id=session('merchant_id') ? session('merchant_id') : null;
-        $this->user_id=session('user_id') ? session('user_id') : 1;
-    }
     /**
      * 充值送
      *
@@ -254,9 +246,9 @@ class Active extends Controller
                     }
                 }
             }
-            return_msg(200,'派卷成功');
+            return_msg(200,'派券成功');
         }else{
-            return_msg(400,'派卷失败');
+            return_msg(400,'派券失败');
 
         }
     }
@@ -441,7 +433,7 @@ class Active extends Controller
      * @param  int  $id
      * @return \think\Response
      */
-    public function stop_active(Request $request)
+    /*public function stop_active(Request $request)
     {
         $data=$request->post();
         if($data['active']=='recharge'){
@@ -464,7 +456,7 @@ class Active extends Controller
             return_msg(400,'操作失败');
 
         }
-    }
+    }*/
     /**
      * 关闭充值送活动
      *
@@ -495,6 +487,44 @@ class Active extends Controller
     {
         $id=$request->post('id');
         $result=ShopActiveDiscount::where('id',$id)->update(['status'=>0]);
+        if($result){
+            return_msg(200,'操作成功');
+        }else{
+            return_msg(400,'操作失败');
+
+        }
+    }
+
+    /**
+     * 关闭分享
+     *
+     * @param  \think\Request  $request
+     * @param  int  $id
+     * @return \think\Response
+     */
+    public function share_stop(Request $request)
+    {
+        $id = $request->post('id');
+        $result=ShopActiveShare::where('id',$id)->update(['status'=>0]);
+        if($result){
+            return_msg(200,'操作成功');
+        }else{
+            return_msg(400,'操作失败');
+
+        }
+    }
+
+    /**
+     * 关闭会员专享
+     *
+     * @param  \think\Request  $request
+     * @param  int  $id
+     * @return \think\Response
+     */
+    public function exclusive_stop(Request $request)
+    {
+        $id = $request->post('id');
+        $result=ShopActiveExclusive::where('id',$id)->update(['status'=>0]);
         if($result){
             return_msg(200,'操作成功');
         }else{

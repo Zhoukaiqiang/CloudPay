@@ -11,15 +11,9 @@ use app\merchant\model\ShopActiveRecharge;
 use think\Controller;
 use think\Request;
 
-class Member extends Controller
+class Member extends Common
 {
-    public $merchant_id;
-    public $user_id;
-    public function __construct()
-    {
-        $this->merchant_id=session('merchant_id') ? session('merchant_id') : null;
-        $this->user_id=session('user_id') ? session('user_id') : 1;
-    }
+
     /**
      * 显示会员列表
      *
