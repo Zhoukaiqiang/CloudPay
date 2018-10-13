@@ -10,16 +10,10 @@ use app\merchant\model\TotalMerchant;
 use think\Controller;
 use think\Request;
 
-class Receipt extends Controller
+class Receipt extends Common
 {
     public $url = 'http://sandbox.starpos.com.cn/emercapp';
-    public $merchant_id;
-    public $user_id;
-    public function __construct()
-    {
-        $this->merchant_id=session('merchant_id') ? session('merchant_id') : null;
-        $this->user_id=session('user_id') ? session('user_id') : 1;
-    }
+
     /**
      * 显示账单详情
      *
@@ -218,26 +212,5 @@ class Receipt extends Controller
         }
     }
 
-    /**
-     * 保存更新的资源
-     *
-     * @param  \think\Request  $request
-     * @param  int  $id
-     * @return \think\Response
-     */
-    public function update(Request $request, $id)
-    {
-        //
-    }
 
-    /**
-     * 删除指定资源
-     *
-     * @param  int  $id
-     * @return \think\Response
-     */
-    public function delete($id)
-    {
-        //
-    }
 }
