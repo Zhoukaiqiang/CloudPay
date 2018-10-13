@@ -18,7 +18,10 @@ class AdminValidate extends Validate{
         ['admin_id'      ,'require','请选择运营人员'],
         ['username'      ,'require','请填写登录账号'],
         ['phone','require|regex:/^1[3-9]\d{9}$/|length:11','请填写联系电话|联系电话格式不正确|电话必须为11位'],
+        ["ini_pwd", "require|length:6", "请输入旧密码|密码长度必须为6位数"],
+        ["code", "require|number", "请输入验证码|验证码必须为数字"],
         ['password'      ,'require|length:6','请填写密码|密码必须为6位数'],
+        ["time", "require", "请填写时间"],
         ['open_bank'     ,'require','请填写开户行名称'],
         ['open_bank_branche','require','请填写开户行网点'],
         ['home'          ,'require','请选择所在地'],
@@ -61,6 +64,12 @@ class AdminValidate extends Validate{
 
     //命名规则 控制器_函数名称
     protected $scene=[
+        //改密码
+        "change_pwd" => ["phone", "password", "ini_pwd"],
+        //登录
+        "agent_login"   => ["phone", "password"],
+        //找回密码
+        "find_pwd"  => ["phone", "code", 'time', 'password'],
         //新增代理商
         'add'=>['agent_mode','agent_name','contact_person','detailed_address','admin_id','username','open_bank','open_bank_branche','home','account','account_name','agent_area','agent_money','contract_time','agent_rate','contract_picture','agent_phone'],
         //代理商修改
@@ -71,8 +80,7 @@ class AdminValidate extends Validate{
         'user'=>[
             'name','role_id','status','phone','password'
         ],
-        //代理商登录
-        "agent_login"   => ["phone", "password"],
+
         "agent_add_partner" => ["partner_phone", "password", "agent_id", "partner_name", "model","commission"],
         //商户登录验证
         "merchant_login" => ['phone', 'password'],

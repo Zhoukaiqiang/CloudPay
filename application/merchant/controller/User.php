@@ -13,7 +13,6 @@ use think\Session;
 class User extends Common
 {
 
-
     /**
      * 员工首页
      *  role 角色 1服务员 2店长 3收银员
@@ -35,7 +34,12 @@ class User extends Common
                 ->where(['a.merchant_id'=>$this->merchant_id,'a.role'=>2])
                 ->select();
             //前端传入员工id
-            return_msg(200,'success',$data);
+            if (count($data["user"])) {
+                return_msg(200,'success',$data);
+            }else {
+                return_msg(400,'no data');
+            }
+
         }elseif(!empty($this->user_id)){
             //取出当前店长所属门店
             $info = MerchantUser::field('shop_id')->where('id',$this->user_id)->find();
@@ -49,7 +53,11 @@ class User extends Common
                 ->where(['a.shop_id'=>$info['shop_id'],'a.role'=>['<>',2]])
                 ->select();
 
-            return_msg(200,'success',$data);
+            if (count($data["user"])) {
+                return_msg(200,'success',$data);
+            }else {
+                return_msg(400,'no data');
+            }
         }
 
     }

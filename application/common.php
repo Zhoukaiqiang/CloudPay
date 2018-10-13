@@ -206,6 +206,7 @@ if (!function_exists('page')) {
 
 /**
  * 参数验证
+ * 验证规则写在Common模块 1--AdminValidate 2--MerchantValidate 3--AgentValidate
  */
 if (!function_exists("check_params")) {
     function check_params($scene, $param, $validate = "AdminValidate")
@@ -224,9 +225,10 @@ if (!function_exists("generate_order_no")) {
      * @param $uid [int] 用户ID
      * @return [string] 订单号码
      */
-    function generate_order_no($uid)
+    function generate_order_no($uid = null)
     {
 
+        if(!$uid) {$uid = rand(100,999);}
         $order_num = (string)date("YmdHms") + (string)$uid + rand(100, 999);
         return $order_num;
 
@@ -381,6 +383,25 @@ if (!function_exists('upload_pics')) {
     }
 }
 
+if (!function_exists("check_time")) {
+    /**
+     *
+     * 验证是否请求超时
+     * @param  [array] $arr [包含时间戳的参数数组]
+     * @return [json]       [检测结果]
+     */
+    function check_time($arr)
+    {
+        if (!isset($arr['time']) || intval($arr['time'] <= 1)) {
+            $this->return_msg(400, '时间戳不正确！！');
+        }
+        if (time() - intval($arr['time']) > 120) {
+            $this->return_msg(400, '请求超时');
+        }
+
+    }
+}
+
 /**
  * 发送短信到手机
  * @param $phone
@@ -483,8 +504,5 @@ if (!function_exists('tailor_img')) {
         }
 
     }
-<<<<<<< Updated upstream
+
 }
-=======
-}
->>>>>>> Stashed changes
