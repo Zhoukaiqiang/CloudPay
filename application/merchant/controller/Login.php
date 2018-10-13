@@ -66,7 +66,7 @@ class Login extends Controller
     {
         if (request()->isPost()) {
             $data = \request()->post();
-            $user_name_type = 'phone';
+
             /** 检验参数 */
 
             check_params("merchant_login", $data);
