@@ -504,5 +504,9 @@ if (!function_exists('tailor_img')) {
         }
 
     }
+<<<<<<< Updated upstream
 
 }
+=======
+}
+>>>>>>> Stashed changes

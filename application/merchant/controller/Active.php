@@ -14,7 +14,7 @@ use think\Controller;
 use think\Request;
 use think\Session;
 
-class Active extends Common
+class Active extends Controller
 {
     /**
      * 充值送
@@ -25,7 +25,50 @@ class Active extends Common
     {
         if($request->isPost()){
             $data=$request->post();
-            $recharge_money=implode(',',$data['recharge_money']);
+            foreach($data['recharge_money'] as $k=>$v){
+                foreach($data['give_money'] as $k1=>$s){
+                    if($k==$k1){
+                        if($data['active_time'] == 0){
+                            //永久
+                            check_params('recharge',$data,'MerchantValidate');
+                            $arr=[
+                                'active_time'=>0,
+                                'recharge_money'=>$v,
+                                'give_money'=>$s,
+                                'name'=>$data['name'],
+                                'merchant_id'=>$this->merchant_id,
+                                'status'=>1,
+                                'create_time'=>time()
+                            ];
+                        }elseif($data['active_time'] == 1){
+                            check_params('new_recharge',$data,'MerchantValidate');
+                            $arr=[
+                                'active_time'=>0,
+                                'recharge_money'=>$v,
+                                'give_money'=>$s,
+                                'name'=>$data['name'],
+                                'merchant_id'=>$this->merchant_id,
+                                'status'=>1,
+                                'create_time'=>time(),
+                                'start_time'=>$data['start_time'],
+                                'end_time'=>$data['end_time'],
+                            ];
+                        }
+                        $result=ShopActiveRecharge::insert($arr,true);
+                        if($result){
+                            $res[]=200;
+                        }else{
+                            $res[]=400;
+                        }
+                    }
+                }
+            }
+            if(in_array(400,$res)){
+                return_msg(400,'操作失败');
+            }else{
+                return_msg(200,'操作成功');
+            }
+            /*$recharge_money=implode(',',$data['recharge_money']);
             $give_money=implode(',',$data['give_money']);
             if(is_array($data['shop_id'])){
                 foreach($data['shop_id'] as $v){
@@ -69,8 +112,15 @@ class Active extends Common
                 }else{
                     return_msg(200,'操作成功');
                 }
-            }
+            }*/
         }else{
+            //查询商户是否有活动
+            $info = ShopActiveRecharge::where(['merchant_id'=>$this->merchant_id,'status'=>1])->find();
+            if($info){
+                return_msg(400,'请先关闭活动');
+            }
+        }
+        /*else{
             if(!empty($this->merchant_id)){
                 //取出所有门店
                 $data=MerchantShop::field('id,shop_name')->where('merchant_id',$this->merchant_id)->select();
@@ -95,7 +145,7 @@ class Active extends Common
                     return_msg(200,'success',$data);
                 }
             }
-        }
+        }*/
     }
 
     /**
