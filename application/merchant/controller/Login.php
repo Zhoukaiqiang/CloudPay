@@ -109,21 +109,33 @@ class Login extends Controller
 
     }
 
-    /**
+      /**
      * 检测用户是否存在于数据库
-     *
-     * @param $phone 用户手机号
+     * @param string $db   [数据库全称]
+     * @param $phone       [要检查的手机号]
+     * @param null $exist   [ 1 / 0 ]
+     * @return bool / [msg]  检验结果
      * @throws \think\db\exception\DataNotFoundException
      * @throws \think\db\exception\ModelNotFoundException
      * @throws \think\exception\DbException
-     * @return [json]  检测结果
      */
-    public function check_phone($phone)
+    public function check_phone($db = 'cloud_total_admin' ,$phone, $exist = null)
     {
-        $result = Db::table('cloud_total_admin')->where('phone', $phone)->find();
-        if ($result) {
-            return return_msg(400, '用户已存在！');
+        $result = Db::table($db)->where('phone', $phone)->find();
+        if ($exist = 1) {
+            if (!empty($result)) {
+                return true;
+            }else {
+                return_msg(400,"账号不存在");
+            }
+        }else {
+            if (!empty($result)) {
+                return return_msg(400, '用户已存在！');
+            }else {
+                return true;
+            }
         }
+
     }
 
     /**

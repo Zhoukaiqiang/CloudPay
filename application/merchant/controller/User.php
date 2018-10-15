@@ -134,6 +134,7 @@ class User extends Common
                 check_params("add_user", $data, "MerchantValidate");
 
                 //查询手机号是否存在
+
                 $info=MerchantUser::where('phone',$data['phone'])->find();
                 if($info){
                     return_msg(400,'failure','手机号已经存在');

@@ -25,36 +25,7 @@ if (!function_exists('encrypt_password')) {
         return md5('$ysf' . md5($password) . $phone);
     }
 }
-/**
- * 发送短信
- * $phone 电话
- * $msg 验证内容
- */
-if (!function_exists('sendmsg')) {
-    //发送短信
-    function sendmsg($phone, $msg)
-    {
-        //获取接口地址
-        $gateway = config('msg.gateway');
-        $appkey = config('msg.appkey');
-        //拼接url  发送get请求
-        $url = $gateway . '?appkey=' . $appkey . '&mobile=' . $phone . '&content=' . $msg;
-        //发送请求
-        $res = curl_request($url, false, [], true);
-        //解析返回结果
-        if (!$res) {
-            return '服务器异常，请求发送失败';
-        }
-        $arr = json_decode($res, true);
-        if (isset($arr['code']) && $arr['code'] == 10000) {
-            //短信发送成功
-            return true;
-        } else {
-            return $arr['msg'];
-//            return '短信发送失败';
-        }
-    }
-}
+
 /**
  * 邮箱注册
  */
@@ -127,7 +98,7 @@ if (!function_exists('return_msg')) {
 
 /**
  * 验证请求是否超时
- * @param [int] $code [结果码 200：正常/4**数据问题/5**服务器问题]]
+ * @param [int] $code [结果码 200：正常 /400：错误 /500：服务器问题]]
  * @param [string] $msg [接口码要返回的提示信息]
  * @param [array] $data [接口要返回的数据]
  *
@@ -228,7 +199,9 @@ if (!function_exists("generate_order_no")) {
     function generate_order_no($uid = null)
     {
 
-        if(!$uid) {$uid = rand(100,999);}
+        if (empty($uid)) {
+            $uid = rand(100, 999);
+        }
         $order_num = (string)date("YmdHms") + (string)$uid + rand(100, 999);
         return $order_num;
 
@@ -243,7 +216,7 @@ if (!function_exists("getSN")) {
      */
     function getSN()
     {
-        $order_num = time() . rand(1000, 9999);
+        $order_num = (string)time() . (string)rand(1000, 9999);
         return $order_num;
     }
 }
@@ -403,7 +376,7 @@ if (!function_exists("check_time")) {
 }
 
 /**
- * 发送短信到手机
+ * 发送[验证码]类型短信到手机
  * @param $phone
  * @param $msg
  */
@@ -504,9 +477,36 @@ if (!function_exists('tailor_img')) {
         }
 
     }
-<<<<<<< Updated upstream
 
 }
-=======
+/**
+ * 检测用户是否存在于数据库
+ * @param string $db [数据库全称]
+ * @param $phone [要检查的手机号]
+ * @param null $exist [ 1 / 0 ]
+ * @return bool / [msg]  检验结果
+ * @throws \think\db\exception\DataNotFoundException
+ * @throws \think\db\exception\ModelNotFoundException
+ * @throws \think\exception\DbException
+ */
+if (!function_exists('check_phone_exists')) {
+    function check_phone_exists($db = 'cloud_total_admin', $phone, $exist = 0)
+    {
+        $result = Db::table($db)->where('phone', $phone)->find();
+        if ($exist == 1) {
+            if ($result) {
+                return true;
+            } else {
+                return_msg(400, "账号不存在");
+            }
+        } elseif ($exist == 0) {
+            /** 用户为不存在的情况 */
+            if ($result) {
+                return_msg(400, '用户已存在！');
+            } else {
+                return true;
+            }
+        }
+
+    }
 }
->>>>>>> Stashed changes
