@@ -8,6 +8,7 @@ use app\merchant\model\MerchantUser;
 use app\merchant\model\Order;
 use app\merchant\model\TotalMerchant;
 use think\Controller;
+use think\Exception;
 use think\Request;
 
 class Receipt extends Common
@@ -22,7 +23,7 @@ class Receipt extends Common
     public function receipt_detail(Request $request)
     {
         $id=$request->param('id');
-        $id=1;//测试
+
         $data=Order::alias('a')
             ->field('a.id,a.status,a.received_money,a.order_money,a.discount,b.shop_name,a.cashier,a.pay_time,a.cashier,a.pay_type,a.order_remark,a.order_number,a.status,a.authorize_number,a.prove_number,a.give_money')
             ->join('cloud_merchant_shop b','a.shop_id=b.id','left')
@@ -87,6 +88,7 @@ class Receipt extends Common
      * 显示账单
      *
      * @return \think\Response
+     * @throws Exception
      */
     public function receipt_bill()
     {
@@ -99,9 +101,9 @@ class Receipt extends Common
                 ->whereTime('create_time','yesterday')
                 ->select();
             return_msg(200,'success',$data);
-        }elseif(empty($this->merchant_id) && !empty($this->user_id)){
+        }elseif( $this->user_id ){
             //获取门店id
-            $info=MerchantUser::field('shop_id')->where('id',$this->user_id)->find();
+            $info = MerchantUser::field('shop_id')->where('id',$this->user_id)->find();
             //显示当前门店
             $data['shop']=MerchantShop::field('id,shop_name')->where('id',$info['shop_id'])->find();
             //显示当前门店下所有账单
@@ -109,7 +111,8 @@ class Receipt extends Common
                 ->where('shop_id',$info['shop_id'])
                 ->whereTime('create_time','yesterday')
                 ->select();
-            return_msg(200,'success',$data);
+
+            check_data($data);
         }
 
     }

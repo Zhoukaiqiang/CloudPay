@@ -9,8 +9,8 @@ class MerchantValidate extends Validate
     protected $rule = [
         //添加员工
         ['name', 'require', '请输入名称'],
-        ['phone', 'require|regex:/^1[3-9]\d{9}$/|unique:phone', '请填写手机号|手机号格式不正确|手机号已存在'],
-        ['password', 'require|between:6,6', '请输入密码|密码固定6位'],
+        ['phone', 'require|regex:/^1[3-9]\d{9}$/', '请填写手机号|手机号格式不正确'],
+        ['password', 'require|length:6', '请输入密码|密码固定6位'],
         ['role', 'require', '请选择角色'],
         ['shop_id', 'require', '请选择门店'],
 
@@ -43,7 +43,7 @@ class MerchantValidate extends Validate
 
     //命名规则 控制器_函数名称
     protected $scene = [
-        //新增商户
+        //新增用户
         'add_user' => ['name', 'phone', 'password', 'role', 'shop_id'],
         //充值送
         'recharge'=>[

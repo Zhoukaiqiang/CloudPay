@@ -6,6 +6,9 @@ use think\Model;
 
 class MerchantUser extends Model
 {
+    protected $autoWriteTimestamp = true;
+    protected $createTime = 'create_time';
+    protected $updateTime = false;
     public function getRoleAttr($val) {
         switch ($val) {
             case 1:

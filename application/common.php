@@ -485,6 +485,7 @@ if (!function_exists('tailor_img')) {
  * @param $phone [要检查的手机号]
  * @param null $exist [ 1 / 0 ]
  * @return bool / [msg]  检验结果
+ * @author K'
  */
 if (!function_exists('check_phone_exists')) {
     function check_phone_exists($db = 'cloud_total_admin', $phone, $exist = 0)
@@ -505,5 +506,23 @@ if (!function_exists('check_phone_exists')) {
             }
         }
 
+    }
+}
+
+/**
+ * 检验是否有数据，并返回结果
+ * @param $data [要检查的数据]
+ * @param null $return_data  [要返回的数据]
+ * @return [json]  返回信息
+ * @author K'
+ */
+function check_data($data, $return_data = null) {
+    if (!$return_data) {
+        $return_data = $data;
+    }
+    if (count($data)) {
+        return_msg(200, "success", $return_data);
+    }else {
+        return_msg(400, "no data");
     }
 }
