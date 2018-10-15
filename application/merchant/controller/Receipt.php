@@ -10,16 +10,10 @@ use app\merchant\model\TotalMerchant;
 use think\Controller;
 use think\Request;
 
-class Receipt extends Controller
+class Receipt extends Common
 {
     public $url = 'http://sandbox.starpos.com.cn/emercapp';
-    public $merchant_id;
-    public $user_id;
-    public function __construct()
-    {
-        $this->merchant_id=session('merchant_id') ? session('merchant_id') : null;
-        $this->user_id=session('user_id') ? session('user_id') : 1;
-    }
+
     /**
      * 显示账单详情
      *
@@ -68,7 +62,7 @@ class Receipt extends Controller
             }
         }elseif(empty($this->merchant_id) && !empty($this->user_id)){
             //取出用户手机和密码
-            $data=MerchantUser::field('phone,password')->where('id',$this->user_id)
+            $data = MerchantUser::field('phone,password')->where('id',$this->user_id)
                 ->find();
             $param['password']=encrypt_password($param['password'],$data['phone']);
             //判断
@@ -102,7 +96,7 @@ class Receipt extends Controller
             //显示当前商户下所有账单
             $data['list']=Order::field('id,status,order_money,pay_type,create_time')
                 ->where('merchant_id',$this->merchant_id)
-//                ->whereTime('create_time','yesterday')
+                ->whereTime('create_time','yesterday')
                 ->select();
             return_msg(200,'success',$data);
         }elseif(empty($this->merchant_id) && !empty($this->user_id)){
@@ -113,7 +107,7 @@ class Receipt extends Controller
             //显示当前门店下所有账单
             $data['list']=Order::field('id,status,order_money,pay_type,create_time')
                 ->where('shop_id',$info['shop_id'])
-//                ->whereTime('create_time','yesterday')
+                ->whereTime('create_time','yesterday')
                 ->select();
             return_msg(200,'success',$data);
         }
@@ -218,26 +212,5 @@ class Receipt extends Controller
         }
     }
 
-    /**
-     * 保存更新的资源
-     *
-     * @param  \think\Request  $request
-     * @param  int  $id
-     * @return \think\Response
-     */
-    public function update(Request $request, $id)
-    {
-        //
-    }
 
-    /**
-     * 删除指定资源
-     *
-     * @param  int  $id
-     * @return \think\Response
-     */
-    public function delete($id)
-    {
-        //
-    }
 }

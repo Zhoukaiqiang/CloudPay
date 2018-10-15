@@ -12,16 +12,10 @@ use app\merchant\model\ShopActiveRecharge;
 use app\merchant\model\ShopActiveShare;
 use think\Controller;
 use think\Request;
+use think\Session;
 
 class Active extends Controller
 {
-    public $merchant_id;
-    public $user_id;
-    public function __construct()
-    {
-        $this->merchant_id=session('merchant_id') ? session('merchant_id') : null;
-        $this->user_id=session('user_id') ? session('user_id') : 1;
-    }
     /**
      * 充值送
      *
@@ -31,44 +25,86 @@ class Active extends Controller
     {
         if($request->isPost()){
             $data=$request->post();
-            if(is_array($data['recharge_money'])){
-                foreach($data['recharge_money'] as $k=>$v){
-                    foreach($data['give_money'] as $k1=>$v1){
-                        if($k==$k1){
-                            //判断是永久还是设置时间
-                            if($data['active_time']==0){
-                                //验证
-                                check_params('recharge',$data,'MerchantValidate');
-                                $arr=[
-                                    'recharge_money'=>$v,
-                                    'give_money'=>$v1,
-                                    'name'=>$data['name'],
-                                    'active_time'=>0,
-                                    'status'=>1,
-                                    'merchant_id'=>$this->merchant_id,
-                                    'create_time'=>time()
-                                ];
-                            }elseif($data['active_time']==1){
-                                check_params('new_recharge',$data,'MerchantValidate');
-                                $arr=[
-                                    'recharge_money'=>$v,
-                                    'give_money'=>$v1,
-                                    'name'=>$data['name'],
-                                    'active_time'=>1,
-                                    'start_time'=>$data['start_time'],
-                                    'end_time'=>$data['end_time'],
-                                    'status'=>1,
-                                    'merchant_id'=>$this->merchant_id,
-                                    'create_time'=>time()
-                                ];
-                            }
-                            $result=ShopActiveRecharge::insert($arr,true);
-                            if($result){
-                                $res[]=200;
-                            }else{
-                                $res[]=400;
-                            }
+            foreach($data['recharge_money'] as $k=>$v){
+                foreach($data['give_money'] as $k1=>$s){
+                    if($k==$k1){
+                        if($data['active_time'] == 0){
+                            //永久
+                            check_params('recharge',$data,'MerchantValidate');
+                            $arr=[
+                                'active_time'=>0,
+                                'recharge_money'=>$v,
+                                'give_money'=>$s,
+                                'name'=>$data['name'],
+                                'merchant_id'=>$this->merchant_id,
+                                'status'=>1,
+                                'create_time'=>time()
+                            ];
+                        }elseif($data['active_time'] == 1){
+                            check_params('new_recharge',$data,'MerchantValidate');
+                            $arr=[
+                                'active_time'=>0,
+                                'recharge_money'=>$v,
+                                'give_money'=>$s,
+                                'name'=>$data['name'],
+                                'merchant_id'=>$this->merchant_id,
+                                'status'=>1,
+                                'create_time'=>time(),
+                                'start_time'=>$data['start_time'],
+                                'end_time'=>$data['end_time'],
+                            ];
                         }
+                        $result=ShopActiveRecharge::insert($arr,true);
+                        if($result){
+                            $res[]=200;
+                        }else{
+                            $res[]=400;
+                        }
+                    }
+                }
+            }
+            if(in_array(400,$res)){
+                return_msg(400,'操作失败');
+            }else{
+                return_msg(200,'操作成功');
+            }
+            /*$recharge_money=implode(',',$data['recharge_money']);
+            $give_money=implode(',',$data['give_money']);
+            if(is_array($data['shop_id'])){
+                foreach($data['shop_id'] as $v){
+                    //获取商户id
+                    $merchant=MerchantShop::field('merchant_id')->where('id',$v)->find();
+                    if($data['active_time']==0){
+                        //验证
+                        check_params('recharge',$data,'MerchantValidate');
+                        $arr=[
+                            'shop_id'=>$v,
+                            'recharge_money'=>$recharge_money,
+                            'give_money'=>$give_money,
+                            'name'=>$data['name'],
+                            'merchant_id'=>$merchant['merchant_id'],
+                            'status'=>1,
+                            'create_time'=>time()
+                        ];
+                    }elseif($data['active_time']==1){
+                        check_params('new_recharge',$data,'MerchantValidate');
+                        $arr=[
+                            'shop_id'=>$v,
+                            'recharge_money'=>$recharge_money,
+                            'give_money'=>$give_money,
+                            'name'=>$data['name'],
+                            'merchant_id'=>$merchant['merchant_id'],
+                            'status'=>1,
+                            'create_time'=>time(),
+                            'start_time'=>$data['start_time'],
+                            'end_time'=>$data['end_time'],
+                        ];
+                    }
+                    $result=ShopActiveRecharge::insert($arr,true);
+                    if($result){
+                        $res[]=200;
+                    }else{
+                        $res[]=400;
                     }
                 }
                 if(in_array(400,$res)){
@@ -76,19 +112,40 @@ class Active extends Controller
                 }else{
                     return_msg(200,'操作成功');
                 }
-            }else{
-                $data['status']=1;
-                $data['create_time']=time();
-                $data['merchant_id']=$this->merchant_id;
-
-                $result=ShopActiveRecharge::insert($data,true);
-                if($result){
-                    return_msg(200,'操作成功');
-                }else{
-                    return_msg(400,'操作失败');
-                }
+            }*/
+        }else{
+            //查询商户是否有活动
+            $info = ShopActiveRecharge::where(['merchant_id'=>$this->merchant_id,'status'=>1])->find();
+            if($info){
+                return_msg(400,'请先关闭活动');
             }
         }
+        /*else{
+            if(!empty($this->merchant_id)){
+                //取出所有门店
+                $data=MerchantShop::field('id,shop_name')->where('merchant_id',$this->merchant_id)->select();
+                //查询门店是否有活动
+                foreach($data as $k=>$v){
+                    $res=ShopActiveRecharge::where(['shop_id'=>$v['id'],'status'=>1])->find();
+                    if(!empty($res)){
+                        unset($data[$k]);
+                    }
+                }
+                if(empty($data)){
+                    return_msg(400,'请先关闭活动');
+                }
+                return_msg(200,'success',$data);
+            }elseif(empty($this->merchant_id) && !empty($this->user_id)){
+                $info=MerchantUser::field('shop_id')->where('id',$this->user_id)->find();
+                $data=MerchantShop::field('id,shop_name')->where('id',$info['shop_id'])->find();
+                $res=ShopActiveRecharge::where(['shop_id'=>$data['id'],'status'=>1])->find();
+                if($res){
+                    return_msg(400,'请先关闭活动');
+                }else{
+                    return_msg(200,'success',$data);
+                }
+            }
+        }*/
     }
 
     /**
@@ -126,35 +183,31 @@ class Active extends Controller
                 }else{
                     return_msg(200,'操作成功');
                 }
-            }else{
-                if($data['active_time']==0){
-                    //验证
-                    check_params('discount',$data,'MerchantValidate');
-                }elseif($data['active_time']==1){
-                    check_params('new_discount',$data,'MerchantValidate');
-                }
-                $data['status']=1;
-                $data['create_time']=time();
-                //获取商户id
-                $info=MerchantShop::field('merchant_id')->where('id',$data['shop_id'])->find();
-                $data['merchant_id']=$info['merchant_id'];
-                $result=ShopActiveDiscount::insert($data,true);
-                if($result){
-                    return_msg(200,'操作成功');
-                }else{
-                    return_msg(400,'操作失败');
-                }
             }
-
         }else{
             if(!empty($this->merchant_id)){
                 //取出所有门店
                 $data=MerchantShop::field('id,shop_name')->where('merchant_id',$this->merchant_id)->select();
+                //查询门店是否有活动
+                foreach($data as $k=>$v){
+                    $res=ShopActiveDiscount::where(['shop_id'=>$v['id'],'status'=>1])->find();
+                    if(!empty($res)){
+                        unset($data[$k]);
+                    }
+                }
+                if(empty($data)){
+                    return_msg(400,'请先关闭活动');
+                }
                 return_msg(200,'success',$data);
             }elseif(empty($this->merchant_id) && !empty($this->user_id)){
                 $info=MerchantUser::field('shop_id')->where('id',$this->user_id)->find();
-                $data=MerchantShop::field('id,shop_name')->where('id',$info['shop_id'])->select();
-                return_msg(200,'success',$data);
+                $data=MerchantShop::field('id,shop_name')->where('id',$info['shop_id'])->find();
+                $res=ShopActiveDiscount::where(['shop_id'=>$data['id'],'status'=>1])->find();
+                if($res){
+                    return_msg(400,'请先关闭活动');
+                }else{
+                    return_msg(200,'success',$data);
+                }
             }
 
         }
@@ -166,8 +219,12 @@ class Active extends Controller
      * @param  \think\Request  $request
      * @return \think\Response
      */
-    public function exclusive (Request $request)
+    public function exclusive(Request $request)
     {
+        $info=ShopActiveExclusive::field('status')->where(['merchant_id'=>$this->merchant_id,'status'=>1])->find();
+        if(empty($info)){
+            return_msg(400,'请先关闭活动');
+        }
         $data=$request->post();
         $data['status']=1;//测试
         $data['create_time']=time();
@@ -239,9 +296,9 @@ class Active extends Controller
                     }
                 }
             }
-            return_msg(200,'派卷成功');
+            return_msg(200,'派券成功');
         }else{
-            return_msg(400,'派卷失败');
+            return_msg(400,'派券失败');
 
         }
     }
@@ -260,18 +317,18 @@ class Active extends Controller
             check_params('share',$data,'MerchantValidate');
             if(is_array($data['shop_id'])){
                 foreach($data['shop_id'] as $k=>$v){
-                    $data['shop_id']=$v;
-                    $data['status']=1;
-                    $data['create_time']=time();
+                    $data['shop_id'] = $v;
+                    $data['status'] = 1;
+                    $data['create_time'] = time();
                     //获取商户id
                     $info=MerchantShop::field('merchant_id')->where('id',$data['shop_id'])->find();
                     $data['merchant_id']=$info['merchant_id'];
 
-                    $result=ShopActiveShare::insert($data,true);
+                    $result = ShopActiveShare::insert($data,true);
                     if($result){
-                        $res[]=200;
+                        $res[] = 200;
                     }else{
-                        $res[]=400;
+                        $res[] = 400;
                     }
                 }
                 if(in_array(400,$res)){
@@ -279,28 +336,32 @@ class Active extends Controller
                 }else{
                     return_msg(200,'操作成功');
                 }
-            }else{
-                $data['status']=1;
-                $data['create_time']=time();
-                //获取商户id
-                $info=MerchantShop::field('merchant_id')->where('id',$data['shop_id'])->find();
-                $data['merchant_id']=$info['merchant_id'];
-                $result=ShopActiveShare::insert($data,true);
-                if($result){
-                    return_msg(200,'操作成功');
-                }else{
-                    return_msg(400,'操作失败');
-                }
             }
+
         }else{
             if(!empty($this->merchant_id)){
                 //取出所有门店
                 $data=MerchantShop::field('id,shop_name')->where('merchant_id',$this->merchant_id)->select();
+                //查询门店是否有活动
+                foreach($data as $k=>$v){
+                    $res=ShopActiveShare::where(['shop_id'=>$v['id'],'status'=>1])->find();
+                    if(!empty($res)){
+                        unset($data[$k]);
+                    }
+                }
+                if(empty($data)){
+                    return_msg(400,'请先关闭活动');
+                }
                 return_msg(200,'success',$data);
             }elseif(empty($this->merchant_id) && !empty($this->user_id)){
                 $info=MerchantUser::field('shop_id')->where('id',$this->user_id)->find();
-                $data=MerchantShop::field('id,shop_name')->where('id',$info['shop_id'])->select();
-                return_msg(200,'success',$data);
+                $data=MerchantShop::field('id,shop_name')->where('id',$info['shop_id'])->find();
+                $res=ShopActiveShare::where(['shop_id'=>$data['id'],'status'=>1])->find();
+                if($res){
+                    return_msg(400,'请先关闭活动');
+                }else{
+                    return_msg(200,'success',$data);
+                }
             }
         }
     }
@@ -316,36 +377,48 @@ class Active extends Controller
         if(!empty($this->merchant_id)){
             //充值送
             //取出永久有效活动
-            $where=[
-                'active_time'=>0,
-                'merchant_id'=>$this->merchant_id,
-            ];
-            $data['recharge'][]=ShopActiveRecharge::where($where)->order('create_time desc')->select();
+            $data['recharge'][] = ShopActiveRecharge::alias('a')
+                ->field('a.*,b.shop_name')
+                ->join('cloud_merchant_shop b','a.shop_id=b.id')
+                ->where(['a.active_time'=>0,'a.merchant_id'=>$this->merchant_id,'a.status'=>1])
+                ->order('a.create_time desc')
+                ->select();
+
             //选择时间
-            $data['recharge'][]=ShopActiveRecharge::where('merchant_id',$this->merchant_id)->whereTime('end_time','>',time())->order('create_time desc')->select();
+
+            $data['recharge'][] = ShopActiveRecharge::alias('a')
+                ->field('a.*,b.shop_name')
+                ->join('cloud_merchant_shop b','a.shop_id=b.id')
+                ->where(['a.active_time'=>1,'a.merchant_id'=>$this->merchant_id])
+                ->whereTime('a.end_time','>',time())
+                ->order('a.create_time desc')
+                ->select();
             //折扣活动 取出商户下所有门店活动
             //取出永久有效活动
             $data['discount'][]=ShopActiveDiscount::alias('a')
                 ->field('a.*,b.shop_name')
                 ->join('cloud_merchant_shop b','a.shop_id=b.id')
-                ->where(['a.active_time'=>0,'a.merchant_id'=>$this->merchant_id])
+                ->where(['a.active_time'=>0,'a.merchant_id'=>$this->merchant_id,'a.status'=>1])
                 ->order('a.create_time desc')
                 ->select();
+
             //选择时间
             $data['discount'][]=ShopActiveDiscount::alias('a')
                 ->field('a.*,b.shop_name')
                 ->join('cloud_merchant_shop b','a.shop_id=b.id')
-                ->where('a.merchant_id',$this->merchant_id)
+                ->where(['a.merchant_id'=>$this->merchant_id,'a.status'=>1])
                 ->whereTime('a.end_time','>',time())
                 ->order('a.create_time desc')
                 ->select();
+
             //会员专享
-            $data['exclusive'][]=ShopActiveDiscount::where('merchant_id',$this->merchant_id)->whereTime('end_time','>',time())->order('create_time desc')->select();
+            $data['exclusive'][]=ShopActiveExclusive::where(['merchant_id'=>$this->merchant_id,'status'=>1])->whereTime('end_time','>',time())->order('create_time desc')->select();
+
             //分享红包
-            $data['share'][]=ShopActiveShare::alias('a')
+            $data['share'][] = ShopActiveShare::alias('a')
                 ->field('a.*,b.shop_name')
                 ->join('cloud_merchant_shop b','a.shop_id=b.id')
-                ->where('a.merchant_id',$this->merchant_id)
+                ->where(['a.merchant_id'=>$this->merchant_id,'status'=>1])
                 ->whereTime('a.end_time','>',time())
                 ->order('a.create_time desc')
                 ->select();
@@ -355,7 +428,8 @@ class Active extends Controller
             $info=MerchantUser::field('shop_id')->where('id',$this->user_id)->find();
             $where=[
                 'active_time'=>0,
-                'shop_id'=>$info['shop_id']
+                'shop_id'=>$info['shop_id'],
+                'status'=>1
             ];
             //折扣
             //取出永久有效活动
@@ -369,7 +443,7 @@ class Active extends Controller
             $data['discount'][]=ShopActiveDiscount::alias('a')
                 ->field('a.*,b.shop_name')
                 ->join('cloud_merchant_shop b','a.shop_id=b.id')
-                ->where('a.shop_id',$info['shop_id'])
+                ->where(['a.shop_id'=>$info['shop_id'],'a.status'=>1])
                 ->whereTime('a.end_time','>',time())
                 ->order('a.create_time desc')
                 ->select();
@@ -377,7 +451,23 @@ class Active extends Controller
             $data['share'][]=ShopActiveShare::alias('a')
                 ->field('a.*,b.shop_name')
                 ->join('cloud_merchant_shop b','a.shop_id=b.id')
-                ->where('a.shop_id',$info['shop_id'])
+                ->where(['a.shop_id'=>$info['shop_id'],'a.status'=>1])
+                ->whereTime('a.end_time','>',time())
+                ->order('a.create_time desc')
+                ->select();
+            //充值
+            //取出永久有效活动
+            $data['recharge'][] = ShopActiveRecharge::alias('a')
+                ->field('a.*,b.shop_name')
+                ->join('cloud_merchant_shop b','a.shop_id=b.id')
+                ->where(['a.shop_id'=>$info['shop_id'],'a.status'=>1,'a.active_time'=>0])
+                ->order('a.create_time desc')
+                ->select();
+            //选择时间
+            $data['recharge'][]=ShopActiveRecharge::alias('a')
+                ->field('a.*,b.shop_name')
+                ->join('cloud_merchant_shop b','a.shop_id=b.id')
+                ->where(['a.shop_id'=>$info['shop_id'],'a.status'=>1,'a.active_time'=>1])
                 ->whereTime('a.end_time','>',time())
                 ->order('a.create_time desc')
                 ->select();
@@ -386,6 +476,37 @@ class Active extends Controller
 
     }
 
+    /**
+     * 关闭活动
+     *
+     * @param  \think\Request  $request
+     * @param  int  $id
+     * @return \think\Response
+     */
+    /*public function stop_active(Request $request)
+    {
+        $data=$request->post();
+        if($data['active']=='recharge'){
+            $this->check('ShopActiveRecharge',$data['id']);
+        }elseif($data['active']=='discount'){
+            $this->check('ShopActiveDiscount',$data['id']);
+        }elseif($data['active']=='exclusive'){
+            $this->check('ShopActiveExclusive',$data['id']);
+        }elseif($data['active']=='share'){
+            $this->check('ShopActiveShare',$data['id']);
+        }
+    }
+
+    public function check($active,$id)
+    {
+        $result=$active::where('id',$id)->update(['status'=>0]);
+        if($result){
+            return_msg(200,'操作成功');
+        }else{
+            return_msg(400,'操作失败');
+
+        }
+    }*/
     /**
      * 关闭充值送活动
      *
@@ -416,6 +537,44 @@ class Active extends Controller
     {
         $id=$request->post('id');
         $result=ShopActiveDiscount::where('id',$id)->update(['status'=>0]);
+        if($result){
+            return_msg(200,'操作成功');
+        }else{
+            return_msg(400,'操作失败');
+
+        }
+    }
+
+    /**
+     * 关闭分享
+     *
+     * @param  \think\Request  $request
+     * @param  int  $id
+     * @return \think\Response
+     */
+    public function share_stop(Request $request)
+    {
+        $id = $request->post('id');
+        $result=ShopActiveShare::where('id',$id)->update(['status'=>0]);
+        if($result){
+            return_msg(200,'操作成功');
+        }else{
+            return_msg(400,'操作失败');
+
+        }
+    }
+
+    /**
+     * 关闭会员专享
+     *
+     * @param  \think\Request  $request
+     * @param  int  $id
+     * @return \think\Response
+     */
+    public function exclusive_stop(Request $request)
+    {
+        $id = $request->post('id');
+        $result=ShopActiveExclusive::where('id',$id)->update(['status'=>0]);
         if($result){
             return_msg(200,'操作成功');
         }else{

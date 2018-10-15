@@ -283,19 +283,4 @@ class Common extends Controller
         die;
     }
 
-
-    /**
-     * 密码加密
-     * @param [sting] $password [加密前的密码]
-     * @param [string] $val 用户手机号
-     * @return [string] [加密后的密码]
-     *
-     */
-    public function encrypt_password($passwor='', $phone= '')
-    {
-        $password = request()->param('password');
-        $phone = request()->param('phone');
-        return md5('$ysf' . md5($password). $phone );
-    }
-
 }

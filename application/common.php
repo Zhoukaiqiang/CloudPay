@@ -205,10 +205,12 @@ if (!function_exists('page')) {
 }
 
 /**
- * 验证
+ * 参数验证
+ * 验证规则写在Common模块 1--AdminValidate 2--MerchantValidate 3--AgentValidate
  */
 if (!function_exists("check_params")) {
-    function check_params($scene, $param,$validate="AdminValidate") {
+    function check_params($scene, $param, $validate = "AdminValidate")
+    {
         $validate = \think\Loader::validate($validate);
         $check = $validate->scene($scene)->check($param);
         if (!$check) {
@@ -223,8 +225,10 @@ if (!function_exists("generate_order_no")) {
      * @param $uid [int] 用户ID
      * @return [string] 订单号码
      */
-    function generate_order_no($uid) {
+    function generate_order_no($uid = null)
+    {
 
+        if(!$uid) {$uid = rand(100,999);}
         $order_num = (string)date("YmdHms") + (string)$uid + rand(100, 999);
         return $order_num;
 
@@ -237,8 +241,9 @@ if (!function_exists("getSN")) {
      * @param $uid [int]
      * @return [string]
      */
-    function getSN() {
-        $order_num = time().rand(1000, 9999);
+    function getSN()
+    {
+        $order_num = time() . rand(1000, 9999);
         return $order_num;
     }
 }
@@ -247,9 +252,9 @@ if (!function_exists("getSN")) {
  */
 if (!function_exists('curl_request')) {
     //使用curl函数库发送请求
-    function curl_request($url,$post = false,$params = [], $https = false)
+    function curl_request($url, $post = false, $params = [], $https = false)
     {
-        $params=json_encode($params);
+        $params = json_encode($params);
         /*$params=json_encode($params);
         return $params;*/
         //①使用curl_init初始化请求会话
@@ -258,7 +263,7 @@ if (!function_exists('curl_request')) {
 
         //测试地址 http://sandbox.starpos.com.cn/emercapp
         //正式地址 https://gateway.starpos.com.cn/emercapp
-        curl_setopt($ch,CURLOPT_URL,$url);
+        curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_HEADER, 0);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         if ($post) {
@@ -307,177 +312,213 @@ function is_user_can($id)
 }
 
 if (!function_exists('sign_ature')) {
-    function sign_ature($ids,Array $arr)
+    function sign_ature($ids, Array $arr)
     {
-         ksort($arr);
+
+        ksort($arr);
         if ($ids == 0000) {
-            $data = ['payChannel','authCode','total_amount','opSys','characterSet','trmNo','tradeNo','txnTime','signType','Amount','serviceId', 'version', 'incom_type', 'stl_sign', 'stl_oac', 'bnk_acnm', 'wc_lbnk_no', 'bus_lic_no', 'bse_lice_nm', 'crp_nm', 'mercAdds', 'bus_exp_dt', 'crp_id_no', 'crp_exp_dt', 'stoe_nm', 'stoe_cnt_nm', 'stoe_cnt_tel', 'mcc_cd', 'stoe_area_cod', 'stoe_adds', 'trm_rec', 'mailbox', 'alipay_flg', 'yhkpay_flg','mercId','orgNo','imgTyp','imgNm','log_no','stoe_id','lbnk_nm'];
+            $data = ['payChannel', 'authCode', 'total_amount', 'opSys', 'characterSet', 'trmNo', 'tradeNo', 'txnTime', 'signType', 'Amount', 'serviceId', 'version', 'incom_type', 'stl_sign', 'stl_oac', 'bnk_acnm', 'wc_lbnk_no', 'bus_lic_no', 'bse_lice_nm', 'crp_nm', 'mercAdds', 'bus_exp_dt', 'crp_id_no', 'crp_exp_dt', 'stoe_nm', 'stoe_cnt_nm', 'stoe_cnt_tel', 'mcc_cd', 'stoe_area_cod', 'stoe_adds', 'trm_rec', 'mailbox', 'alipay_flg', 'yhkpay_flg', 'mercId', 'orgNo', 'imgTyp', 'imgNm', 'log_no', 'stoe_id', 'lbnk_nm'];
             $stra = '';
 
-            foreach($arr as $k=>$v){
-                if (in_array($k,$data)) {
-                    $stra .= $v;
-                }
-            }
+            foreach ($arr as $k => $v) {
+                if (in_array($k, $data)) {
+
+//        dump($arr);die;
+                    ksort($arr);
+                    if ($ids == 0000) {
+                        $data = ['serviceId', 'version', 'incom_type', 'stl_typ', 'stl_sign', 'stl_oac', 'bnk_acnm', 'wc_lbnk_no', 'bus_lic_no', 'bse_lice_nm', 'crp_nm', 'mercAdds', 'bus_exp_dt', 'crp_id_no', 'crp_exp_dt', 'stoe_nm', 'stoe_cnt_nm', 'stoe_cnt_tel', 'mcc_cd', 'stoe_area_cod', 'stoe_adds', 'trm_rec', 'mailbox', 'alipay_flg', 'yhkpay_flg', 'mercId', 'orgNo', 'imgTyp', 'imgNm', 'log_no', 'stoe_id', 'lbnk_nm'];
+                        $stra = '';
+
+                        foreach ($arr as $k => $v) {
+                            if (in_array($k, $data)) {
+//                    echo $k."<br/>";
+                                $stra .= $v;
+                            }
+                        }
 //            var_dump($stra);die;
-        } else if ($ids == 1111) {
-            $data = ['tradeNo','returnCode','sysTime','message','LogNo','Result','check_flag', 'msg_cd', 'msg_dat', 'mercId', 'log_no', 'stoe_id', 'mobile', 'sign_stats', 'deliv_stats'];
-            $stra = '';
-            foreach ($arr as $key1 => $val) {
-                if (in_array($key1, $data)) {
-                    $stra .= $val;
+                    } else if ($ids == 1111) {
+                        $data = ['tradeNo', 'returnCode', 'sysTime', 'message', 'LogNo', 'Result', 'check_flag', 'msg_cd', 'msg_dat', 'mercId', 'log_no', 'stoe_id', 'mobile', 'sign_stats', 'deliv_stats'];
+                        $stra = '';
+                        foreach ($arr as $key1 => $val) {
+                            if (in_array($key1, $data)) {
+                                $stra .= $val;
+                            }
+                        }
+
+                    }
+
+                    return md5($stra . KEY);
                 }
             }
-
-        }
-
-        return md5($stra . KEY);
-    }
-}
 
 //批量上传图片
-if (!function_exists('upload_logo')) {
-    function upload_pics($files){
-        $goods_pics=[];
-        foreach($files as $file){
-            $info=$file->validate(['size'=>500*1024*1024,'ext'=>'jpg,jpeg,gif,png'])->move(ROOT_PATH.'public'.DS.'uploads');
-            if($info){
-                //图片上传成功
-                $goods_logo=DS.'uploads'.DS.$info->getSaveName();
-                $goods_logo=str_replace('\\','/',$goods_logo);
-                $goods_pics[]=$goods_logo;
-            }else{
-                $error=$info->getError();
-                return_msg(400,$error);
+            if (!function_exists('upload_logo')) {
+                function upload_pics($files)
+                {
+                    $goods_pics = [];
+                    foreach ($files as $file) {
+                        $info = $file->validate(['size' => 500 * 1024 * 1024, 'ext' => 'jpg,jpeg,gif,png'])->move(ROOT_PATH . 'public' . DS . 'uploads');
+                        if ($info) {
+                            //图片上传成功
+                            $goods_logo = DS . 'uploads' . DS . $info->getSaveName();
+                            $goods_logo = str_replace('\\', '/', $goods_logo);
+                            $goods_pics[] = $goods_logo;
+                        } else {
+                            $error = $info->getError();
+                            return_msg(400, $error);
+                        }
+                    }
+                    return $goods_pics;
+                }
             }
-        }
-        return $goods_pics;
-    }
-}
 
 //图片上传
-if (!function_exists('upload_pics')) {
-    function upload_pics($file){
-        //移动图片
-        $info=$file->validate(['size'=>5*1024*1024,'ext'=>'jpg,png,gif,jpeg'])->move(ROOT_PATH.'public'.DS.'uploads');
+            if (!function_exists('upload_pics')) {
+                function upload_pics($file)
+                {
+                    //移动图片
+                    $info = $file->validate(['size' => 5 * 1024 * 1024, 'ext' => 'jpg,png,gif,jpeg'])->move(ROOT_PATH . 'public' . DS . 'uploads');
 
-        if($info){
-            //文件上传成功,生成缩略图
-            //获取文件路径
-            $goods_logo=DS.'uploads'.DS.$info->getSaveName();
-            $goods_logo=str_replace('\\','/',$goods_logo);
-            return $goods_logo;
-        }else{
-            $error=$file->getError();
-            $this->error($error);
-        }
-    }
-}
+                    if ($info) {
+                        //文件上传成功,生成缩略图
+                        //获取文件路径
+                        $goods_logo = DS . 'uploads' . DS . $info->getSaveName();
+                        $goods_logo = str_replace('\\', '/', $goods_logo);
+                        return $goods_logo;
+                    } else {
+                        $error = $file->getError();
+                        $this->error($error);
+                    }
+                }
+            }
 
-/**
- * 发送短信到手机
- * @param $phone
- * @param $msg
- */
-function send_msg_to_phone($phone, $msg)
-{
-    $curl = curl_init();
+            if (!function_exists("check_time")) {
+                /**
+                 *
+                 * 验证是否请求超时
+                 * @param  [array] $arr [包含时间戳的参数数组]
+                 * @return [json]       [检测结果]
+                 */
+                function check_time($arr)
+                {
+                    if (!isset($arr[ 'time' ]) || intval($arr[ 'time' ] <= 1)) {
+                        $this->return_msg(400, '时间戳不正确！！');
+                    }
+                    if (time() - intval($arr[ 'time' ]) > 120) {
+                        $this->return_msg(400, '请求超时');
+                    }
 
-    curl_setopt($curl, CURLOPT_URL, 'https://api.mysubmail.com/message/xsend.json');
-    //curl_setopt($curl, CURLOPT_HEADER, 0);
-    curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
-    //post数据
-    curl_setopt($curl, CURLOPT_POST, 1);
-    //配置submail
-    $data = [
-        'appid' => '27075', //应用id
-        'to'  => $phone,     //要接受短信的电话
-        'project' => 'Jaayb', //模板标识
-        'vars'  => "{'code': '".$msg."'}",
-        'signature' => '5ac305ef38fb126d2a0ec5304040ab7d', //应用签名
-    ];
+                }
+            }
 
-    curl_setopt($curl, CURLOPT_POSTFIELDS, $data);
-    $res = curl_exec($curl);
-    curl_close($curl);
-    $res = json_decode($res);
-    if($res->status !== 'success') {
-        return false;
-    }else {
-        return true;
-    }
+            /**
+             * 发送短信到手机
+             * @param $phone
+             * @param $msg
+             */
+            function send_msg_to_phone($phone, $msg)
+            {
+                $curl = curl_init();
 
-}
-/**
- * 图片缩略图
- * @param Request $request
- * @return string
- */
-if(!function_exists('image_thumbnail')) {
+                curl_setopt($curl, CURLOPT_URL, 'https://api.mysubmail.com/message/xsend.json');
+                //curl_setopt($curl, CURLOPT_HEADER, 0);
+                curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
+                //post数据
+                curl_setopt($curl, CURLOPT_POST, 1);
+                //配置submail
+                $data = [
+                    'appid' => '27075', //应用id
+                    'to' => $phone,     //要接受短信的电话
+                    'project' => 'Jaayb', //模板标识
+                    'vars' => "{'code': '" . $msg . "'}",
+                    'signature' => '5ac305ef38fb126d2a0ec5304040ab7d', //应用签名
+                ];
 
-     function image_thumbnail($file, $width = 150, $height = 150)
-    {
+                curl_setopt($curl, CURLOPT_POSTFIELDS, $data);
+                $res = curl_exec($curl);
+                curl_close($curl);
+                $res = json_decode($res);
+                if ($res->status !== 'success') {
+                    return false;
+                } else {
+                    return true;
+                }
 
-        $image = \think\Image::open($file);
+            }
+
+            /**
+             * 图片缩略图
+             * @param Request $request
+             * @return string
+             */
+            if (!function_exists('image_thumbnail')) {
+
+                function image_thumbnail($file, $width = 150, $height = 150)
+                {
+
+                    $image = \think\Image::open($file);
 //                var_dump($image);die;
 
-        $type = $image->type();
+                    $type = $image->type();
 
-        //判断是否是图片格式
-        if(in_array($type,['jpg','png'])){
-            $date_path = 'uploads/thumb/' . date('Ymd');
+                    //判断是否是图片格式
+                    if (in_array($type, ['jpg', 'png'])) {
+                        $date_path = 'uploads/thumb/' . date('Ymd');
 
-            if (!file_exists($date_path)) {
-                mkdir($date_path, 0777, true);
+                        if (!file_exists($date_path)) {
+                            mkdir($date_path, 0777, true);
+                        }
+                        list($usec, $sec) = explode(" ", microtime());
+                        $times = str_replace('.', '', $usec + $sec);
+
+                        $thumb_path = $date_path . '/' . $times . '.' . $type;
+
+                        $image->thumb($width, $height)->save($thumb_path);
+                        return $thumb_path;
+                    } else {
+                        return 9;
+                    }
+
+                }
             }
-            list($usec, $sec) = explode(" ", microtime());
-            $times = str_replace('.', '', $usec + $sec);
-
-            $thumb_path = $date_path . '/' . $times . '.' . $type;
-
-            $image->thumb($width, $height)->save($thumb_path);
-            return $thumb_path;
-        }else{
-            return 9;
-        }
 
 
+            if (!function_exists('tailor_img')) {
 
-    }
-}
+                function tailor_img($file, $width = 200, $height = 200)
+                {
 
-
-if(!function_exists('tailor_img')) {
-
-    function tailor_img($file, $width = 200, $height = 200)
-    {
-
-        $image = \think\Image::open($file);
+                    $image = \think\Image::open($file);
 //                var_dump($image);die;
 
-        $type = $image->type();
+                    $type = $image->type();
 
 
-        //判断是否是图片格式
-        if(in_array($type,['jpg','jpeg','png'])){
-            $date_path = 'uploads/thumb/' . date('Ymd');
+                    //判断是否是图片格式
+                    if (in_array($type, ['jpg', 'jpeg', 'png'])) {
+                        $date_path = 'uploads/thumb/' . date('Ymd');
 
-            if (!file_exists($date_path)) {
-                mkdir($date_path, 0777, true);
+                        if (!file_exists($date_path)) {
+                            mkdir($date_path, 0777, true);
+                        }
+                        list($usec, $sec) = explode(" ", microtime());
+                        $times = str_replace('.', '', $usec + $sec);
+
+                        $thumb_path = $date_path . '/' . $times . '.' . $type;
+
+                        $image->thumb($width, $height, \think\Image::THUMB_CENTER)->save($thumb_path);
+                        return $thumb_path;
+                    } else {
+                        return 0;
+                    }
+
+                }
+
+
             }
-            list($usec, $sec) = explode(" ", microtime());
-            $times = str_replace('.', '', $usec + $sec);
-
-            $thumb_path = $date_path . '/' . $times . '.' . $type;
-
-            $image->thumb($width, $height,\think\Image::THUMB_CENTER)->save($thumb_path);
-            return $thumb_path;
-        }else{
-            return 0;
         }
-
-
-
     }
 }
+
+
 
