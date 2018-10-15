@@ -10,6 +10,8 @@ use think\Exception;
 use think\exception\DbException;
 use think\Request;
 use think\Session;
+use app\admin\controller\Incom;
+use app\admin\model\IncomImg;
 
 class Shop extends Controller
 {
@@ -44,8 +46,8 @@ class Shop extends Controller
 
         //查询商户的log_no流水号、mercId识别号    stl_sign结算标志 1对私 2对公
         $log_no = Db::name('merchant_incom')->where('merchant_id', $data[ 'merchant_id' ])
-            ->field('mcc_cd,tranTyps,wc_lbnk_no,stl_oac,icrp_id_no,crp_exp_dt_tmp,bnk_acnm ,mercId,log_no,status,suptDbfreeFlg,cardTyp,alipay_flg, yhkpay_flg,
-           fee_rat_scan,fee_rat3_scan,fee_rat1_scan,fee_rat,max_fee_amt,fee_rat1')
+            ->field('mcc_cd,stl_sign,wc_lbnk_no,stl_oac,icrp_id_no,crp_exp_dt_tmp,bnk_acnm ,mercId,status,suptDbfreeFlg,cardTyp,alipay_flg, yhkpay_flg,
+           fee_rat_scan,fee_rat1_scan,fee_rat,max_fee_amt,fee_rat1')
             ->find();
 //        dump($log_no);die;
 
@@ -65,12 +67,16 @@ class Shop extends Controller
 
             $data['orgNo']=ORG_NO;
             //fee_rat2_scan
+
         $data['fee_rat2_scan']="0.6";
             $data[ 'serviceId' ] = 6060602;
             $data[ 'version' ] = 'V1.0.1';
+            $data['log_no']="201810110001103896";
+            $data['tranTyps']="C1";
             $data=array_merge($data,$log_no);
 //        unset($data['']);
         unset($data['merchant_id']);
+        unset($data['status']);
 //        return json_encode($data);
             //签名域
             $sign_value = sign_ature(0000, $data);
@@ -81,9 +87,10 @@ class Shop extends Controller
 //        var_dump($data);die;
 
             $shop_api = curl_request($this->url, true, $data, true);
+//            return $shop_api;
             $shop_api = json_decode($shop_api, true);
             //获取签名域
-        var_dump($shop_api);die;
+//        var_dump($shop_api);die;
             $return_sign = sign_ature(1111, $shop_api);
             if ($shop_api[ 'msg_cd' ] === 000000) {
                 if ($shop_api[ 'signValue' ] == $return_sign) {
@@ -102,6 +109,97 @@ class Shop extends Controller
 //        }else{
 //            return_msg(100,'error','请先申请商户修改');
 //        }
+    }
+
+    public function upload_pictures(Request $request)
+    {
+        $info=$request->post();
+        $merchant_id=\session('merchant_id');
+        $merchant_id=87;
+        $data=MerchantIncom::alias('a')
+            ->field('a.mercId,a.orgNo,b.log_no,b.stoe_id')
+            ->join('merchant_shop b','b.merchant_id=a.merchant_id')
+            ->where('a.merchant_id',$info['merchant_id'])
+            ->find();
+
+        $data['serviceId']='6060606';
+        $data['version']='V1.0.1';
+        $data['imgTyp']=$info['imgTyp'];
+        $data['imgNm']=$info['imgNm'];
+        $data['merchant_id']=$info['merchant_id'];
+        $data = $data->toArray();
+        $file=$request->file('imgFile');
+        $data['imgFile'] = bin2hex(file_get_contents($file->getRealPath()));
+        $img = $this->upload_pics($file);
+        $this->send($data,$img);
+
+
+    }
+    /**
+     * 图片上传消息发送接口
+     *
+     * @param  int $id
+     * @return \think\Response
+     */
+    public function send($data,$img)
+    {
+        //获取签名
+        $data['signValue']=sign_ature(0000,$data);
+        //发送给新大陆
+        $result=json_decode(curl_request($this->url,true,$data,true),true);
+        if ($result['msg_cd'] !== '000000') {
+            return_msg(400, $result["msg_dat"]);
+        }
+        //生成签名
+        $signValue=sign_ature(1111,$result);
+        return_msg(200,'success',$result);
+        return json_encode($result);
+        if($result['msg_cd']=='000000' && $result['signValue']==$signValue){
+            //取出数据库中的图片
+            $file_img = IncomImg::field('img')->where('merchant_id',$data['merchant_id'])->find();
+            if($file_img == null){
+                //没有图片
+                $data['img']=json_encode($img);
+                IncomImg::create($data,true);
+            }elseif(is_array(json_decode($file_img['img']))){
+                //有多张图片
+
+                $arr=json_decode($file_img['img']);
+                $arr[]=$img;
+                IncomImg::where('merchant_id',$data['merchant_id'])->update(['img'=>json_encode($arr)]);
+            }else{
+                //只有一张图片
+
+                $arr[]=json_decode($file_img['img']);
+                $arr[]=$img;
+
+                IncomImg::where('merchant_id',$data['merchant_id'])->update(['img'=>json_encode($arr)]);
+            }
+//            $file_img=$file_img['img'].$img;
+            $res=[
+                'merchant_id'=>$data['merchant_id'],
+                'img'=>$img
+            ];
+            return_msg(200,'success',$res);
+        }else{
+            return_msg(400,'failure');
+        }
+    }
+
+    public function upload_pics(){
+        //移动图片
+        $file = request()->file('imgFile');
+        $info = $file->validate(['size'=>5*1024*1024,'ext'=>'jpg,png,gif,jpeg'])->move(ROOT_PATH.'public'.DS.'uploads');
+        if($info){
+            //文件上传成功,生成缩略图
+            //获取文件路径
+            $goods_logo = DS.'uploads'.DS.$info->getSaveName();
+            $goods_logo = str_replace('\\','/',$goods_logo);
+            return $goods_logo;
+        }else{
+            $error=$file->getError();
+            $this->error($error);
+        }
     }
     /**
      * 新增门店页面展示及mcc码查询

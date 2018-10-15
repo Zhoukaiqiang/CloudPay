@@ -485,9 +485,6 @@ if (!function_exists('tailor_img')) {
  * @param $phone [要检查的手机号]
  * @param null $exist [ 1 / 0 ]
  * @return bool / [msg]  检验结果
- * @throws \think\db\exception\DataNotFoundException
- * @throws \think\db\exception\ModelNotFoundException
- * @throws \think\exception\DbException
  */
 if (!function_exists('check_phone_exists')) {
     function check_phone_exists($db = 'cloud_total_admin', $phone, $exist = 0)

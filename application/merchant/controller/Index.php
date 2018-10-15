@@ -43,7 +43,7 @@ class Index extends Controller
                 $id=MerchantUser::where('id',$id)->field('shop_id')->find();
                 $name='shop_id';
             }
-            if($id==-1){
+            if($role==-1){
                 $name='merchant_id';
             }
 
@@ -51,8 +51,14 @@ class Index extends Controller
         //查询今天的收银金额和订单笔数
         $data=Order::where([$name=>$id])
             ->whereTime('pay_time','d')
+            ->where($name,$id)
             ->field('count(id) id,sum(received_money) received_money')
             ->select();
-        return json_encode($data[0]);
+
+
+                return_msg(200,'success',$data);
+
+
+
     }
 }

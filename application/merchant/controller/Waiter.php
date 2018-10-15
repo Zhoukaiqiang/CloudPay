@@ -262,6 +262,9 @@ class Waiter extends Controller
 
     /**
      * 保存桌码  二维码
+     * image  二维码地址
+     * name   桌码名称
+     * shop_id  门店id
      * @param Request $request
      */
     public function save_code(Request $request)
@@ -409,16 +412,21 @@ class Waiter extends Controller
                 $rew[]=$v['norm_id'];
 
             }
+            //菜品分类去重
             $data['rew']=array_unique($rew);
 //            $rew=array_filter(array_unique(explode(',',$rew)));
 
-
-            return json_encode($data);
+            if($data){
+                return_msg(200,'success',$data);
+            }else{
+                return_msg(400,'error','此店未来得及上传菜品');
+            }
         }else if($request->param('dish_name')){
+            //搜索菜品
             $dish_name=$request->param('dish_name');
             $data=MerchantDish::where(['dish_name'=>['like','%'.$dish_name.'%'],'shop_id'=>$shop_id,'status'=>1])->select();
             if($data){
-                return_msg(200,'success',json_encode($data));
+                return_msg(200,'success',$data);
             }else{
                 return_msg(400,'error','查无此菜品');
             }
@@ -755,19 +763,20 @@ class Waiter extends Controller
             $shop_id=$shop_id['shop_id'];
             $table=Db::name('shop_table')->where('shop_id',$shop_id)->field(['id','name','shop_id'])->select();
             if(empty($table)){
-                return false;
+                return_msg(400,'error','无桌位');
             }
-            return json_encode($table);
+            return_msg(200,'success',$table);
         }elseif ($request->isPost()){
             //桌位搜索
-            $name=$request->param(['name']);
+            $name=$request->param('name');
             $user_id=session('user_id');
             $user_id=1;
-            $shop_id=MerchantUser::where('id',$user_id)->field(['shop_id'])->find();
+            $shop_id=MerchantUser::where('id',$user_id)->field('shop_id')->find();
             $shop_id=$shop_id['shop_id'];
-            $table=Db::name('shop_table')->where(['shop_id'=>$shop_id,'name'=>['=',$name]])->field(['id','name','shop_id'])->select();
+
+            $table=Db::name('shop_table')->where(['shop_id'=>$shop_id,'name'=>['like',"%$name%"]])->field(['id','name','shop_id'])->select();
             if($table){
-                return_msg(200,'success',json_encode($table)) ;
+                return_msg(200,'success',$table) ;
             }else{
                 return_msg(400,'error','没有此桌位') ;
             }

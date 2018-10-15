@@ -398,14 +398,16 @@ class Incom extends Controller
     {
         $merchant_id=$request->post('merchant_id');
         //取出数据表中数据
-        $data=MerchantIncom::where('merchant_id',$merchant_id)->field('mercId,log_no,orgNo')->find();
+        $data=MerchantIncom::where('merchant_id',$merchant_id)->field('mercId,orgNo')->find();
         $data = $data->toArray();
         $data['serviceId']='6060603';
         $data['version']='V1.0.1';
+        $data['log_no']="201810110001103896";
 
         $data['signValue'] = sign_ature(0000,$data);
 
         $result=curl_request($this->url,true,$data,true);
+        return $result;
         $result = json_decode($result,true);
         if (!empty($result)) {
             return_msg(400, $result);
@@ -573,7 +575,7 @@ class Incom extends Controller
             $bbntu = json_decode($par, true);
             $return_sign = sign_ature(1111, $resul);
 
-              dump($bbntu);die;
+//              dump($bbntu);die;
 
             if ($bbntu[ 'msg_cd' ] === 000000) {
                 if ($return_sign == $bbntu[ 'signValue' ]) {
@@ -660,8 +662,8 @@ class Incom extends Controller
         $data['signValue']=$signValue;
         //向新大陆接口发送请求信息
         $par= curl_request($this->url,true,$data,true);
-        $par=json_decode($par,true);
-
+//        $par=json_decode($par,true);
+        return $par;
         //获取签名域
         $return_sign = sign_ature(1111,$par);
         if ($par['msg_cd']==000000){
