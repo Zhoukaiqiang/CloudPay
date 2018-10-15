@@ -96,7 +96,7 @@ class Receipt extends Common
             //显示当前商户下所有账单
             $data['list']=Order::field('id,status,order_money,pay_type,create_time')
                 ->where('merchant_id',$this->merchant_id)
-//                ->whereTime('create_time','yesterday')
+                ->whereTime('create_time','yesterday')
                 ->select();
             return_msg(200,'success',$data);
         }elseif(empty($this->merchant_id) && !empty($this->user_id)){
@@ -107,7 +107,7 @@ class Receipt extends Common
             //显示当前门店下所有账单
             $data['list']=Order::field('id,status,order_money,pay_type,create_time')
                 ->where('shop_id',$info['shop_id'])
-//                ->whereTime('create_time','yesterday')
+                ->whereTime('create_time','yesterday')
                 ->select();
             return_msg(200,'success',$data);
         }

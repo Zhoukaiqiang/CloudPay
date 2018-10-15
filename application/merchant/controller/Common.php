@@ -3,6 +3,7 @@
 namespace app\merchant\controller;
 
 use think\Controller;
+use think\Request;
 use think\Session;
 
 class Common extends Controller
