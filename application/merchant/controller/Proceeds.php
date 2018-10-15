@@ -9,6 +9,8 @@
 namespace app\merchant\controller;
 
 
+use app\agent\model\MerchantIncom;
+use app\merchant\model\MerchantShop;
 use app\merchant\model\TotalMerchant;
 use think\Controller;
 use think\Db;
@@ -85,6 +87,48 @@ class Proceeds extends Controller
          *
      */
     public function index()
+    {
+
+    }
+
+    /**
+     *扫码支付- 商户主扫
+     * @param Request $request
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     * Amount  实付金额
+     * total_amount 1 订单总金额
+     * authCode  1  扫码支付授权码，设备读取用户微信或支付宝中的条码或者二维码信息
+     * payChannel  1  支付渠道  支付宝 ALIPAY  微信 WXPAY   银联 YLPAY
+     * tradeNo   商户单号  在商户端不重复    ??????
+     */
+    public function shop_Lordesau(Request $request)
+    {
+        $data=$request->post();
+        //oprId  操作员号暂时没有
+        $data['payChannel']="WXPAY";
+//        $data['payChannel']=
+
+       return Scancode::publics($data);
+
+    }
+
+    /**
+     * 客户主扫
+     * @param Request $request
+     */
+
+    public function client_Lordesau(Request $request)
+    {
+        $data=$request->post();
+        //oprId  操作员号暂时没有
+
+        return Scancode::lord_esau($data);
+
+    }
+
+    public function order_inquiry()
     {
 
     }

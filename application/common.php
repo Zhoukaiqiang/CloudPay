@@ -309,21 +309,19 @@ function is_user_can($id)
 if (!function_exists('sign_ature')) {
     function sign_ature($ids,Array $arr)
     {
-//        dump($arr);die;
          ksort($arr);
         if ($ids == 0000) {
-            $data = ['serviceId', 'version', 'incom_type', 'stl_typ', 'stl_sign', 'stl_oac', 'bnk_acnm', 'wc_lbnk_no', 'bus_lic_no', 'bse_lice_nm', 'crp_nm', 'mercAdds', 'bus_exp_dt', 'crp_id_no', 'crp_exp_dt', 'stoe_nm', 'stoe_cnt_nm', 'stoe_cnt_tel', 'mcc_cd', 'stoe_area_cod', 'stoe_adds', 'trm_rec', 'mailbox', 'alipay_flg', 'yhkpay_flg','mercId','orgNo','imgTyp','imgNm','log_no','stoe_id','lbnk_nm'];
+            $data = ['payChannel','authCode','total_amount','opSys','characterSet','trmNo','tradeNo','txnTime','signType','Amount','serviceId', 'version', 'incom_type', 'stl_sign', 'stl_oac', 'bnk_acnm', 'wc_lbnk_no', 'bus_lic_no', 'bse_lice_nm', 'crp_nm', 'mercAdds', 'bus_exp_dt', 'crp_id_no', 'crp_exp_dt', 'stoe_nm', 'stoe_cnt_nm', 'stoe_cnt_tel', 'mcc_cd', 'stoe_area_cod', 'stoe_adds', 'trm_rec', 'mailbox', 'alipay_flg', 'yhkpay_flg','mercId','orgNo','imgTyp','imgNm','log_no','stoe_id','lbnk_nm'];
             $stra = '';
 
             foreach($arr as $k=>$v){
                 if (in_array($k,$data)) {
-//                    echo $k."<br/>";
                     $stra .= $v;
                 }
             }
 //            var_dump($stra);die;
         } else if ($ids == 1111) {
-            $data = ['check_flag', 'msg_cd', 'msg_dat', 'mercId', 'log_no', 'stoe_id', 'mobile', 'sign_stats', 'deliv_stats'];
+            $data = ['tradeNo','returnCode','sysTime','message','LogNo','Result','check_flag', 'msg_cd', 'msg_dat', 'mercId', 'log_no', 'stoe_id', 'mobile', 'sign_stats', 'deliv_stats'];
             $stra = '';
             foreach ($arr as $key1 => $val) {
                 if (in_array($key1, $data)) {

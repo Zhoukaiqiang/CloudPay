@@ -673,7 +673,7 @@
 "data" : []
 }
 ```
-## 16 卡卷核销 SN码搜索查询
+## 16 卡券核销 SN码搜索查询
 
 `post`http://www.domain.com/merchant/Coupon/cancel
 
@@ -747,7 +747,7 @@ user_id  操作人员
 
 ## 18 核销纪录
 
-`post`http://www.domain.com/merchant/Coupon/cancel_list
+`post
 
 <table>
 <tr>
@@ -1194,6 +1194,138 @@ received_money 订单金额
 "data" : []
 }
 ```
+
+## 生成二维码
+
+`post`http://www.domain.com/merchant/Waiter/qrcode2
+
+<table>
+<tr>
+<th>参数</th><th>类型</th><th>必选/可选</th><th>默认</th><th>描述</th>
+</tr>
+
+
+
+</table>
+
+```
+{
+"code": 200,
+"msg" : "success",
+"data" : []
+}
+```
+
+## 保存桌码
+
+`post`http://www.domain.com/merchant/Waiter/save_code
+
+<table>
+<tr>
+<th>参数</th><th>类型</th><th>必选/可选</th><th>默认</th><th>描述</th>
+</tr>
+
+<tr>
+<td>shop_id</td>
+<td>int</td>
+<td>必选</td>
+<td>无</td>
+<td>门店id</td>
+</tr>
+
+<tr>
+<td>image</td>
+<td>int</td>
+<td>必选</td>
+<td>无</td>
+<td》二维码图片</td>
+</tr>
+
+<tr>
+<td>name</td>
+<td>int</td>
+<td>必选</td>
+<td>无</td>
+<td>桌子名称</td>
+</tr>
+
+</table>
+
+```
+{
+"code": 200,
+"msg" : "success",
+"data" : []
+}
+```
+
+## 
+
+## 下载桌码 二维码
+
+`post`http://www.domain.com/merchant/Waiter/proceeds
+
+<table>
+<tr>
+<th>参数</th><th>类型</th><th>必选/可选</th><th>默认</th><th>描述</th>
+</tr>
+
+<tr>
+<td>id</td>
+<td>int</td>
+<td>必选</td>
+<td>无</td>
+<td>桌位id</td>
+</tr>
+
+
+
+</table>
+
+```
+{
+"code": 200,
+"msg" : "success",
+"data" : []
+}
+```
+
+## 
+
+## 删除桌码
+
+`post`http://www.domain.com/merchant/Waiter/table_delete
+
+<table>
+<tr>
+<th>参数</th><th>类型</th><th>必选/可选</th><th>默认</th><th>描述</th>
+</tr>
+
+<tr>
+<td>id</td>
+<td>int</td>
+<td>必选</td>
+<td>无</td>
+<td>桌位id</td>
+</tr>
+
+
+
+</table>
+
+```
+{
+"code": 200,
+"msg" : "success",
+"data" : []
+}
+```
+
+## 
+
+
+
+
 
 ## 29 餐具费设置
 
@@ -1968,7 +2100,7 @@ received_money 订单金额
 }
 ```
 
-## 48 服务员端--桌位展示
+## 48 服务员端--桌位展示 选择桌位
 
 `post`http://www.domain.com/merchant/Waiter/choose_table
 
@@ -2190,6 +2322,27 @@ received_money 订单金额
 <td>无</td>
 <td>菜品名称</td>
 </tr>
+
+</table>
+
+```
+{
+"code": 200,
+"msg" : "success",
+"data" : []
+}
+```
+
+## 52 APP首页面
+
+`post`http://www.domain.com/merchant/Index/index
+
+<table>
+<tr>
+<th>参数</th><th>类型</th><th>必选/可选</th><th>默认</th><th>描述</th>
+</tr>
+
+
 
 </table>
 

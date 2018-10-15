@@ -32,15 +32,17 @@ class Deposit extends Controller
     {
         //获取商户id
         $merchant_id=session('merchant_id');
-        $merchant_id=1;
+        $merchant_id=3;
         //账户可提现余额
         $data=TotalMerchant::where('id',$merchant_id)->field(['money','password'])->select();
+//        return json_encode($data);
         if(Request::instance()->isGet()){
             return json_encode(['money'=>$data[0]['money']]);
         }else{
             $money=$request->param('money');
             //判断密码是否正确
-            if($data[0]['password']==$request->param('password')){
+//
+            if($data[0]['password']==md5($request->param('password'))){
 
                 //orgNo机构号 tot_fee提现费率 mercId商户编号 stl_oac结算卡号 wc_lbnk_no开户行
                 $del=MerchantIncom::where('merchant_id',$merchant_id)
@@ -56,7 +58,7 @@ class Deposit extends Controller
 
                 $bese=['serial_number'=>$serial_number,'poundage'=>$tot_fee,'money'=>$money,'status'=>2,'create_time'=>time(),'bank'=>$del['wc_lbnk_no'],'bank_card'=>$del['stl_oac'],'merchant_id'=>$merchant_id];
                 //提现记录id
-                $id=Db::name('merchant_withdrawal')->getLastInsID($bese);
+                $id=Db::name('merchant_withdrawal')->insertGetId($bese);
                 if(!$id){
                     return_msg(400,'error','提现失败');
                 }
@@ -64,7 +66,7 @@ class Deposit extends Controller
                 $resu=['bank'=>$del['wc_lbnk_no'],'bank_card'=>$del['stl_oac'],'money'=>$money,'poundage'=>$tot_fee];
                 for ($i=0;$i<2;$i++){
                     if($i==0){
-                        return_msg(200,'success',json_encode($resu));
+                        return_msg(200,'success',$resu);
                     }else{
 
                         $par=$this->confirm_withdrawal($money,$del,$tot_fee);
@@ -104,7 +106,8 @@ class Deposit extends Controller
     public function Withdrawal_record()
     {
         $merchant_id=session('merchant_id');
-        $data=Db::name('merchant_withdrawal')->where(['merchant_id'=>$merchant_id,'status'=>1])->select();
+        $merchant_id=1;
+        $data=Db::name('merchant_withdrawal')->where(['merchant_id'=>$merchant_id])->select();
         return json_encode($data);
     }
 
@@ -132,8 +135,8 @@ class Deposit extends Controller
             $statussyom='<>';
         }
         //时间
-        $create_time=$request->param('create_time') ? strtotime($request->param('create_time')) : mktime(0,0,0,date('m'),date('d'),date('Y'));
-        $end_time=$request->param('end_time') ? strtotime($request->param('end_time'))+60*60*24-1 : mktime(23, 59, 59,date('m'),date('d'),date('Y'));
+        $create_time=$request->param('create_time') ? strtotime($request->param('create_time')) : 1533950117;
+        $end_time=$request->param('end_time') ? strtotime($request->param('end_time'))+60*60*24-1 : 1912641317;
 
         $data=Db::name('merchant_withdrawal')
             ->where(['merchant_id'=>$merchant_id,'status'=>[$statussyom,$status],'way'=>[$waysymo,$way],

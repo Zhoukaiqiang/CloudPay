@@ -48,13 +48,14 @@ class Reconciliation extends Controller
 
         } else {
             $shop_id = session('shop_id');
-            $shop_id = 2;
+            $shop_id = 1;
             //取出门店以及员工
-            $shop = Db::table('cloud_merchant_shop')->alias('a')
-                ->field(['a.shop_name', 'a.id as shopid', 'b.id as userid', 'b.name'])
-                ->join('cloud_merchant_user b', 'a.id=b.shop_id')
+            $shop = Db::table('merchant_shop')->alias('a')
+                ->field(['a.shop_name', 'a.id as shop_id', 'b.id as user_id', 'b.name'])
+                ->join('merchant_user b', 'a.id=b.shop_id')
                 ->where('a.id', $shop_id)
                 ->select();
+
             //取第一家的数据
             $data = Db::query("select pay_type,count(id) as count,sum(received_money) as received_money,sum(discount) as discount,sum(order_money) as order_money,sum(refund_money) as refund_money from cloud_order where shop_id=$shop_id group By pay_type");
 
