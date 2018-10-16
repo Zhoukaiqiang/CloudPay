@@ -109,8 +109,10 @@ class Proceeds extends Controller
         //oprId  操作员号暂时没有
         $data['payChannel']="WXPAY";
 //        $data['payChannel']=
-
-       return Scancode::publics($data);
+        //公共参数
+       $data= Scancode::publics($data);
+       //调用接口
+       return Scancode::lord_esau($data);
 
     }
 
@@ -124,7 +126,10 @@ class Proceeds extends Controller
         $data=$request->post();
         //oprId  操作员号暂时没有
 
-        return Scancode::lord_esau($data);
+        //公共参数
+        $data= Scancode::publics($data);
+        //调用接口
+        return Scancode::client_lordesau($data);
 
     }
 

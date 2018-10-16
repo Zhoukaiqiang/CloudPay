@@ -9,6 +9,7 @@
 // | Author: 流年 <liu21st@gmail.com>
 // +----------------------------------------------------------------------
 use think\Db;
+use think\Validate;
 
 // 应用公共文件
 if (!function_exists('encrypt_password')) {
@@ -316,8 +317,31 @@ if (!function_exists('sign_ature')) {
 }
 
 //批量上传图片
+
 if (!function_exists('upload_logo')) {
-    function upload_pics($files)
+    function upload_pics()
+    {
+        $files = request()->file('dish_img');
+        $goods_pics = [];
+        foreach ($files as $file) {
+            $info = $file->validate(['size' => 500 * 1024 * 1024, 'ext' => 'jpg,jpeg,gif,png'])->move(ROOT_PATH . 'public' . DS . 'uploads');
+            if ($info) {
+                //图片上传成功
+                $goods_logo = DS . 'uploads' . DS . $info->getSaveName();
+                $goods_logo = str_replace('\\', '/', $goods_logo);
+                $goods_pics[] = $goods_logo;
+            } else {
+
+                $error = $info->getError();
+                return_msg(400, $error);
+            }
+        }
+        return $goods_pics;
+    }
+}
+
+if (!function_exists('upload_pics_pay')) {
+    function upload_pics_pay($files)
     {
         $goods_pics = [];
         foreach ($files as $file) {
@@ -330,6 +354,7 @@ if (!function_exists('upload_logo')) {
             } else {
                 $error = $info->getError();
                 return_msg(400, $error);
+
             }
         }
         return $goods_pics;
@@ -337,6 +362,26 @@ if (!function_exists('upload_logo')) {
 }
 
 //图片上传
+
+if (!function_exists('upload_picspay')) {
+    function upload_picspay($file)
+    {
+        //移动图片
+        $info = $file->move(ROOT_PATH . 'public' . DS . 'uploads');
+
+        if ($info) {
+            //文件上传成功,生成缩略图
+            //获取文件路径
+            $goods_logo = DS . 'uploads' . DS . $info->getSaveName();
+            $goods_logo = str_replace('\\', '/', $goods_logo);
+            return $goods_logo;
+        } else {
+            $error = $file->getError();
+            $this->error($error);
+        }
+    }
+}
+
 if (!function_exists('upload_pics')) {
     function upload_pics($file)
     {
@@ -355,6 +400,7 @@ if (!function_exists('upload_pics')) {
         }
     }
 }
+
 
 if (!function_exists("check_time")) {
     /**
@@ -447,8 +493,10 @@ if (!function_exists('image_thumbnail')) {
 }
 
 
+/**
+ * 裁剪图片为正方形 200*200
+ */
 if (!function_exists('tailor_img')) {
-
     function tailor_img($file, $width = 200, $height = 200)
     {
 
@@ -533,10 +581,10 @@ function check_data($data, $return_data = null, $return = 1)
         } else {
             return_msg(400, "no data");
         }
-    }else {
+    } else {
         if (!$data) {
             return_msg(400, "no data");
-        }else {
+        } else {
             return true;
         }
     }

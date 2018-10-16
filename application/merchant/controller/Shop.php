@@ -40,8 +40,8 @@ class Shop extends Controller
     }
 
     /**
-     * 查询支行名称   联号
-     * @param Request $request
+     * 门店进件
+     * @param Request
      * @throws DbException
      * @throws \think\db\exception\DataNotFoundException
      * @throws \think\db\exception\ModelNotFoundException
