@@ -105,7 +105,8 @@ class Receipt extends Common
                 ->where('merchant_id',$this->merchant_id)
 //                ->whereTime('create_time','>','yesterday')
                 ->select();
-            return_msg(200,'success',$data);
+            check_data($data);
+
         }elseif( $this->user_id ){
             //获取门店id
             $info = MerchantUser::field('shop_id')->where('id',$this->user_id)->find();

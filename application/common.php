@@ -512,17 +512,33 @@ if (!function_exists('check_phone_exists')) {
 /**
  * 检验是否有数据，并返回结果
  * @param $data [要检查的数据]
- * @param null $return_data  [要返回的数据]
+ * @param null $return_data [要返回的数据]
+ * @param $return 0---不返回数据  1---返回数据
  * @return [json]  返回信息
  * @author K'
  */
-function check_data($data, $return_data = null) {
-    if (!$return_data) {
-        $return_data = $data;
-    }
-    if (count($data)) {
-        return_msg(200, "success", $return_data);
+function check_data($data, $return_data = null, $return = 1)
+{
+    if ($return == 1) {
+        if (!$data) {
+            return_msg(400, "no data");
+        } elseif (gettype($data) !== 'array') {
+            $data = $data->toArray();
+        }
+        if (!$return_data) {
+            $return_data = $data;
+        }
+        if (count($data)) {
+            return_msg(200, "success", $return_data);
+        } else {
+            return_msg(400, "no data");
+        }
     }else {
-        return_msg(400, "no data");
+        if (!$data) {
+            return_msg(400, "no data");
+        }else {
+            return true;
+        }
     }
+
 }

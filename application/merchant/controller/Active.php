@@ -189,7 +189,7 @@ class Active extends Common
                 }
             }
         }else{
-            if(!empty($this->merchant_id)){
+            if(!empty($this->merchant_id )){
                 //取出所有门店
                 $data=MerchantShop::field('id,shop_name')->where('merchant_id',$this->merchant_id)->select();
                 //查询门店是否有活动
