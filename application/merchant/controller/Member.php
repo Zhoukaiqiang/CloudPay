@@ -34,7 +34,7 @@ class Member extends Common
             //显示当前门店下所有会员
             $data=MerchantMember::field('id,member_head,member_phone,member_name,money')
                 ->where('shop_id',$info['shop_id'])
-//                ->whereTime('register_time','>','yesterday')
+                ->whereTime('register_time','>','yesterday')
                 ->select();
             return_msg(200,'success',$data);
         }
@@ -101,7 +101,6 @@ class Member extends Common
     {
         //获取会员订单id
         $id=$request->param('id');
-        $id=1;//测试
         $data=MemberRecharge::alias('a')
             ->field('a.*,b.shop_name')
             ->join('cloud_merchant_shop b','a.shop_id=b.id')
@@ -179,92 +178,91 @@ class Member extends Common
      * @param  int  $id
      * @return \think\Response
      */
-    public function scan_code(Request $request)
-    {
-        if(!empty($this->merchant_id)){
-            //获取会员id
-            $data=$request->post();
-            //获取门店id
-            $shop=MerchantShop::field('id')->where('merchant_id',$this->merchant_id)->find();
-            //发送给新大陆
-            $result = curl_request($this->url, true, $data, true);
-            if($result['Result']=="S"){
-                $arr=[
-                    'LogNo'=>$result['LogNo'],
-                    'order_no'=>$result['orderNo'],
-                    'amount'=>$result['Amount']/100,
-                    'order_money'=>$result['total_amount']/100,
-                    'member_id'=>$data['id'],
-                    'prove_number'=>$data['authCode'],
-                    'pay_type'=>$data['payChannel'],
-                    'status'=>1,
-                    'create_time'=>time(),
-                    'recharge_time'=>time(),
-                    'merchant_id'=>$this->merchant_id,
-                    'shop_id'=>$shop['id']
-                ];
-                $res=MemberRecharge::insert($arr);
-                if($res){
-                    //修改充值总额和余额
-                    $data['money']=floatval($result['Amount']/100);
-                    $info=MerchantMember::field('money')->where('id',$data['id'])->find();
-                    $total=$data['money']+$info['money'];
-                    MerchantMember::where('id',$data['id'])->update(['money'=>$total]);
-                        //修改充值总额
-                        $recharge_money=MerchantMember::field('recharge_money')->where('id',$data['id'])->find();
-                        $recharge_total=$recharge_money['recharge_money']+$data['money'];
-                        MerchantMember::where('id',$data['id'])->update(['recharge_money'=>$recharge_total]);
-                    return_msg(200,'交易成功');
-                }else{
-                    return_msg(200,'交易失败');
-                }
-            }else{
-                return_msg(400,'交易失败');
-            }
-        }elseif(empty($this->merchant_id) && !empty($this->user_id)){
-            //获取会员id
-            $data=$request->post();
-            //获取商户id和门店id
-            $merchant=MerchantMember::field('merchant_id,shop_id')->where('id',$data['id'])->find();
-
-            //发送给新大陆
-            $result = curl_request($this->url, true, $data, true);
-            if($result['Result']=="S"){
-                $arr=[
-                    'LogNo'=>$result['LogNo'],
-                    'order_no'=>$result['orderNo'],
-                    'amount'=>$result['Amount']/100,
-                    'order_money'=>$result['total_amount']/100,
-                    'member_id'=>$data['id'],
-                    'prove_number'=>$data['authCode'],
-                    'pay_type'=>$data['payChannel'],
-                    'status'=>1,
-                    'create_time'=>time(),
-                    'recharge_time'=>time(),
-                    'merchant_id'=>$merchant['merchant_id'],
-                    'shop_id'=>$merchant['shop_id']
-                ];
-                $res=MemberRecharge::insert($arr);
-                if($res){
-                    //修改充值总额和余额
-                    $data['money']=floatval($result['Amount']/100);
-                    $info=MerchantMember::field('money')->where('id',$data['id'])->find();
-                    $total=$data['money']+$info['money'];
-                    MerchantMember::where('id',$data['id'])->update(['money'=>$total]);
-                    //修改充值总额
-                    $recharge_money=MerchantMember::field('recharge_money')->where('id',$data['id'])->find();
-                    $recharge_total=$recharge_money['recharge_money']+$data['money'];
-                    MerchantMember::where('id',$data['id'])->update(['recharge_money'=>$recharge_total]);
-                    return_msg(200,'交易成功');
-                }else{
-                    return_msg(200,'交易失败');
-                }
-            }else{
-                return_msg(400,'交易失败');
-            }
-        }
-
-    }
+//    public function scan_code(Request $request)
+//    {
+//        if(!empty($this->merchant_id)){
+//            //获取会员id
+//            $data=$request->post();
+//            //获取门店id
+//            $shop=MerchantShop::field('id')->where('merchant_id',$this->merchant_id)->find();
+//            //发送给新大陆
+//            $result = curl_request($this->url, true, $data, true);
+//            if($result['Result']=="S"){
+//                $arr=[
+//                    'LogNo'=>$result['LogNo'],
+//                    'order_no'=>$result['orderNo'],
+//                    'amount'=>$result['Amount']/100,
+//                    'order_money'=>$result['total_amount']/100,
+//                    'member_id'=>$data['id'],
+//                    'prove_number'=>$data['authCode'],
+//                    'pay_type'=>$data['payChannel'],
+//                    'status'=>1,
+//                    'create_time'=>time(),
+//                    'recharge_time'=>time(),
+//                    'merchant_id'=>$this->merchant_id,
+//                    'shop_id'=>$shop['id']
+//                ];
+//                $res=MemberRecharge::insert($arr);
+//                if($res){
+//                    //修改充值总额和余额
+//                    $data['money']=floatval($result['Amount']/100);
+//                    $info=MerchantMember::field('money')->where('id',$data['id'])->find();
+//                    $total=$data['money']+$info['money'];
+//                    MerchantMember::where('id',$data['id'])->update(['money'=>$total]);
+//                        //修改充值总额
+//                        $recharge_money=MerchantMember::field('recharge_money')->where('id',$data['id'])->find();
+//                        $recharge_total=$recharge_money['recharge_money']+$data['money'];
+//                        MerchantMember::where('id',$data['id'])->update(['recharge_money'=>$recharge_total]);
+//                    return_msg(200,'交易成功');
+//                }else{
+//                    return_msg(200,'交易失败');
+//                }
+//            }else{
+//                return_msg(400,'交易失败');
+//            }
+//        }elseif(empty($this->merchant_id) && !empty($this->user_id)){
+//            //获取会员id
+//            $data=$request->post();
+//            //获取商户id和门店id
+//            $merchant=MerchantMember::field('merchant_id,shop_id')->where('id',$data['id'])->find();
+//
+//            //发送给新大陆
+//            $result = curl_request($this->url, true, $data, true);
+//            if($result['Result']=="S"){
+//                $arr=[
+//                    'LogNo'=>$result['LogNo'],
+//                    'order_no'=>$result['orderNo'],
+//                    'amount'=>$result['Amount']/100,
+//                    'order_money'=>$result['total_amount']/100,
+//                    'member_id'=>$data['id'],
+//                    'prove_number'=>$data['authCode'],
+//                    'pay_type'=>$data['payChannel'],
+//                    'status'=>1,
+//                    'create_time'=>time(),
+//                    'recharge_time'=>time(),
+//                    'merchant_id'=>$merchant['merchant_id'],
+//                    'shop_id'=>$merchant['shop_id']
+//                ];
+//                $res=MemberRecharge::insert($arr);
+//                if($res){
+//                    //修改充值总额和余额
+//                    $data['money']=floatval($result['Amount']/100);
+//                    $info=MerchantMember::field('money')->where('id',$data['id'])->find();
+//                    $total=$data['money']+$info['money'];
+//                    MerchantMember::where('id',$data['id'])->update(['money'=>$total]);
+//                    //修改充值总额
+//                    $recharge_money=MerchantMember::field('recharge_money')->where('id',$data['id'])->find();
+//                    $recharge_total=$recharge_money['recharge_money']+$data['money'];
+//                    MerchantMember::where('id',$data['id'])->update(['recharge_money'=>$recharge_total]);
+//                    return_msg(200,'交易成功');
+//                }else{
+//                    return_msg(200,'交易失败');
+//                }
+//            }else{
+//                return_msg(400,'交易失败');
+//            }
+//        }
+//    }
 
     /**
      * 银联收款

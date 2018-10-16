@@ -14,7 +14,7 @@ use think\Controller;
 use think\Request;
 use think\Session;
 
-class Active extends Controller
+class Active extends Common
 {
     /**
      * 充值送
@@ -38,7 +38,9 @@ class Active extends Controller
                                 'name'=>$data['name'],
                                 'merchant_id'=>$this->merchant_id,
                                 'status'=>1,
-                                'create_time'=>time()
+                                'create_time'=>time(),
+                                'start_time'=>time(),
+                                'end_time'=>strtotime('2038-01-19 03:14:07')
                             ];
                         }elseif($data['active_time'] == 1){
                             check_params('new_recharge',$data,'MerchantValidate');
@@ -159,6 +161,8 @@ class Active extends Controller
             $data=$request->post();
             if(is_array($data['shop_id'])){
                 if($data['active_time']==0){
+                    $data['start_time']=time();
+                    $data['end_time']=strtotime('2038-01-19 03:14:07');
                     //验证
                     check_params('discount',$data,'MerchantValidate');
                 }elseif($data['active_time']==1){
@@ -516,13 +520,11 @@ class Active extends Controller
      */
     public function recharge_stop(Request $request)
     {
-        $id=$request->post('id');
-        $result=ShopActiveRecharge::where('id',$id)->update(['status'=>0]);
+        $result=ShopActiveRecharge::where('merchant_id',$this->merchant_id)->delete();
         if($result){
             return_msg(200,'操作成功');
         }else{
             return_msg(400,'操作失败');
-
         }
     }
 
@@ -535,14 +537,24 @@ class Active extends Controller
      */
     public function discount_stop(Request $request)
     {
-        $id=$request->post('id');
-        $result=ShopActiveDiscount::where('id',$id)->update(['status'=>0]);
-        if($result){
-            return_msg(200,'操作成功');
-        }else{
-            return_msg(400,'操作失败');
-
+        if(!empty($this->merchant_id)){
+            $result=ShopActiveDiscount::where('merchant_id',$this->merchant_id)->delete();
+            if($result){
+                return_msg(200,'操作成功');
+            }else{
+                return_msg(400,'操作失败');
+            }
+        }elseif(!empty($this->user_id)){
+            //获取门店id
+            $shop_id=$request->param('shop_id');
+            $result=ShopActiveDiscount::where('shop_id',$shop_id)->delete();
+            if($result){
+                return_msg(200,'操作成功');
+            }else{
+                return_msg(400,'操作失败');
+            }
         }
+
     }
 
     /**
@@ -554,14 +566,25 @@ class Active extends Controller
      */
     public function share_stop(Request $request)
     {
-        $id = $request->post('id');
-        $result=ShopActiveShare::where('id',$id)->update(['status'=>0]);
-        if($result){
-            return_msg(200,'操作成功');
-        }else{
-            return_msg(400,'操作失败');
+        if(!empty($this->merchant_id)){
+            $result=ShopActiveShare::where('merchant_id',$this->merchant_id)->delete();
+            if($result){
+                return_msg(200,'操作成功');
+            }else{
+                return_msg(400,'操作失败');
+            }
+        }elseif(!empty($this->user_id)){
+            //获取门店id
+            $shop_id = $request->post('shop_id');
+            $result=ShopActiveShare::where('shop_id',$shop_id)->delete();
+            if($result){
+                return_msg(200,'操作成功');
+            }else{
+                return_msg(400,'操作失败');
 
+            }
         }
+
     }
 
     /**
@@ -573,13 +596,11 @@ class Active extends Controller
      */
     public function exclusive_stop(Request $request)
     {
-        $id = $request->post('id');
-        $result=ShopActiveExclusive::where('id',$id)->update(['status'=>0]);
+        $result=ShopActiveExclusive::where('merchant_id',$this->merchant_id)->delete();
         if($result){
             return_msg(200,'操作成功');
         }else{
             return_msg(400,'操作失败');
-
         }
     }
     /**
