@@ -9,8 +9,23 @@ class Order extends Model
     public function getStatusAttr($value)
     {
         //
-        $attr_input_type = ['未支付','已支付','已关闭','会员充值'];
-        return $attr_input_type[$value];
+        switch($value){
+            case 0:
+                return "未支付";
+                break;
+            case 1:
+                return "已支付";
+                break;
+            case 2:
+                return "退款成功";
+                break;
+            case 3:
+                return "退款中";
+                break;
+            case 3:
+                return "退款失败";
+                break;
+        }
     }
 
     public function getPayTypeAttr($value)

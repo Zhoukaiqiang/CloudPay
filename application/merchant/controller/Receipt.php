@@ -8,6 +8,7 @@ use app\merchant\model\MerchantUser;
 use app\merchant\model\Order;
 use app\merchant\model\TotalMerchant;
 use think\Controller;
+use think\Exception;
 use think\Request;
 
 class Receipt extends Common
@@ -22,7 +23,7 @@ class Receipt extends Common
     public function receipt_detail(Request $request)
     {
         $id=$request->param('id');
-        $id=1;//测试
+
         $data=Order::alias('a')
             ->field('a.id,a.status,a.received_money,a.order_money,a.discount,b.shop_name,a.cashier,a.pay_time,a.cashier,a.pay_type,a.order_remark,a.order_number,a.status,a.authorize_number,a.prove_number,a.give_money')
             ->join('cloud_merchant_shop b','a.shop_id=b.id','left')
@@ -50,14 +51,19 @@ class Receipt extends Common
             }
             //取出订单号
             $order=Order::field('order_no')->where('id',$param['id'])->find();
-            $order=$order->toArray($order);
+            $arr=[
+                'orderNo'=>$order['order_no'],
+                'txnAmt'=>$param['txnAmt']
+            ];
             //发给新大陆
-            $result = curl_request($this->url, true, $order, true);
+            $result = curl_request($this->url, true, $arr, true);
             $result = json_decode($result, true);
             if($result['result']=='S'){
-
+                //修改状态
+                Order::where('id',$param['id'])->update(['status'=>2]);
                 return_msg(200,'退款中');
             }else{
+                Order::where('id',$param['id'])->update(['status'=>4]);
                 return_msg(400,'退款失败');
             }
         }elseif(empty($this->merchant_id) && !empty($this->user_id)){
@@ -87,6 +93,7 @@ class Receipt extends Common
      * 显示账单
      *
      * @return \think\Response
+     * @throws Exception
      */
     public function receipt_bill()
     {
@@ -96,20 +103,21 @@ class Receipt extends Common
             //显示当前商户下所有账单
             $data['list']=Order::field('id,status,order_money,pay_type,create_time')
                 ->where('merchant_id',$this->merchant_id)
-                ->whereTime('create_time','yesterday')
+//                ->whereTime('create_time','>','yesterday')
                 ->select();
             return_msg(200,'success',$data);
-        }elseif(empty($this->merchant_id) && !empty($this->user_id)){
+        }elseif( $this->user_id ){
             //获取门店id
-            $info=MerchantUser::field('shop_id')->where('id',$this->user_id)->find();
+            $info = MerchantUser::field('shop_id')->where('id',$this->user_id)->find();
             //显示当前门店
             $data['shop']=MerchantShop::field('id,shop_name')->where('id',$info['shop_id'])->find();
             //显示当前门店下所有账单
             $data['list']=Order::field('id,status,order_money,pay_type,create_time')
                 ->where('shop_id',$info['shop_id'])
-                ->whereTime('create_time','yesterday')
+//                ->whereTime('create_time','>','yesterday')
                 ->select();
-            return_msg(200,'success',$data);
+
+            check_data($data);
         }
 
     }
@@ -146,6 +154,24 @@ class Receipt extends Common
 
     }
 
+    /**
+     * 订单搜索
+     */
+    public function order_search(Request $request)
+    {
+        $order=$request->param('order');
+        $info=Order::alias('a')
+            ->field('a.id,a.status,a.received_money,a.order_money,a.discount,b.shop_name,a.cashier,a.pay_time,a.cashier,a.pay_type,a.order_remark,a.order_number,a.status,a.authorize_number,a.prove_number,a.give_money')
+            ->join('cloud_merchant_shop b','a.shop_id=b.id','left')
+            ->where('a.order_number',$order)
+            ->find();
+        if($info){
+            return_msg(200,'success',$info);
+        }else{
+            return_msg(400,'未找到数据');
+        }
+
+    }
     /**
      * 搜索
      *

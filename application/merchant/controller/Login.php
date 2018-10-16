@@ -77,7 +77,6 @@ class Login extends Controller
 
             $res = $db_res->toArray();
 
-
             if ($db_res['password'] !== encrypt_password($data['password'], $data["phone"])) {
 
                 return_msg(400, '用户密码不正确！');
@@ -90,6 +89,10 @@ class Login extends Controller
                     Session::set("username_", ["id" => $res['id'], "role" => $res["role"]], 'app');
                 }
                 unset($res['password']); //密码不返回
+                if (!isset($res['role'])) {
+                    $res["role"] = -1;
+                }
+
                 return_msg(200, '登录成功！', $res);
             }
         }
@@ -103,27 +106,10 @@ class Login extends Controller
     public function logout(Request $request)
     {
         Session::clear("app");
-        if (!Session::get("username_", "app")) {
+        if (!Session::has("username_", "app")) {
             return_msg(200, "退出成功");
         }
 
-    }
-
-    /**
-     * 检测用户是否存在于数据库
-     *
-     * @param $phone 用户手机号
-     * @throws \think\db\exception\DataNotFoundException
-     * @throws \think\db\exception\ModelNotFoundException
-     * @throws \think\exception\DbException
-     * @return [json]  检测结果
-     */
-    public function check_phone($phone)
-    {
-        $result = Db::table('cloud_total_admin')->where('phone', $phone)->find();
-        if ($result) {
-            return return_msg(400, '用户已存在！');
-        }
     }
 
     /**
@@ -141,23 +127,29 @@ class Login extends Controller
 
         check_params("change_pwd", $query);
         /* 检测用户名并取出数据库中的密码 */
-        $this->check_exist($query['phone'], 'phone', 1);
+        $this->check_exist($query["phone"], "phone", 1);
         $where['phone'] = $query['phone'];
 
         /* 判断原始密码是否正确 */
         if (Session::get("username_", "app")["role"] == -1) {
             $db_ini_pwd = TotalMerchant::where($where)->value("password");
-        }else {
+        } else {
             $db_ini_pwd = MerchantUser::where($where)->value("password");
         }
 
-        if ($db_ini_pwd !== encrypt_password($query['ini_pwd'], $query["phone"])) {
-            return_msg(400, '密码不正确!');
+        if ($db_ini_pwd !==  encrypt_password( $query['ini_pwd'], $query["phone"])) {
+            return_msg(400, '旧密码不正确!');
+        }
+
+        if (Session::get("username_", "app")["role"] == -1) {
+            $res = Db::name('total_merchant')->where($where)->setField('password', encrypt_password($query['password'], $query['phone']));
+
+        }else {
+            $res = Db::name('merchant_user')->where($where)->setField('password', encrypt_password($query['password'], $query['phone']));
         }
 
         /* 把新的密码存入数据库 */
-        $res = db('total_admin')->where($where)->setField('password', encrypt_password($query['password'], $query['phone']));
-        if ($res !== false) {
+        if ($res !== 0) {
             return_msg(200, '密码修改成功！');
         } else {
             return_msg(400, '密码修改失败！');
@@ -184,9 +176,9 @@ class Login extends Controller
         $where['phone'] = $query['phone'];
 
         /* 修改数据库 */
-        if (Session::get("username_", "app")["role"]  == -1) {
+        if (Session::get("username_", "app")["role"] == -1) {
             $res = db('total_merchant')->where($where)->setField('password', encrypt_password($query['password'], $query['phone']));
-        }else {
+        } else {
             $res = db('merchant_user')->where($where)->setField('password', encrypt_password($query['password'], $query['phone']));
         }
 
