@@ -98,31 +98,33 @@ class Waiter extends Controller
      */
     public function add_cuisine(Request $request)
     {
-
+        //页面展示
         if(Request::instance()->isGet()){
             //取出所有属性
             $shop_id=$request->param('shop_id');
             $data=[];
+            //取出推荐 和特色标签
             $data['data']=Db::name('merchant_dish_norm')->where(['parent_id'=>['in',[1,2]]])->select();
-            $data['type']=Db::name('merchant_dish_norm')->where('shop_id',$shop_id)->field('id,dish_norm')->select();
+//            $data['type']=Db::name('merchant_dish_norm')->where('shop_id',$shop_id)->field('id,dish_norm')->select();
             $data['shop_id']=$shop_id;
             return json_encode($data);
         }else if(Request::instance()->isPost()){
+            //新增菜品
             $data=$request->post();
             //标签 []
 
 //            $data['dish_label']=explode(',',$data['dish_label']);
-//            dump($data['dish_label']);die;
-//            $data['dish_attr']=implode(',',explode(',',$data['dish_attr']));
+//            $data['dish_attr']=explode(',',$data['dish_attr']);
+//            dump($data['dish_attr']);die;
             $file=$request->file('dish_img');
             //裁剪200*200图
             $tailor=tailor_img($file);
             if(!$tailor){
                 return_msg(400,'success','图片格式不正确');
             }
-//            var_dump($tailor);die;
+//            var_dump($file);die;
             //原图
-            $file=upload_pics($file);
+            $file=upload_picspay($file);
            $file=$tailor.','.$file;
             $data['dish_img']=$file;
             $dish=Db::name('merchant_dish')->insert($data);

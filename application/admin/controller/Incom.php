@@ -275,9 +275,11 @@ class Incom extends Controller
      * @throws \think\db\exception\ModelNotFoundException
      * @throws \think\exception\DbException
      */
-    public function bank_query($open_branch=null) {
+    public function bank_query(Request $request) {
         if(empty($open_branch)){
-            $branch=request()->param('open_branch');
+//            $branch=request()->param('open_branch');
+            $branch=$request->param('open_branch');
+            return $branch;
             $str_len=strlen($branch)/3;
             if($str_len<10){
                 return_msg(400,'长度不能低于10位');
@@ -293,6 +295,7 @@ class Incom extends Controller
             $res = curl_request($this->url, true, $query, true);
             /** json转成数组 */
             $res = json_decode($res, true);
+//            var_dump($res);die;
             if($res['msg_cd']==000000){
                 $check = $this->check_sign_value($res['signValue'], $res);
                 if($check==true){

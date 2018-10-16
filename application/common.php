@@ -9,6 +9,7 @@
 // | Author: 流年 <liu21st@gmail.com>
 // +----------------------------------------------------------------------
 use think\Db;
+use think\Validate;
 
 // 应用公共文件
 if (!function_exists('encrypt_password')) {
@@ -353,8 +354,9 @@ if (!function_exists('sign_ature')) {
 
 //批量上传图片
             if (!function_exists('upload_logo')) {
-                function upload_pics($files)
+                function upload_pics()
                 {
+                    $files=request()->file('dish_img');
                     $goods_pics = [];
                     foreach ($files as $file) {
                         $info = $file->validate(['size' => 500 * 1024 * 1024, 'ext' => 'jpg,jpeg,gif,png'])->move(ROOT_PATH . 'public' . DS . 'uploads');
@@ -364,6 +366,7 @@ if (!function_exists('sign_ature')) {
                             $goods_logo = str_replace('\\', '/', $goods_logo);
                             $goods_pics[] = $goods_logo;
                         } else {
+
                             $error = $info->getError();
                             return_msg(400, $error);
                         }
@@ -377,7 +380,7 @@ if (!function_exists('sign_ature')) {
                 function upload_pics($file)
                 {
                     //移动图片
-                    $info = $file->validate(['size' => 5 * 1024 * 1024, 'ext' => 'jpg,png,gif,jpeg'])->move(ROOT_PATH . 'public' . DS . 'uploads');
+                    $info = $file->move(ROOT_PATH . 'public' . DS . 'uploads');
 
                     if ($info) {
                         //文件上传成功,生成缩略图
@@ -482,7 +485,9 @@ if (!function_exists('sign_ature')) {
                 }
             }
 
-
+            /**
+             * 裁剪图片为正方形 200*200
+             */
             if (!function_exists('tailor_img')) {
 
                 function tailor_img($file, $width = 200, $height = 200)
