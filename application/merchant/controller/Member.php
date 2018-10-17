@@ -15,7 +15,7 @@ use think\Request;
 
 class Member extends Common
 {
-
+    public $url = 'http://sandbox.starpos.com.cn/emercapp';
     /**
      * 显示会员列表
      *
@@ -31,11 +31,11 @@ class Member extends Common
                 ->select();
             check_data($data);
         }elseif(empty($this->merchant_id) && !empty($this->user_id)){
-            $info=MerchantUser::field('shop_id')->where('id',$this->user_id)->find();
+            $merchant=MerchantUser::field('merchant_id')->where('id',$this->user_id)->find();
             //显示当前门店下所有会员
             $data=MerchantMember::field('id,member_head,member_phone,member_name,money')
-                ->where('shop_id',$info['shop_id'])
-                ->whereTime('register_time','>','yesterday')
+                ->where('merchant_id',$merchant['merchant_id'])
+//                ->whereTime('register_time','>','yesterday')
                 ->select();
             check_data($data);
         }
@@ -50,14 +50,43 @@ class Member extends Common
     public function search()
     {
         $search=request()->param('search');
-        if(is_numeric($search)){
-            //电话搜索
-            $data=MerchantMember::field('id,member_head,member_phone,member_name,money')->where('member_phone','like',$search.'%')->select();
-        }else{
-            //姓名搜索
-            $data=MerchantMember::field('id,member_head,member_phone,member_name,money')->where('member_name','like',$search.'%')->select();
+        if(!empty($this->merchant_id)){
+            if(is_numeric($search)){
+                $where=[
+                    'member_phone'=>['like',$search.'%'],
+                    'merchant_id'=>$this->merchant_id
+                ];
+                //电话搜索
+                $data=MerchantMember::field('id,member_head,member_phone,member_name,money')->where($where)->select();
+            }else{
+                $where=[
+                    'member_name'=>['like',$search.'%'],
+                    'merchant_id'=>$this->merchant_id
+                ];
+                //姓名搜索
+                $data=MerchantMember::field('id,member_head,member_phone,member_name,money')->where($where)->select();
+            }
+            check_data($data);
+        }elseif(!empty($this->user_id)){
+            $merchant=MerchantUser::field('merchant_id')->where('id',$this->user_id)->find();
+            if(is_numeric($search)){
+                $where=[
+                    'member_phone'=>['like',$search.'%'],
+                    'merchant_id'=>$merchant['merchant_id']
+                ];
+                //电话搜索
+                $data=MerchantMember::field('id,member_head,member_phone,member_name,money')->where($where)->select();
+            }else{
+                $where=[
+                    'member_name'=>['like',$search.'%'],
+                    'merchant_id'=>$merchant['merchant_id']
+                ];
+                //姓名搜索
+                $data=MerchantMember::field('id,member_head,member_phone,member_name,money')->where($where)->select();
+            }
+            check_data($data);
         }
-        check_data($data);
+
     }
     /**
      * 会员详情
@@ -122,7 +151,40 @@ class Member extends Common
         if($request->isPost()){
             //获取会员id
             $data=$request->post();
-            $data['money']=floatval($data['money']);
+            check_params('member_recharge',$data,'MerchantValidate');
+            //获取支付金额
+           //取出所有活动
+            $check=$this->get_recharge();
+            $check=collection($check)->toArray();
+            //按键值升序排序
+            array_multisort($check);
+//            halt($check);
+            for($i=0;$i<count($check);$i++){
+                if($i==(count($check)-1)){
+                    if($check[$i]['recharge_money']<=$data['amount']){
+                        //充值金额
+                        $data['money']=$data['amount']+$check[$i]['give_money'];
+                        //优惠金额
+                        $data['discount_amount']=$check[$i]['give_money'];
+                    }elseif($check[0]['recharge_money']>$data['amount']){
+                        //没有优惠
+                        $data['money']=$data['amount'];
+                        $data['discount_amount']=0;
+                    }
+                }else{
+                    if($check[$i]['recharge_money']<=$data['amount'] && $data['amount']<=$check[$i+1]['recharge_money']){
+                        //充值金额
+                        $data['money']=$data['amount']+$check[$i]['give_money'];
+                        //优惠金额
+                        $data['discount_amount']=$check[$i]['give_money'];
+                    }elseif($check[0]['recharge_money']>$data['amount']){
+                        //没有优惠
+                        $data['money']=$data['amount'];
+                        $data['discount_amount']=0;
+                    }
+                }
+            }
+            //修改余额
             $info=MerchantMember::field('money')->where('id',$data['id'])->find();
             $total=$data['money']+$info['money'];
             $result=MerchantMember::where('id',$data['id'])->update(['money'=>$total]);
@@ -155,24 +217,27 @@ class Member extends Common
                 return_msg(400,'充值失败');
             }
         }else{
-            //取出所有会员充值送活动
-                //取出永久充值送活动
-            if(!empty($this->merchant_id)){
-                $data[]=ShopActiveRecharge::field('recharge_money,give_money')->where(['active_time'=>0,'merchant_id'=>$this->merchant_id])->select();
-                //取出未过期充值送活动
-                $data[]=ShopActiveRecharge::field('recharge_money,give_money')->where(['active_time'=>1,'merchant_id'=>$this->merchant_id])->whereTime('end_time','>',time())->select();
-                check_data($data);
-            }elseif(empty($this->merchant_id) && !empty($this->user_id)){
-                $info=MerchantUser::field('merchant_id')->where('id',$this->user_id)->find();
-                $data[]=ShopActiveRecharge::field('recharge_money,give_money')->where(['active_time'=>0,'merchant_id'=>$info['merchant_id']])->select();
-                //取出未过期充值送活动
-                $data[]=ShopActiveRecharge::field('recharge_money,give_money')->where(['active_time'=>1,'merchant_id'=>$info['merchant_id']])->whereTime('end_time','>',time())->select();
-                check_data($data);
-            }
-
+            $data=$this->get_recharge();
+            check_data($data);
         }
     }
 
+    public function get_recharge()
+    {
+        //取出所有会员充值送活动
+        //取出永久充值送活动
+        if(!empty($this->merchant_id)){
+            //取出未过期充值送活动
+            $data=ShopActiveRecharge::field('recharge_money,give_money')->where(['merchant_id'=>$this->merchant_id])->whereTime('end_time','>',time())->select();
+//                halt($data);
+            return $data;
+        }elseif(empty($this->merchant_id) && !empty($this->user_id)){
+            $info=MerchantUser::field('merchant_id')->where('id',$this->user_id)->find();
+            //取出未过期充值送活动
+            $data=ShopActiveRecharge::field('recharge_money,give_money')->where(['merchant_id'=>$info['merchant_id']])->whereTime('end_time','>',time())->select();
+            return $data;
+        }
+    }
     /**
      * 扫码收款
      *
@@ -189,6 +254,8 @@ class Member extends Common
 //            $shop=MerchantShop::field('id')->where('merchant_id',$this->merchant_id)->find();
 //            //发送给新大陆
 //            $result = curl_request($this->url, true, $data, true);
+//            $result=json_decode($result,true);
+//
 //            if($result['Result']=="S"){
 //                $arr=[
 //                    'LogNo'=>$result['LogNo'],
@@ -353,4 +420,205 @@ class Member extends Common
             return_msg(400,'设置失败');
         }
     }
+
+    /**
+     *我的会员
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function pc_member_list()
+    {
+        //取出商户下所有会员
+        $row=MerchantMember::where('merchant_id',$this->merchant_id)->count();
+        $pages=page($row);
+        $data['list']=MerchantMember::field("id,member_name,money,member_phone, register_time")
+            ->where('merchant_id',$this->merchant_id)
+            ->limit($pages['offset'],$pages['limit'])
+            ->select();
+        //取出今日数据
+        $data['new_member']=MerchantMember::where('merchant_id',$this->merchant_id)
+            ->whereTime('register_time','today')
+            ->count();
+        $data['member_recharge']=MemberRecharge::where('merchant_id',$this->merchant_id)
+            ->whereTime('recharge_time','today')
+            ->count();
+        $data['recharge_total']=MemberRecharge::where('merchant_id',$this->merchant_id)
+            ->whereTime('recharge_time','today')
+            ->sum('order_money');
+        $data['page']=$pages;
+        check_data($data);
+    }
+
+    /**
+     *会员搜索
+     * @param Request $request
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function pc_member_search(Request $request)
+    {
+        $search=$request->param('search');
+        if(is_numeric($search)){
+            $where=[
+                'member_phone'=>['like',$search.'%'],
+                'merchant_id'=>$this->merchant_id
+            ];
+            $row=MerchantMember::where($where)->count();
+            $pages=page($row);
+            //电话搜索
+            $data['list'] = MerchantMember::field('id,member_name,money,member_phone,register_time')
+                ->where($where)
+                ->limit($pages['offset'],$pages['limit'])
+                ->select();
+        }else{
+            $where = [
+                'member_name'=>['like',$search.'%'],
+                'merchant_id'=>$this->merchant_id
+            ];
+            $row = MerchantMember::where($where)->count();
+            $pages = page($row);
+            //姓名搜索
+            $data = MerchantMember::field('id,member_name,money,member_phone,register_time')->where($where)->limit($pages['offset'],$pages['limit'])->select();
+        }
+        check_data($data);
+    }
+
+    /**
+     *会员详情
+     * @param Request $request
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function pc_member_detail(Request $request)
+    {
+        //获取会员id
+        $member_id = $request->param('id');
+        $row=MemberRecharge::where('member_id',$member_id)
+            ->count();
+        $pages=page($row);
+        $data['list'] = MemberRecharge::field('order_no,recharge_time,pay_type,order_money,discount_amount,amount')
+            ->where('member_id',$member_id)
+            ->limit($pages['offset'],$pages['limit'])
+            ->order('recharge_time desc')
+            ->select();
+        $data['page']=$pages;
+        check_data($data);
+    }
+
+    /**
+     *会员详情搜索
+     * @param Request $request
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function pc_member_detail_search(Request $request)
+    {
+        //获取会员id
+        $member_id=$request->param('id');
+        $query['start_time']=$request->param('start_time') ? $request->param('start_time') : '';
+        if(!empty($query['start_time'])) {
+            $query['end_time'] = $request->param('end_time') ? $request->param('end_time') : '';
+            if (empty($query['end_time'])) {
+                return_msg(400, '请选择结束时间');
+            }
+            if (time() - $query['start_time'] > 5604000) {
+                return_msg(400, '您选择的时间大于两个月，请重新选择！');
+            }
+            $time=[$query['start_time'],$query['end_time']];
+            $row = MemberRecharge::where('member_id',$member_id)
+                ->whereTime('recharge_time','between',$time)
+                ->count();
+            $pages=page($row);
+
+            $data['list'] = MemberRecharge::field('order_no,recharge_time,pay_type,order_money,discount_amount,amount')
+                ->where('member_id',$member_id)
+                ->whereTime('recharge_time','between',$time)
+                ->limit($pages['offset'],$pages['limit'])
+                ->order('recharge_time desc')
+                ->select();
+            $data['page'] = $pages;
+            check_data($data);
+        }
+    }
+
+    /**
+     *会员充值记录
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function pc_member_recharge()
+    {
+        //统计数据
+        $member=new MemberRecharge();
+        //实际充值
+        $data['amount']=$member->where('merchant_id',$this->merchant_id)->whereTime('recharge_time','today')->sum('amount');
+        //赠送金额
+        $data['give_money']=$member->where('merchant_id',$this->merchant_id)->whereTime('recharge_time','today')->sum('discount_amount');
+        //现金收款
+        $data['cash']=$member->where(['merchant_id'=>$this->merchant_id,'pay_type'=>'PAY'])->whereTime('recharge_time','today')->sum('order_money');
+        //银联
+        $data['union']=$member->where(['merchant_id'=>$this->merchant_id,'pay_type'=>'YLPAY'])->whereTime('recharge_time','today')->sum('order_money');
+        //线上
+        $data['online']=$member->where(['merchant_id'=>$this->merchant_id,'pay_type'=>'WXPAY'])->whereOr('pay_type','ALIPAY')->whereTime('recharge_time','today')->sum('order_money');
+
+        $row=$member->alias('a')
+            ->join('cloud_merchant_member b','a.member_id=b.id','left')
+            ->where('a.merchant_id',$this->merchant_id)
+            ->count();
+        $pages=page($row);
+        $data['data'] = $member->alias('a')
+            ->field('a.recharge_time,a.LogNo,a.order_no,a.status,a.order_money,a.discount_amount,a.pay_type,b.member_phone')
+            ->join('cloud_merchant_member b','a.member_id=b.id','left')
+            ->where('a.merchant_id',$this->merchant_id)
+            ->limit($pages['offset'],$pages['limit'])
+            ->order('a.recharge_time desc')
+            ->select();
+        $data['page']=$pages;
+        check_data($data);
+    }
+
+    /**
+     *会员充值记录搜索
+     * @param Request $request
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function pc_member_recharge_search(Request $request){
+        $query['start_time']=$request->param('start_time') ? $request->param('start_time') : '';
+        if(!empty($query['start_time'])) {
+            $query['end_time'] = $request->param('end_time') ? $request->param('end_time') : '';
+            if (empty($query['end_time'])) {
+                return_msg(400, '请选择结束时间');
+            }
+            if (time() - $query['start_time'] > 5604000) {
+                return_msg(400, '您选择的时间大于两个月，请重新选择！');
+            }
+            $time=[$query['start_time'],$query['end_time']];
+
+           $member=new MemberRecharge();
+            $row=$member->alias('a')
+                ->join('cloud_merchant_member b','a.member_id=b.id','left')
+                ->where('a.merchant_id',$this->merchant_id)
+                ->whereTime('a.recharge_time','between',$time)
+                ->count();
+            $pages=page($row);
+            $data['data'] = $member->alias('a')
+                ->field('a.recharge_time,a.LogNo,a.order_no,a.status,a.order_money,a.discount_amount,a.pay_type,b.member_phone')
+                ->join('cloud_merchant_member b','a.member_id=b.id','left')
+                ->where('a.merchant_id',$this->merchant_id)
+                ->whereTime('a.recharge_time','between',$time)
+                ->limit($pages['offset'],$pages['limit'])
+                ->order('a.recharge_time desc')
+                ->select();
+            $data['page']=$pages;
+            check_data($data);
+        }
+    }
+
 }

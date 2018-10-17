@@ -44,6 +44,9 @@ class MerchantValidate extends Validate
         ['member_color', 'require', '请选择会员卡颜色 '],
         ['member_content', 'require', '请输入宣传标语'],
         ['member_cart_name', 'require', '请输入会员卡名称'],
+
+        //会员充值
+        ['amount', 'require|number', '请输入支付金额|支付金额必须是数字 '],
     ];
 
     //命名规则 控制器_函数名称
@@ -77,6 +80,11 @@ class MerchantValidate extends Validate
         //会员卡
         'card'=>[
             'member_color','member_content','member_cart_name'
+        ],
+
+        //会员充值
+        'member_recharge'=>[
+            'amount'
         ],
     ];
 
