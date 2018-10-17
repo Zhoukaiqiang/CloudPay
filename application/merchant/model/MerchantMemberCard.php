@@ -4,7 +4,7 @@ namespace app\merchant\model;
 
 use think\Model;
 
-class MerchantMemberCart extends Model
+class MerchantMemberCard extends Model
 {
     //
 }

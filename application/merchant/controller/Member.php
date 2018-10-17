@@ -4,6 +4,7 @@ namespace app\merchant\controller;
 
 use app\merchant\model\MemberRecharge;
 use app\merchant\model\MerchantMember;
+use app\merchant\model\MerchantMemberCard;
 use app\merchant\model\MerchantMemberCart;
 use app\merchant\model\MerchantShop;
 use app\merchant\model\MerchantUser;
@@ -28,7 +29,7 @@ class Member extends Common
                 ->where('merchant_id',$this->merchant_id)
                 ->whereTime('register_time','>','yesterday')
                 ->select();
-            return_msg(200,'success',$data);
+            check_data($data);
         }elseif(empty($this->merchant_id) && !empty($this->user_id)){
             $info=MerchantUser::field('shop_id')->where('id',$this->user_id)->find();
             //显示当前门店下所有会员
@@ -36,7 +37,7 @@ class Member extends Common
                 ->where('shop_id',$info['shop_id'])
                 ->whereTime('register_time','>','yesterday')
                 ->select();
-            return_msg(200,'success',$data);
+            check_data($data);
         }
 
     }
@@ -56,7 +57,7 @@ class Member extends Common
             //姓名搜索
             $data=MerchantMember::field('id,member_head,member_phone,member_name,money')->where('member_name','like',$search.'%')->select();
         }
-        return_msg(200,'success',$data);
+        check_data($data);
     }
     /**
      * 会员详情
@@ -70,7 +71,7 @@ class Member extends Common
         $data=MerchantMember::field('id,member_head,recharge_money,consumption_money,member_name,member_phone,money,consump_number,register_time')
             ->where('id',$id)
             ->find();
-        return_msg(200,'success',$data);
+        check_data($data);
     }
 
     /**
@@ -88,7 +89,7 @@ class Member extends Common
             ->whereTime('recharge_time','>',time()-7776000)
             ->select();
 //        $data['member_id']=$member_id;
-        return_msg(200,'success',$data);
+        check_data($data);
     }
 
     /**
@@ -106,7 +107,8 @@ class Member extends Common
             ->join('cloud_merchant_shop b','a.shop_id=b.id')
             ->where('a.id',$id)
             ->find();
-        return_msg(200,'success',$data);
+        check_data($data);
+//        return_msg(200,'success',$data);
     }
 
     /**
@@ -137,7 +139,7 @@ class Member extends Common
                 $arr=[
                     'status'=>1,
                     'member_id'=>$data['id'],
-                    'order_money'=>$data['order_money'],
+                    'order_money'=>$data['money'],
                     'amount'=>$data['amount'],
                     'recharge_time'=>time(),
                     'pay_type'=>'PAY',
@@ -159,13 +161,13 @@ class Member extends Common
                 $data[]=ShopActiveRecharge::field('recharge_money,give_money')->where(['active_time'=>0,'merchant_id'=>$this->merchant_id])->select();
                 //取出未过期充值送活动
                 $data[]=ShopActiveRecharge::field('recharge_money,give_money')->where(['active_time'=>1,'merchant_id'=>$this->merchant_id])->whereTime('end_time','>',time())->select();
-                return_msg(200,'success',$data);
+                check_data($data);
             }elseif(empty($this->merchant_id) && !empty($this->user_id)){
                 $info=MerchantUser::field('merchant_id')->where('id',$this->user_id)->find();
                 $data[]=ShopActiveRecharge::field('recharge_money,give_money')->where(['active_time'=>0,'merchant_id'=>$info['merchant_id']])->select();
                 //取出未过期充值送活动
                 $data[]=ShopActiveRecharge::field('recharge_money,give_money')->where(['active_time'=>1,'merchant_id'=>$info['merchant_id']])->whereTime('end_time','>',time())->select();
-                return_msg(200,'success',$data);
+                check_data($data);
             }
 
         }
@@ -302,7 +304,7 @@ class Member extends Common
             $data[]['new_count'] = MerchantMember::whereTime('register_time', 'today')
                 ->where('merchant_id', $this->merchant_id)
                 ->count();
-            return_msg(200, 'success', $data);
+            check_data($data);
         }elseif(empty($this->merchant_id) && !empty($this->user_id)){
             //获取门店id
             $info=MerchantUser::field('shop_id')->where('id',$this->user_id)->find();
@@ -321,7 +323,7 @@ class Member extends Common
             $data[]['new_count'] = MerchantMember::whereTime('register_time', 'today')
                 ->where('shop_id', $info['shop_id'])
                 ->count();
-            return_msg(200, 'success', $data);
+            check_data($data);
         }
     }
 
@@ -341,9 +343,11 @@ class Member extends Common
     public function set_member_cart(Request $request)
     {
         $data=$request->post();
-        $result=MerchantMemberCart::insertGetId($data,true);
+        $data['merchant_id']=$this->merchant_id;
+        check_params('card',$data,'MerchantValidate');
+        MerchantMemberCard::where('merchant_id',$this->merchant_id)->delete();
+        $result=MerchantMemberCard::insertGetId($data,true);
         if($result){
-            MerchantMember::update('card_id',$result);
             return_msg(200,'设置成功');
         }else{
             return_msg(400,'设置失败');
