@@ -277,13 +277,18 @@ class Incom extends Controller
      */
     public function bank_query(Request $request) {
         if(empty($open_branch)){
+<<<<<<< Updated upstream
 //            $branch=request()->param('open_branch');
             $branch=$request->param('open_branch');
             return $branch;
             $str_len=strlen($branch)/3;
+=======
+            $branch=request()->param('open_branch');
+            /*$str_len=strlen($branch)/3;
+>>>>>>> Stashed changes
             if($str_len<10){
                 return_msg(400,'长度不能低于10位');
-            }
+            }*/
             $query = [
                 'serviceId' => "6060208",
                 'version' => "V1.0.1",
@@ -295,7 +300,11 @@ class Incom extends Controller
             $res = curl_request($this->url, true, $query, true);
             /** json转成数组 */
             $res = json_decode($res, true);
+<<<<<<< Updated upstream
 //            var_dump($res);die;
+=======
+            halt($res);
+>>>>>>> Stashed changes
             if($res['msg_cd']==000000){
                 $check = $this->check_sign_value($res['signValue'], $res);
                 if($check==true){

@@ -39,6 +39,11 @@ class MerchantValidate extends Validate
         //分享红包
         ['money', 'require|number', '请输入红包金额|红包金额必须为数字 '],
         ['lowest_consump', 'number', '最低消费必须为数字  '],
+
+        //设置会员卡
+        ['member_color', 'require', '请选择会员卡颜色 '],
+        ['member_content', 'require', '请输入宣传标语'],
+        ['member_cart_name', 'require', '请输入会员卡名称'],
     ];
 
     //命名规则 控制器_函数名称
@@ -68,6 +73,10 @@ class MerchantValidate extends Validate
         //分享红包
         'share'=>[
             'money', 'lowest_consump', 'start_time','end_time','shop_id'
+        ],
+        //会员卡
+        'card'=>[
+            'member_color','member_content','member_cart_name'
         ],
     ];
 

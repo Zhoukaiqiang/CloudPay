@@ -29,7 +29,7 @@ class Receipt extends Common
             ->join('cloud_merchant_shop b','a.shop_id=b.id','left')
             ->where('a.id',$id)
             ->find();
-        return_msg(200,'success',$data);
+        check_data($data);
     }
 
     /**
@@ -82,8 +82,10 @@ class Receipt extends Common
             $result = curl_request($this->url, true, $order, true);
             $result = json_decode($result, true);
             if($result['result']=='S'){
-                return_msg(200,'退款成功');
+                Order::where('id',$param['id'])->update(['status'=>2]);
+                return_msg(200,'退款中');
             }else{
+                Order::where('id',$param['id'])->update(['status'=>4]);
                 return_msg(400,'退款失败');
             }
         }
@@ -106,7 +108,6 @@ class Receipt extends Common
 //                ->whereTime('create_time','>','yesterday')
                 ->select();
             check_data($data);
-
         }elseif( $this->user_id ){
             //获取门店id
             $info = MerchantUser::field('shop_id')->where('id',$this->user_id)->find();
@@ -161,16 +162,25 @@ class Receipt extends Common
     public function order_search(Request $request)
     {
         $order=$request->param('order');
-        $info=Order::alias('a')
-            ->field('a.id,a.status,a.received_money,a.order_money,a.discount,b.shop_name,a.cashier,a.pay_time,a.cashier,a.pay_type,a.order_remark,a.order_number,a.status,a.authorize_number,a.prove_number,a.give_money')
-            ->join('cloud_merchant_shop b','a.shop_id=b.id','left')
-            ->where('a.order_number',$order)
-            ->find();
-        if($info){
-            return_msg(200,'success',$info);
-        }else{
-            return_msg(400,'未找到数据');
+        if($this->merchant_id){
+            //查询当前商户订单
+            $info=Order::alias('a')
+                ->field('a.id,a.order_number,a.status,a.received_money,a.order_money,a.discount,b.shop_name,a.cashier,a.pay_time,a.cashier,a.pay_type,a.order_remark,a.order_number,a.status,a.authorize_number,a.prove_number,a.give_money')
+                ->join('cloud_merchant_shop b','a.shop_id=b.id','left')
+                ->where(['a.order_number'=>$order,'a.merchant_id'=>$this->merchant_id])
+                ->find();
+            check_data($info);
+        }elseif($this->user_id){
+            //获取当前门店
+            $shop=MerchantUser::field('shop_id')->where('id',$this->user_id)->find();
+            $info=Order::alias('a')
+                ->field('a.id,a.order_number,a.status,a.received_money,a.order_money,a.discount,b.shop_name,a.cashier,a.pay_time,a.cashier,a.pay_type,a.order_remark,a.order_number,a.status,a.authorize_number,a.prove_number,a.give_money')
+                ->join('cloud_merchant_shop b','a.shop_id=b.id','left')
+                ->where(['a.order_number'=>$order,'a.shop_id'=>$shop['shop_id']])
+                ->find();
+            check_data($info);
         }
+
 
     }
     /**
@@ -187,21 +197,21 @@ class Receipt extends Common
                 ->where('shop_id',$data['shop_id'])
                 ->whereTime('create_time',$param,$time)
                 ->select();
-            return_msg(200,'success',$data);
+            check_data($data);
         }elseif(!empty($data['shop_id']) && !empty($data['status'])){
             //取出当前门店下所有状态
             $data=Order::field('id,status,order_money,pay_type,create_time')
                 ->where(['shop_id'=>$data['shop_id'],'status'=>$data['status']])
                 ->whereTime('create_time',$param,$time)
                 ->select();
-            return_msg(200,'success',$data);
+            check_data($data);
         }elseif(empty($data['shop_id']) && !empty($data['status'])){
             //当前商户下所有状态
             $data=Order::field('id,status,order_money,pay_type,create_time')
                 ->where(['merchant_id'=>$this->merchant_id,'status'=>$data['status']])
                 ->whereTime('create_time',$param,$time)
                 ->select();
-            return_msg(200,'success',$data);
+            check_data($data);
         }
     }
 
@@ -221,21 +231,21 @@ class Receipt extends Common
                 ->where('shop_id',$data['shop_id'])
                 ->order('create_time desc')
                 ->select();
-            return_msg(200,'success',$data);
+            check_data($data);
         }elseif(!empty($data['shop_id']) && !empty($data['status'])){
             //取出当前门店下所有状态
             $data=Order::field('id,status,order_money,pay_type,create_time')
                 ->where(['shop_id'=>$data['shop_id'],'status'=>$data['status']])
                 ->order('create_time desc')
                 ->select();
-            return_msg(200,'success',$data);
+            check_data($data);
         }elseif(empty($data['shop_id']) && !empty($data['status'])){
             //当前商户下所有状态
             $data=Order::field('id,status,order_money,pay_type,create_time')
                 ->where(['merchant_id'=>$this->merchant_id,'status'=>$data['status']])
                 ->order('create_time desc')
                 ->select();
-            return_msg(200,'success',$data);
+            check_data($data);
         }
     }
 

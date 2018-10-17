@@ -226,7 +226,7 @@ class Active extends Common
     public function exclusive(Request $request)
     {
         $info=ShopActiveExclusive::field('status')->where(['merchant_id'=>$this->merchant_id,'status'=>1])->find();
-        if(empty($info)){
+        if(!empty($info)){
             return_msg(400,'请先关闭活动');
         }
         $data=$request->post();
@@ -426,7 +426,7 @@ class Active extends Common
                 ->whereTime('a.end_time','>',time())
                 ->order('a.create_time desc')
                 ->select();
-            return_msg(200,'success',$data);
+            check_data($data);
         }elseif(empty($this->merchant_id) && !empty($this->user_id)){
             //取出门店下所有活动
             $info=MerchantUser::field('shop_id')->where('id',$this->user_id)->find();
@@ -437,7 +437,7 @@ class Active extends Common
             ];
             //折扣
             //取出永久有效活动
-            $data['discount'][]=ShopActiveDiscount::alias('a')
+            $data['discount'][] = ShopActiveDiscount::alias('a')
                 ->field('a.*,b.shop_name')
                 ->join('cloud_merchant_shop b','a.shop_id=b.id')
                 ->where($where)
@@ -475,7 +475,7 @@ class Active extends Common
                 ->whereTime('a.end_time','>',time())
                 ->order('a.create_time desc')
                 ->select();
-            return_msg(200,'success',$data);
+            check_data($data);
         }
 
     }
