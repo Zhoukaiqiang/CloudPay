@@ -531,7 +531,7 @@ if (!function_exists('tailor_img')) {
  * 检测用户是否存在于数据库
  * @param string $db [数据库全称]
  * @param $phone [要检查的手机号]
- * @param null $exist [ 1 / 0 ]
+ * @param $exist $exist [ 1 / 0 ]
  * @return bool / [msg]  检验结果
  * @author K'
  */
