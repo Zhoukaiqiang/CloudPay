@@ -59,9 +59,9 @@ class Index extends Common
 
     }
 
-    /******* 商户PC后台--首页数据  ********/
+    /******* 商户PC端后台--首页数据  ********/
     /**
-     * 首页交易数据--统计
+     * PC端首页交易数据--统计
      *
      * @param Request $request ->  $time  时间戳  格式[12312312,35146112]
      * @throws \think\db\exception\DataNotFoundException
@@ -86,7 +86,7 @@ class Index extends Common
                 ->whereTime("pay_time", $time_flag, $time)
                 ->select();
 
-            check_data($result,'',0);
+            check_data($result, '', 0);
             /** 实收金额 */
             $data["count"]['true_money'] = 0;
             /** 交易金额 */
@@ -128,7 +128,7 @@ class Index extends Common
     }
 
     /**
-     * 首页数据-- 列表
+     * PC端首页数据-- 今日交易数据
      * @param Request $request
      * @throws \think\db\exception\DataNotFoundException
      * @throws \think\db\exception\ModelNotFoundException
@@ -152,23 +152,112 @@ class Index extends Common
                 "pay_time" => [$time_flag, $time]
             ];
 
-            $Order = new Order();
+            $where_join = [
+                "o.merchant_id" => $this->merchant_id,
+                "o.pay_time" => [$time_flag, $time],
+            ];
 
-            /** 默认展示今天的 门店数据 */
-            $rows = $Order::where($where)->count("id");
-            $pages = page($rows);
-            $field = ['order_number','pay_time',"shop_name", "cashier","pay_type", "received_money", "order_money", "discount", "status"];
+            $this->return_list($where,$where_join);
 
-            $data["list"] = $Order::where($where)
-                ->alias("o")
-                ->join("cloud_merchant_shop shop", "o.shop_id")
-                ->limit($pages["offset"], $pages["limit"])->field($field)->select();
-            $data["pages"] = $pages;
-            $data["pages"]["rows"] = $rows;
-
-            check_data($data);
         }
 
+    }
+
+    /**
+     * PC端首页数据-- 今日交易数据
+     * @param Request $request
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function pc_search_list(Request $request)
+    {
+        if ($request->isPost()) {
+
+            $cashier = $request->param("cashier");
+            $shop = $request->param("shop");
+            $status = $request->param("status");
+            $time = $request->param("time");
+
+            if (isset($time)) {
+                $time_flag = "between";
+
+            } else {
+                $time = strtotime("today");
+                $time_flag = ">=";
+            }
+            if ($cashier) {
+                $cashier_flag = "LIKE";
+            } else {
+                $cashier_flag = "<>";
+                $cashier = -2;
+            }
+
+            if (isset($shop)) {
+                $shop_flag = "eq";
+            } else {
+                $shop_flag = "<>";
+                $shop = -2;
+            }
+
+            if (isset($status)) {
+                $status_flag = "eq";
+            } else {
+                $status_flag = "<>";
+                $status = -2;
+            }
+            $where = [
+                "merchant_id" => $this->merchant_id,
+                "pay_time" => [$time_flag, $time]
+            ];
+
+            $where_join = [
+                "o.merchant_id" => $this->merchant_id,
+                "o.cashier" => [$cashier_flag, $cashier],
+                "o.shop_id" => [$shop_flag, $shop],
+                "o.status" => [$status_flag, $status],
+                "o.pay_time" => [$time_flag, $time],
+            ];
+
+            $this->return_list($where,$where_join);
+
+        }
+
+    }
+
+
+    /**
+     * 返回列表数据
+     * @param $where
+     * @param $where_join
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    protected function return_list($where, $where_join) {
+        $Order = new Order();
+
+        /** 搜索可选项--------- 返回所有门店 */
+        $data["shop_list"] = MerchantShop::where(["merchant_id"=> $this->merchant_id])->field("shop_name,id")->select();
+
+        /** 搜索可选项--------- 返回所有收银员 */
+        $data["cashier_list"] = MerchantUser::where(["merchant_id"=> ["eq",$this->merchant_id], "role" => ["eq", 1]])->field("name,id")->select();
+
+        /** 默认展示今天的 门店数据 */
+        $rows = $Order::where($where)->count("id");
+        $pages = page($rows);
+        $field = ['o.order_number', 'o.pay_time', "shop.shop_name", "o.cashier", "o.pay_type", "o.received_money", "o.order_money", "o.discount", "o.status"];
+
+        $data["list"] = $Order::where($where_join)
+            ->alias("o")
+            ->field($field)
+            ->join("cloud_merchant_shop shop", "o.shop_id")
+            ->group("o.id")
+            ->limit($pages["offset"], $pages["limit"])->field($field)->select();
+        $data["pages"] = $pages;
+        $data["pages"]["rows"] = $rows;
+
+        check_data($data["list"], $data, 1);
     }
 
 }

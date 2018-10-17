@@ -11,6 +11,8 @@ namespace app\merchant\controller;
 
 use app\merchant\model\MemberRecharge;
 use app\merchant\model\MerchantMember;
+use app\agent\model\MerchantIncom;
+use app\merchant\model\MerchantShop;
 use app\merchant\model\Order;
 use app\merchant\model\ShopActiveRecharge;
 use think\Controller;

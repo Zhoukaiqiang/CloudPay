@@ -16,7 +16,7 @@ use think\Controller;
 use think\Db;
 use think\Request;
 
-class Proceeds extends Controller
+class Proceeds extends Scancode
 {
     /**
      * 现金支付
@@ -110,7 +110,7 @@ class Proceeds extends Controller
         $data['payChannel']="WXPAY";
 //        $data['payChannel']=
         //公共参数
-       $data= Scancode::publics($data);
+       $data= $this->publics($data);
        //调用接口
        return Scancode::lord_esau($data);
 
@@ -121,7 +121,7 @@ class Proceeds extends Controller
      * @param Request $request
      */
 
-    public function client_Lordesau(Request $request)
+    public function client_Lordesau_1(Request $request)
     {
         $data=$request->post();
         //oprId  操作员号暂时没有
