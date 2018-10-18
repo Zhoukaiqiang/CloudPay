@@ -19,7 +19,6 @@ class Incom extends Controller
    public $url = 'https://gateway.starpos.com.cn/emercapp';
 
 
-
     /**
      * 验证签名域是否正确
      * @param $old_sign
@@ -527,28 +526,6 @@ class Incom extends Controller
         }
     }
 
-    /**
-     * 保存更新的资源
-     *
-     * @param  \think\Request $request
-     * @param  int $id
-     * @return \think\Response
-     */
-    public function update(Request $request, $id)
-    {
-        //
-    }
-
-    /**
-     * 删除指定资源
-     *
-     * @param  int $id
-     * @return \think\Response
-     */
-    public function delete($id)
-    {
-        //
-    }
 
 
     /*

@@ -47,11 +47,18 @@ class MerchantValidate extends Validate
 
         //会员充值
         ['amount', 'require|number', '请输入支付金额|支付金额必须是数字 '],
+
+        //绑定银行卡
+        ["account_name", "require", "开户者名称必填"],
+        ["account_no", "require", "银行卡号必填"],
+        ["id_card", "require", "身份证号必填"],
+        ["open_bank", "require", "支行行号必填"],
     ];
 
     //命名规则 控制器_函数名称
     protected $scene = [
         //新增用户
+        'bind_card' => ["account_name", "account_no", "id_card", "open_bank"],
         'add_user' => ['name', 'phone', 'password', 'role', 'shop_id'],
         //充值送
         'recharge'=>[
