@@ -319,26 +319,27 @@ if (!function_exists('sign_ature')) {
 
 //批量上传图片
 
-            if (!function_exists('upload_logo')) {
-                function upload_pics()
-                {
-                    $files = request()->file('dish_img');
-                    $goods_pics = [];
-                    foreach ($files as $file) {
-                        $info = $file->validate(['size' => 500 * 1024 * 1024, 'ext' => 'jpg,jpeg,gif,png'])->move(ROOT_PATH . 'public' . DS . 'uploads');
-                        if ($info) {
-                            //图片上传成功
-                            $goods_logo = DS . 'uploads' . DS . $info->getSaveName();
-                            $goods_logo = str_replace('\\', '/', $goods_logo);
-                            $goods_pics[] = $goods_logo;
-                        } else {
+if (!function_exists('upload_logo')) {
+    function upload_pics()
+    {
+        $files = request()->file('dish_img');
+        $goods_pics = [];
+        foreach ($files as $file) {
+            $info = $file->validate(['size' => 500 * 1024 * 1024, 'ext' => 'jpg,jpeg,gif,png'])->move(ROOT_PATH . 'public' . DS . 'uploads');
+            if ($info) {
+                //图片上传成功
+                $goods_logo = DS . 'uploads' . DS . $info->getSaveName();
+                $goods_logo = str_replace('\\', '/', $goods_logo);
+                $goods_pics[] = $goods_logo;
+            } else {
 
-                            $error = $info->getError();
-                            return_msg(400, $error);
-                        }
-                    }
-                    return $goods_pics;
-                }
+                $error = $info->getError();
+                return_msg(400, $error);
+            }
+        }
+        return $goods_pics;
+    }
+}
 
 //                if (!function_exists('upload_logo')) {
 //                    function upload_pics($files)
@@ -360,219 +361,253 @@ if (!function_exists('sign_ature')) {
 //                        return $goods_pics;
 //                    }
 //                }
+if (!function_exists('upload_pics_pay')) {
+    function upload_pics_pay($files)
+    {
+        $goods_pics = [];
+        foreach ($files as $file) {
+            $info = $file->validate(['size' => 500 * 1024 * 1024, 'ext' => 'jpg,jpeg,gif,png'])->move(ROOT_PATH . 'public' . DS . 'uploads');
+            if ($info) {
+                //图片上传成功
+                $goods_logo = DS . 'uploads' . DS . $info->getSaveName();
+                $goods_logo = str_replace('\\', '/', $goods_logo);
+                $goods_pics[] = $goods_logo;
+            } else {
+                $error = $info->getError();
+                return_msg(400, $error);
+
+            }
+        }
+        return $goods_pics;
+    }
+}
 
 //图片上传
 
-                if (!function_exists('upload_picspay')) {
-                    function upload_picspay($file)
-                    {
-                        //移动图片
-                        $info = $file->move(ROOT_PATH . 'public' . DS . 'uploads');
+if (!function_exists('upload_picspay')) {
+    function upload_picspay($file)
+    {
+        //移动图片
+        $info = $file->move(ROOT_PATH . 'public' . DS . 'uploads');
 
-                        if ($info) {
-                            //文件上传成功,生成缩略图
-                            //获取文件路径
-                            $goods_logo = DS . 'uploads' . DS . $info->getSaveName();
-                            $goods_logo = str_replace('\\', '/', $goods_logo);
-                            return $goods_logo;
-                        } else {
-                            $error = $file->getError();
-                            $this->error($error);
-                        }
-                    }
-                }
+        if ($info) {
+            //文件上传成功,生成缩略图
+            //获取文件路径
+            $goods_logo = DS . 'uploads' . DS . $info->getSaveName();
+            $goods_logo = str_replace('\\', '/', $goods_logo);
+            return $goods_logo;
+        } else {
+            $error = $file->getError();
+            $this->error($error);
+        }
+    }
+}
 
-                if (!function_exists('upload_pics')) {
-                    function upload_pics($file)
-                    {
-                        //移动图片
-                        $info = $file->validate(['size' => 5 * 1024 * 1024, 'ext' => 'jpg,png,gif,jpeg'])->move(ROOT_PATH . 'public' . DS . 'uploads');
+if (!function_exists('upload_pics')) {
+    function upload_pics($file)
+    {
+        //移动图片
+        $info = $file->validate(['size' => 5 * 1024 * 1024, 'ext' => 'jpg,png,gif,jpeg'])->move(ROOT_PATH . 'public' . DS . 'uploads');
 
-                        if ($info) {
-                            //文件上传成功,生成缩略图
-                            //获取文件路径
-                            $goods_logo = DS . 'uploads' . DS . $info->getSaveName();
-                            $goods_logo = str_replace('\\', '/', $goods_logo);
-                            return $goods_logo;
-                        } else {
-                            $error = $file->getError();
-                            $this->error($error);
-                        }
-                    }
-                }
+        if ($info) {
+            //文件上传成功,生成缩略图
+            //获取文件路径
+            $goods_logo = DS . 'uploads' . DS . $info->getSaveName();
+            $goods_logo = str_replace('\\', '/', $goods_logo);
+            return $goods_logo;
+        } else {
+            $error = $file->getError();
+            $this->error($error);
+        }
+    }
+}
 
 
-                if (!function_exists("check_time")) {
-                    /**
-                     *
-                     * 验证是否请求超时
-                     * @param  [array] $arr [包含时间戳的参数数组]
-                     * @return [json]       [检测结果]
-                     */
-                    function check_time($arr)
-                    {
-                        if (!isset($arr[ 'time' ]) || intval($arr[ 'time' ] <= 1)) {
-                            $this->return_msg(400, '时间戳不正确！！');
-                        }
-                        if (time() - intval($arr[ 'time' ]) > 120) {
-                            $this->return_msg(400, '请求超时');
-                        }
+if (!function_exists("check_time")) {
+    /**
+     *
+     * 验证是否请求超时
+     * @param  [array] $arr [包含时间戳的参数数组]
+     * @return [json]       [检测结果]
+     */
+    function check_time($arr)
+    {
+        if (!isset($arr['time']) || intval($arr['time'] <= 1)) {
+            $this->return_msg(400, '时间戳不正确！！');
+        }
+        if (time() - intval($arr['time']) > 120) {
+            $this->return_msg(400, '请求超时');
+        }
 
-                    }
-                }
+    }
+}
 
-                /**
-                 * 发送[验证码]类型短信到手机
-                 * @param $phone
-                 * @param $msg
-                 */
-                function send_msg_to_phone($phone, $msg)
-                {
-                    $curl = curl_init();
+/**
+ * 发送[验证码]类型短信到手机
+ * @param $phone
+ * @param $msg
+ */
+function send_msg_to_phone($phone, $msg)
+{
+    $curl = curl_init();
 
-                    curl_setopt($curl, CURLOPT_URL, 'https://api.mysubmail.com/message/xsend.json');
-                    //curl_setopt($curl, CURLOPT_HEADER, 0);
-                    curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
-                    //post数据
-                    curl_setopt($curl, CURLOPT_POST, 1);
-                    //配置submail
-                    $data = [
-                        'appid' => '27075', //应用id
-                        'to' => $phone,     //要接受短信的电话
-                        'project' => 'Jaayb', //模板标识
-                        'vars' => "{'code': '" . $msg . "'}",
-                        'signature' => '5ac305ef38fb126d2a0ec5304040ab7d', //应用签名
-                    ];
+    curl_setopt($curl, CURLOPT_URL, 'https://api.mysubmail.com/message/xsend.json');
+    //curl_setopt($curl, CURLOPT_HEADER, 0);
+    curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
+    //post数据
+    curl_setopt($curl, CURLOPT_POST, 1);
+    //配置submail
+    $data = [
+        'appid' => '27075', //应用id
+        'to' => $phone,     //要接受短信的电话
+        'project' => 'Jaayb', //模板标识
+        'vars' => "{'code': '" . $msg . "'}",
+        'signature' => '5ac305ef38fb126d2a0ec5304040ab7d', //应用签名
+    ];
 
-                    curl_setopt($curl, CURLOPT_POSTFIELDS, $data);
-                    $res = curl_exec($curl);
-                    curl_close($curl);
-                    $res = json_decode($res);
-                    if ($res->status !== 'success') {
-                        return false;
-                    } else {
-                        return true;
-                    }
+    curl_setopt($curl, CURLOPT_POSTFIELDS, $data);
+    $res = curl_exec($curl);
+    curl_close($curl);
+    $res = json_decode($res);
+    if ($res->status !== 'success') {
+        return false;
+    } else {
+        return true;
+    }
 
-                }
+}
 
-                /**
-                 * 图片缩略图
-                 * @param Request $request
-                 * @return string
-                 */
-                if (!function_exists('image_thumbnail')) {
+/**
+ * 图片缩略图
+ * @param Request $request
+ * @return string
+ */
+if (!function_exists('image_thumbnail')) {
 
-                    function image_thumbnail($file, $width = 150, $height = 150)
-                    {
+    function image_thumbnail($file, $width = 150, $height = 150)
+    {
 
-                        $image = \think\Image::open($file);
+        $image = \think\Image::open($file);
 //                var_dump($image);die;
 
-                        $type = $image->type();
+        $type = $image->type();
 
-                        //判断是否是图片格式
-                        if (in_array($type, ['jpg', 'png'])) {
-                            $date_path = 'uploads/thumb/' . date('Ymd');
+        //判断是否是图片格式
+        if (in_array($type, ['jpg', 'png'])) {
+            $date_path = 'uploads/thumb/' . date('Ymd');
 
-                            if (!file_exists($date_path)) {
-                                mkdir($date_path, 0777, true);
-                            }
-                            list($usec, $sec) = explode(" ", microtime());
-                            $times = str_replace('.', '', $usec + $sec);
-
-                            $thumb_path = $date_path . '/' . $times . '.' . $type;
-
-                            $image->thumb($width, $height)->save($thumb_path);
-                            return $thumb_path;
-                        } else {
-                            return 9;
-                        }
-
-                    }
-                }
-
-
-                /**
-                 * 裁剪图片为正方形 200*200
-                 */
-                if (!function_exists('tailor_img')) {
-                    function tailor_img($file, $width = 200, $height = 200)
-                    {
-
-                        $image = \think\Image::open($file);
-//                var_dump($image);die;
-
-                        $type = $image->type();
-
-
-                        //判断是否是图片格式
-                        if (in_array($type, ['jpg', 'jpeg', 'png'])) {
-                            $date_path = 'uploads/thumb/' . date('Ymd');
-
-                            if (!file_exists($date_path)) {
-                                mkdir($date_path, 0777, true);
-                            }
-                            list($usec, $sec) = explode(" ", microtime());
-                            $times = str_replace('.', '', $usec + $sec);
-
-                            $thumb_path = $date_path . '/' . $times . '.' . $type;
-
-                            $image->thumb($width, $height, \think\Image::THUMB_CENTER)->save($thumb_path);
-                            return $thumb_path;
-                        } else {
-                            return 0;
-                        }
-
-                    }
-
-                }
-                /**
-                 * 检测用户是否存在于数据库
-                 * @param string $db [数据库全称]
-                 * @param $phone [要检查的手机号]
-                 * @param null $exist [ 1 / 0 ]
-                 * @return bool / [msg]  检验结果
-                 * @author K'
-                 */
-                if (!function_exists('check_phone_exists')) {
-                    function check_phone_exists($db = 'cloud_total_admin', $phone, $exist = 0)
-                    {
-                        $result = Db::table($db)->where('phone', $phone)->find();
-                        if ($exist == 1) {
-                            if ($result) {
-                                return true;
-                            } else {
-                                return_msg(400, "账号不存在");
-                            }
-                        } elseif ($exist == 0) {
-                            /** 用户为不存在的情况 */
-                            if ($result) {
-                                return_msg(400, '用户已存在！');
-                            } else {
-                                return true;
-                            }
-                        }
-
-                    }
-                }
-
-                /**
-                 * 检验是否有数据，并返回结果
-                 * @param $data [要检查的数据]
-                 * @param null $return_data [要返回的数据]
-                 * @return [json]  返回信息
-                 * @author K'
-                 */
-                function check_data($data, $return_data = null)
-                {
-                    if (!$return_data) {
-                        $return_data = $data;
-                    }
-                    if (count($data)) {
-                        return_msg(200, "success", $return_data);
-                    } else {
-                        return_msg(400, "no data");
-                    }
-                }
+            if (!file_exists($date_path)) {
+                mkdir($date_path, 0777, true);
             }
+            list($usec, $sec) = explode(" ", microtime());
+            $times = str_replace('.', '', $usec + $sec);
+
+            $thumb_path = $date_path . '/' . $times . '.' . $type;
+
+            $image->thumb($width, $height)->save($thumb_path);
+            return $thumb_path;
+        } else {
+            return 9;
+        }
+
+    }
+}
+
+
+/**
+ * 裁剪图片为正方形 200*200
+ */
+if (!function_exists('tailor_img')) {
+    function tailor_img($file, $width = 200, $height = 200)
+    {
+
+        $image = \think\Image::open($file);
+//                var_dump($image);die;
+
+        $type = $image->type();
+
+
+        //判断是否是图片格式
+        if (in_array($type, ['jpg', 'jpeg', 'png'])) {
+            $date_path = 'uploads/thumb/' . date('Ymd');
+
+            if (!file_exists($date_path)) {
+                mkdir($date_path, 0777, true);
+            }
+            list($usec, $sec) = explode(" ", microtime());
+            $times = str_replace('.', '', $usec + $sec);
+
+            $thumb_path = $date_path . '/' . $times . '.' . $type;
+
+            $image->thumb($width, $height, \think\Image::THUMB_CENTER)->save($thumb_path);
+            return $thumb_path;
+        } else {
+            return 0;
+        }
+
+    }
+
+}
+/**
+ * 检测用户是否存在于数据库
+ * @param string $db [数据库全称]
+ * @param $phone [要检查的手机号]
+ * @param $exist $exist [ 1 / 0 ]
+ * @return bool / [msg]  检验结果
+ * @author K'
+ */
+if (!function_exists('check_phone_exists')) {
+    function check_phone_exists($db = 'cloud_total_admin', $phone, $exist = 0)
+    {
+        $result = Db::table($db)->where('phone', $phone)->find();
+        if ($exist == 1) {
+            if ($result) {
+                return true;
+            } else {
+                return_msg(400, "账号不存在");
+            }
+        } elseif ($exist == 0) {
+            /** 用户为不存在的情况 */
+            if ($result) {
+                return_msg(400, '用户已存在！');
+            } else {
+                return true;
+            }
+        }
+
+    }
+}
+
+/**
+ * 检验是否有数据，并返回结果
+ * @param $data [要检查的数据]
+ * @param null $return_data [要返回的数据]
+ * @param $return 0---不返回数据  1---返回数据
+ * @return [json]  返回信息
+ * @author K'
+ */
+function check_data($data, $return_data = null, $return = 1)
+{
+    if ($return == 1) {
+        if (!$data) {
+            return_msg(400, "no data");
+        } elseif (gettype($data) !== 'array') {
+            $data = $data->toArray();
+        }
+        if (!$return_data) {
+            $return_data = $data;
+        }
+        if (count($data)) {
+            return_msg(200, "success", $return_data);
+        } else {
+            return_msg(400, "no data");
+        }
+    } else {
+        if (!$data) {
+            return_msg(400, "no data");
+        } else {
+            return true;
+        }
+    }
+
+}

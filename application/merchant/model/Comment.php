@@ -7,11 +7,7 @@ use think\Model;
 class Comment extends Model
 {
 
-    protected $auto = [
-        "ctime",
-    ];
-
-    public function setCtimeAttr($val) {
-        return time();
-    }
+    protected $autoWriteTimestamp = true;
+    protected $createTime = "ctime";
+    protected $updateTime = false;
 }

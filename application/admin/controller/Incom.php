@@ -19,7 +19,6 @@ class Incom extends Controller
    public $url = 'https://gateway.starpos.com.cn/emercapp';
 
 
-
     /**
      * 验证签名域是否正确
      * @param $old_sign
@@ -277,9 +276,7 @@ class Incom extends Controller
      */
     public function bank_query(Request $request) {
         if(empty($open_branch)){
-//            $branch=request()->param('open_branch');
-            $branch=$request->param('open_branch');
-            return $branch;
+            $branch=request()->param('open_branch');
             $str_len=strlen($branch)/3;
             if($str_len<10){
                 return_msg(400,'长度不能低于10位');
@@ -295,7 +292,7 @@ class Incom extends Controller
             $res = curl_request($this->url, true, $query, true);
             /** json转成数组 */
             $res = json_decode($res, true);
-//            var_dump($res);die;
+
             if($res['msg_cd']==000000){
                 $check = $this->check_sign_value($res['signValue'], $res);
                 if($check==true){
@@ -379,6 +376,8 @@ class Incom extends Controller
                 return_msg(400, 'failure');
             }
         }else {
+            halt($result);
+//            $info=TotalMerchant::field('')
             //审核未通过
             MerchantIncom::where('merchant_id',$merchant_id)->delete();
             TotalMerchant::where('id',$merchant_id)->delete();
@@ -529,28 +528,6 @@ class Incom extends Controller
         }
     }
 
-    /**
-     * 保存更新的资源
-     *
-     * @param  \think\Request $request
-     * @param  int $id
-     * @return \think\Response
-     */
-    public function update(Request $request, $id)
-    {
-        //
-    }
-
-    /**
-     * 删除指定资源
-     *
-     * @param  int $id
-     * @return \think\Response
-     */
-    public function delete($id)
-    {
-        //
-    }
 
 
     /*

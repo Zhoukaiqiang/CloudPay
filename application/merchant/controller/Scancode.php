@@ -11,6 +11,9 @@ namespace app\merchant\controller;
 
 use app\merchant\model\MemberRecharge;
 use app\merchant\model\MerchantMember;
+
+
+use app\agent\model\MerchantIncom;
 use app\merchant\model\MerchantShop;
 use app\merchant\model\Order;
 use app\merchant\model\ShopActiveRecharge;
@@ -117,11 +120,10 @@ class Scancode extends Commonality
     {
         $url = $this->url . "sdkBarcodePay.json";
         unset($data['shop_id']);
-//return json_encode($data);
+
         //获取返回结果 */
         $res = curl_request($url, true, $data, true);
-return $res;
-// json转成数组
+        // json转成数组
 
         $par = json_decode($res, true);
         $return_sign = sign_ature(1111, $par);

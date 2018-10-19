@@ -100,7 +100,7 @@ class User extends Common
                 ->where($query)
                 ->select();
 
-            return_msg(200, 'success', $data);
+            check_data($data);
         } else {
             /** 店长身份登录 */
             $shop_id = MerchantUser::get($this->user_id)["shop_id"];
@@ -136,16 +136,13 @@ class User extends Common
                 //检查手机号是否存在
                 check_phone_exists("cloud_merchant_user", $data['phone'], 0);
 
-//                if ($this->merchant_id) {
-//                    $data['merchant_id'] = $this->merchant_id;
-//                }else {
-//                    $data["merchant_id"] = MerchantUser::get($this->user_id)->field("merchant_id");
-//                }
+
                 $data['password'] = addslashes(encrypt_password($data['password'], $data['phone']));
 
-                $result = new MerchantUser($data);
+                $result = new MerchantUser();
 
-                if ($result->save()) {
+                $res = $result->save($data);
+                if ($res) {
                     return_msg(200, '添加成功');
                 } else {
                     return_msg(400, '添加失败');
@@ -211,19 +208,14 @@ class User extends Common
             }
             $result = MerchantUser::update($data);
 
-            if ($result) {
-
-                return_msg(200, '修改成功');
-            } else {
-                return_msg(400, '修改失败');
-            }
+            check_data($result, $result, 0);
         } else {
             $id = $request->param('id');
 
             if (!empty($this->merchant_id)) {
                 //获取员工信息
                 $data['list'] = MerchantUser::alias('a')
-                    ->field('a.id,a.name,a.phone,a.role,b.shop_name')
+                    ->field('a.id,a.name,a.phone,a.role,b.shop_name, a.create_time')
                     ->join('cloud_merchant_shop b', 'a.shop_id=b.id', 'left')
                     ->where('a.id', $id)
                     ->find();
@@ -235,7 +227,7 @@ class User extends Common
             } elseif (!empty($this->user_id)) {
                 //获取员工信息
                 $data['list'] = MerchantUser::alias('a')
-                    ->field('a.id,a.name,a.phone,a.role,b.shop_name')
+                    ->field('a.id,a.name,a.phone,a.role,b.shop_name, a.create_time')
                     ->join('cloud_merchant_shop b', 'a.shop_id=b.id', 'left')
                     ->where('a.id', $id)
                     ->find();
@@ -250,6 +242,167 @@ class User extends Common
 
         }
 
+    }
+
+    /**
+     * PC端--员工列表
+     * @method GET
+     * @param Request $request
+     */
+    public function pc_staff_list(Request $request)
+    {
+        if ($request->isGet()) {
+            $where = [
+                "merchant_id" => $this->merchant_id
+            ];
+            $rows = MerchantUser::where($where)->count("id");
+            $pages = page($rows);
+            $data["list"] = MerchantUser::where($where)->select();
+
+            foreach ($data["list"] as $v) {
+                unset($v["password"]);
+            }
+            $data["pages"] = $pages;
+            $data["pages"]["rows"] = $rows;
+            check_data($data["list"], $data);
+        }
+    }
+
+
+    /**
+     * PC端 人员----编辑人员
+     * @method [GET 获取员工数据 POST 修改]
+     * @param Request $request
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function pc_edit(Request $request)
+    {
+
+        if ($request->isPost()) {
+
+            $data = $request->post();
+            if (isset($data["password"])) {
+                $data['password'] = addslashes(encrypt_password($data['password'], $data['phone']));
+            }
+            $result = MerchantUser::update($data);
+
+            check_params("add_user", $data, "MerchantValidate");
+            if ($result) {
+                return_msg(200, "修改成功");
+            } else {
+                return_msg(400, "修改失败");
+            }
+        } else {
+            $id = $request->param('id');
+            $where = [
+                "a.merchant_id" =>  2,
+                "a.id"  => $id
+            ];
+            //获取员工信息
+            $data['list'] = MerchantUser::alias('a')
+                ->field('a.id,a.name,a.phone,a.role,b.shop_name, a.create_time')
+                ->join('cloud_merchant_shop b', 'a.shop_id=b.id', 'left')
+                ->where($where)
+                ->find();
+
+            check_data($data);
+
+        }
 
     }
+
+    /**
+     * PC端--删除员工
+     * @id  员工ID
+     * @param Request $request
+     */
+    public function pc_del(Request $request) {
+        $id = $request->param("id");
+
+        $res = MerchantUser::destroy($id);
+
+        if ($res) {
+            return_msg(200, "删除成功");
+        }else {
+            return_msg(400, "删除失败");
+        }
+    }
+
+    /**
+     * PC端添加员工
+     * @param Request $request
+     */
+    public function pc_add(Request $request) {
+        if ($request->isPost()) {
+            $data = $request->post();
+            $data['merchant_id'] = $this->merchant_id;
+
+            //验证参数
+            check_params("add_user", $data, "MerchantValidate");
+            //检查手机号是否存在
+            check_phone_exists("cloud_merchant_user", $data['phone'], 0);
+
+
+            $data['password'] = addslashes(encrypt_password($data['password'], $data['phone']));
+
+            $result = new MerchantUser();
+
+            $res = $result->save($data);
+            if ($res) {
+                return_msg(200, '添加成功');
+            } else {
+                return_msg(400, '添加失败');
+            }
+        }
+    }
+
+    /**
+     * PC端----员工搜索
+     * @param Request $request
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function pc_search(Request $request) {
+        $param["shop"] = $request->param("shop");
+        $param["keyword"] = $request->param("keyword");
+
+        if ($param["shop"]) {
+            $param["shop_flag"] = "LIKE";
+        }else {
+            $param["shop"] = "-2";
+            $param["shop_flag"] = "NOT LIKE";
+        }
+        if ($param["keyword"]) {
+            $param["keyword_flag"] = "LIKE";
+        }else {
+            $param["keyword"] = -2;
+            $param["keyword_flag"] = "<>";
+        }
+
+        $where = [
+            "mu.merchant_id|ms.merchant_id"  => ["=", $this->merchant_id],
+            "mu.name" => [$param["keyword_flag"], $param["keyword"]."%"],
+            "ms.shop_name" => [$param["shop_flag"], $param["shop"]."%"],
+        ];
+
+        $rows = MerchantUser::alias("mu")
+            ->join("cloud_merchant_shop ms", "ms.id = mu.shop_id", "LEFT")
+            ->where($where)
+            ->count("mu.id");
+
+        $pages = page($rows);
+        $data["list"] = MerchantUser::alias("mu")
+            ->join("cloud_merchant_shop ms", "ms.id = mu.shop_id", "LEFT")
+            ->where($where)
+            ->field("mu.name,mu.phone,mu.role, mu.create_time, ms.shop_name")
+            ->select();
+
+        $data["pages"] = $pages;
+        $data["pages"]["rows"] = $rows;
+        check_data($data["list"], $data);
+    }
+
 }

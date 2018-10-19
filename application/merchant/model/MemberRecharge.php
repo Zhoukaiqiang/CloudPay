@@ -6,6 +6,9 @@ use think\Model;
 
 class MemberRecharge extends Model
 {
+    protected $autoWriteTimestamp=true;
+    protected $createTime = "recharge_time";
+    protected $updateTime = false;
     public function getPayTypeAttr($val)
     {
         switch ($val) {

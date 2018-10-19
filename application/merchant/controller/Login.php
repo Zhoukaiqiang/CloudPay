@@ -72,7 +72,7 @@ class Login extends Controller
             $db_res = MerchantUser::where("phone", $data['phone'])->field("id,name,phone,role,password")->find();
 
             if (!$db_res) {
-                $db_res = TotalMerchant::where("phone", $data['phone'])->field("id,contact,phone,password,status")->find();
+                $db_res = TotalMerchant::where("phone", $data['phone'])->field("id,name,phone,password,status")->find();
             }
 
             $res = $db_res->toArray();

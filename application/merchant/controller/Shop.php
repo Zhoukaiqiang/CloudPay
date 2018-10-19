@@ -15,6 +15,7 @@ use think\Session;
 use app\admin\controller\Incom;
 use app\admin\model\IncomImg;
 
+
 class Shop extends Commonality
 {
 
@@ -426,7 +427,7 @@ class Shop extends Commonality
         $param = $request->param();
         if ($request->isGet()) {
             $res = MerchantShop::where("id", $param["id"])->field([
-                "shop_name", "stoe_adds", "stoe_cnt_tel", "imgFile"
+                'id', "shop_name", "stoe_adds", "stoe_cnt_tel", "imgFile"
             ])->find();
             if (count($res->toArray()) > 0) {
                 return_msg(200, "success", $res->toArray());
