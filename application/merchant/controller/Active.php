@@ -260,7 +260,7 @@ class Active extends Common
                 $info=MerchantMember::field('id,consumption_time')->select();
                 foreach($info as $v){
                     //比较时间戳大小
-                    if($v['consumption_time'] >= $data['last_consump']){
+                    if($v['consumption_time'] >= time()-$data['last_consump']){
                         //派卷
                         $arr=[
                             'SN'=>getSN(),
@@ -630,5 +630,142 @@ class Active extends Common
         }
 
 
+    }
+
+    /**
+     *pc端分享活动详情
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function pc_active_detail()
+    {
+        $data=ShopActiveShare::field('money,lowest_consump,use_number')->where('merchant_id',$this->merchant_id)->find();
+        check_data($data);
+    }
+
+    /**
+     *核销记录
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function pc_cancel_record()
+    {
+        $where=[
+            ['cloud_merchant_member b','a.member_id=b.id'],
+            ['cloud_merchant_user c','a.user_id=c.id'],
+            ['cloud_shop_active_exclusive d','a.exclusive_id=d.id']
+        ];
+        $row=MemberExclusive::alias('a')
+            ->join($where)
+            ->where('a.merchant_id',$this->merchant_id)
+            ->count();
+        $pages=page($row);
+        $data['list']=MemberExclusive::alias('a')
+            ->field('a.id,a.cancel_time,a.order_number,a.status,b.member_phone,c.name user_name,d.name active_name,d.coupons_money,d.order_money,d.consump_number,d.last_consump,d.recharge_total,d.consump_total,d.register_status')
+            ->join($where)
+            ->where(['a.merchant_id'=>$this->merchant_id,'a.status'=>0])
+            ->limit($pages['offset'],$pages['limit'])
+            ->select();
+        $data['page']=$pages;
+        check_data($data);
+    }
+
+    /**
+     *发放记录
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function pc_issue_record()
+    {
+        $row=ShopActiveExclusive::
+            where('merchant_id',$this->merchant_id)
+            ->count();
+        $pages=page($row);
+        $data['list']=ShopActiveExclusive::field('create_time,coupons_title,coupons_money,order_money,consump_number,last_consump,recharge_total,consump_total,register_status')
+            ->where('merchant_id',$this->merchant_id)
+            ->limit($pages['offset'],$pages['limit'])
+            ->select();
+        check_data($data);
+    }
+
+    /**
+     *核销记录搜索
+     * @param Request $request
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function pc_cancel_record_search(Request $request)
+    {
+        $query['start_time'] = $request->param('start_time') ? $request->param('start_time') : '';
+        if(!empty($query['start_time'])) {
+            $query['end_time'] = $request->param('end_time') ? $request->param('end_time') : '';
+            if (empty($query['end_time'])) {
+                return_msg(400, '请选择结束时间');
+            }
+            if (time() - $query['start_time'] > 5604000) {
+                return_msg(400, '您选择的时间大于两个月，请重新选择！');
+            }
+            $time = [$query['start_time'], $query['end_time']];
+
+            $where=[
+                ['cloud_merchant_member b','a.member_id=b.id'],
+                ['cloud_merchant_user c','a.user_id=c.id'],
+                ['cloud_shop_active_exclusive d','a.exclusive_id=d.id']
+            ];
+            $row=MemberExclusive::alias('a')
+                ->join($where)
+                ->where('a.merchant_id',$this->merchant_id)
+                ->whereTime('a.cancel_time','between',$time)
+                ->count();
+            $pages=page($row);
+            $data['list']=MemberExclusive::alias('a')
+                ->field('a.id,a.cancel_time,a.order_number,a.status,b.member_phone,c.name user_name,d.name active_name,d.coupons_money,d.order_money')
+                ->join($where)
+                ->where(['a.merchant_id'=>$this->merchant_id,'a.status'=>0])
+                ->whereTime('a.cancel_time','between',$time)
+                ->limit($pages['offset'],$pages['limit'])
+                ->select();
+            $data['page']=$pages;
+
+            check_data($data);
+        }
+    }
+
+    /**
+     *发放记录搜索
+     * @param Request $request
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function pc_issue_record_search(Request $request)
+    {
+        $query['start_time']=$request->param('start_time') ? $request->param('start_time') : '';
+        if(!empty($query['start_time'])) {
+            $query['end_time'] = $request->param('end_time') ? $request->param('end_time') : '';
+            if (empty($query['end_time'])) {
+                return_msg(400, '请选择结束时间');
+            }
+            if (time() - $query['start_time'] > 5604000) {
+                return_msg(400, '您选择的时间大于两个月，请重新选择！');
+            }
+            $time = [$query['start_time'], $query['end_time']];
+
+            $row=ShopActiveExclusive::where('merchant_id',$this->merchant_id)
+                ->whereTime('create_time','between',$time)
+                ->count();
+            $pages=page($row);
+            $data['list']=ShopActiveExclusive::field('create_time,coupons_title,coupons_money,order_money')
+                ->where('merchant_id',$this->merchant_id)
+                ->whereTime('create_time','between',$time)
+                ->limit($pages['offset'],$pages['limit'])
+                ->select();
+            $data['page'] = $pages;
+            check_data($data);
+        }
     }
 }
