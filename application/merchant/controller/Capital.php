@@ -98,6 +98,10 @@ class Capital extends Common
         check_data($data);
     }
 
+    /**
+     * PC端--绑定银行卡
+     * @param Request $request
+     */
     public function pc_bind(Request $request)
     {
         if ($request->isPost()) {
@@ -126,7 +130,7 @@ class Capital extends Common
 
 
     /**
-     * 银行卡绑定查询
+     * 银行卡绑定查询 -- 走聚合数据接口
      * @param $arg
      */
     public function check_bank($arg)
@@ -234,51 +238,69 @@ class Capital extends Common
      * @throws \think\db\exception\DataNotFoundException
      * @throws \think\db\exception\ModelNotFoundException
      * @throws \think\exception\DbException
+     * mark
      */
     public function pc_bill(Request $request)
     {
         if ($request->isGet()) {
-            $res = MerchantShop::all(["merchant_id" => $this->merchant_id]);
+            $rows = MerchantShop::where(["merchant_id" => $this->merchant_id])->count("id");
+            $pages = page($rows, 2);
+            $res = MerchantShop::where(["merchant_id" => $this->merchant_id])->limit($pages["offset"], $pages["limit"])->select();
             check_data($res, $res, 0);
             $shop_ids = [];
             foreach ($res as $v) {
                 $shop_ids[] = $v["id"];
             }
 
-            $where = [
-                "ms.merchant_id" => $this->merchant_id,
-            ];
-            $field = ["ms.shop_name", "o.pay_type", "count(o.id) money_num", "sum(o.order_money) order_money", "sum(o.discount) discount", "sum(o.refund_money) refund_money", "sum(o.received_money) received_money"];
+
+            $field = ["ms.id", "ms.shop_name", "o.pay_type", "count(o.id) money_num", "sum(o.order_money) order_money", "sum(o.discount) discount", "sum(o.refund_money) refund_money", "sum(o.received_money) received_money"];
+
+
+            $pay_type = ["wxpay", "alipay", "etc", "cash"];
+
 
             foreach ($shop_ids as $i) {
-                $refund[$i] = MerchantShop::alias("ms")
-                    ->join("cloud_order o", "o.shop_id = ms.id", "RIGHT")
-                    ->where($where)
-                    ->where("refund_time", "<>", null)
-                    ->where("ms.id", $i)
-                    ->field($field)
-                    ->group("o.id")
-                    ->count("ms.id");
-            }
-            foreach ($shop_ids as $i) {
-                $data["list"][] = MerchantShop::alias("ms")
-                    ->join("cloud_order o", "o.shop_id = ms.id", "RIGHT")
-                    ->where($where)
-                    ->where("ms.id", $i)
-                    ->field($field)
-                    ->group("o.id")
-                    ->find();
 
-            }
+                foreach ($pay_type as $type) {
+                    /** 退款次数 */
+                    $refund[$i][$type] = MerchantShop::alias("ms")
+                        ->join("cloud_order o", "o.shop_id = ms.id", "RIGHT")
+                        ->where("refund_time", ">", 0)
+                        ->where("ms.id", $i)
+                        ->where("o.pay_type", $type)
+//                        ->whereTime("pay_time", "d")
+                        ->group("o.id")
+                        ->count("ms.id");
 
-            foreach ($data["list"] as &$list) {
-
-                foreach ($refund as $i) {
-                    $list["refund_num"] = $i;
+                    $data["list"][$i][$type] = MerchantShop::alias("ms")
+                        ->join("cloud_order o", "o.shop_id = ms.id", "RIGHT")
+                        ->where("ms.id", $i)
+//                    ->whereTime("pay_time", "d")
+                        ->where("o.pay_type", $type)
+                        ->field($field)
+//                        ->group("o.id")
+                        ->find();
                 }
 
             }
-            /** 退款笔数 */
+
+//            $money = MerchantShop::alias("ms")
+//                ->join("cloud_order o", "o.shop_id = ms.id", "RIGHT")
+//                ->where("ms.id", 106)
+//                ->field($field)
+//                ->where("o.pay_type", 'alipay')
+//                ->select();
+
+            foreach ($data["list"] as $k => &$list) {
+
+                /** 退款笔数 */
+                foreach ($pay_type as $type) {
+                    $list[$type]["refund_num"] = $refund[$k][$type];
+                }
+            }
+
+            $data["pages"] = $pages;
+            $data["pages"]["rows"] = $rows;
 
             check_data($data["list"], $data);
         }

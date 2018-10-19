@@ -11,16 +11,16 @@ namespace app\merchant\controller;
 
 use app\merchant\model\MemberRecharge;
 use app\merchant\model\MerchantMember;
-use app\agent\model\MerchantIncom;
 use app\merchant\model\MerchantShop;
 use app\merchant\model\Order;
 use app\merchant\model\ShopActiveRecharge;
 use think\Controller;
 use think\Request;
 
-class Scancode extends Controller
+class Scancode extends Commonality
 {
-    protected static $url = "http://139.196.77.69:8280/adpweb/ehpspos3/";
+    protected  $url = "http://gateway.starpos.com.cn/adpweb/ehpspos3/";
+    protected  $decision=1;
 
     /**
      * 公共请求参数头
@@ -51,29 +51,40 @@ class Scancode extends Controller
     public function publics($data)
     {
         /**设备号*/
-        $url = Scancode::$url . "sdkBarcodePay.json";
+
         $data[ 'opSys' ] = 3;
-        $data[ 'characterSet' ] = 00;
+        $data[ 'characterSet' ] = "00";
         $data[ 'signType' ] = 'MD5';
+
         $data[ 'version' ] = 'V1.0.0';
+//        return $data;
         $data[ 'txnTime' ] = date("Ymdhis");
+        $data['trmNo']=95447191;
+
         //商户号
         list($usec, $sec) = explode(" ", microtime());
         $times = str_replace('.', '', $usec + $sec);
         $data[ 'tradeNo' ] = $data[ 'txnTime' ] . $times;
 
         //trmTyp  0  设备类型   P - 智能POS  A -   app 扫码   C - PC端   T - 台牌扫码
-        $data[ 'trmTyp' ] = 'P';
+//        $data[ 'trmTyp' ] = 'P';
         //获取商户id
-        $shop = MerchantShop::where('id', $data[ 'shop_id' ])->field('merchant_id')->find();
+
+        $shop = MerchantShop::alias('a')
+            ->field('b.orgNo,b.mercId')
+            ->join('merchant_incom b','b.merchant_id=a.merchant_id')
+            ->where('a.id', $data[ 'shop_id' ])
+            ->select();
+//        var_dump($shop);die;
         //获取orgNo mercId
-        $resu = MerchantIncom::where('merchant_id', $shop[ 'merchant_id' ])->field('orgNo,mercId')->find();
-        $resu = $resu->toArray();
+//        $resu = MerchantIncom::where('merchant_id', $shop[ 'merchant_id' ])->field('orgNo,mercId')->find();
+        $resu = $shop[0]->toArray();
+
         //数组合并
         $data = array_merge($data, $resu);
         //得到当前请求的签名，用于和返回参数验证
-        $data[ 'signValue' ] = sign_ature(0000, $data);
 
+        $data[ 'signValue' ] = sign_ature(0000, $data);
         return $data;
     }
 
@@ -104,12 +115,14 @@ class Scancode extends Controller
      */
     public function lord_esau($data)
     {
-        $url = Scancode::$url . "sdkBarcodePay.json";
-
+        $url = $this->url . "sdkBarcodePay.json";
+        unset($data['shop_id']);
+//return json_encode($data);
         //获取返回结果 */
         $res = curl_request($url, true, $data, true);
+        return $res;
+// json转成数组
 
-        // json转成数组
         $par = json_decode($res, true);
         $return_sign = sign_ature(1111, $par);
         //result 交易接查  为空交易失败  S - 交易成功 F - 交易失败 A - 等待授权  Z - 交易未知
@@ -184,7 +197,7 @@ class Scancode extends Controller
 
                         Order::where('id', $data[ 'order_id' ])->update(['payCode' => $par[ 'payCode' ], 'LogNo' => $par[ 'LogNo' ], 'orderNo ' => $par[ 'orderNo' ], 'selOrderNo' => $par[ 'selOrderNo' ], 'tradeNo' => $par[ 'tradeNo' ]]);
                         //返回二维码地址
-                        return_msg(200, 'success', $par[ 'payCode' ]);
+                        return_msg(200, 'success', $par);
 
                     } else {
                         return_msg(200, 'success', $par[ 'repMsg' ]);
@@ -207,7 +220,7 @@ class Scancode extends Controller
 
 
 
-}
+    }
 
     /**
      * 客户扫码  异步返回接口
@@ -216,12 +229,45 @@ class Scancode extends Controller
     public function message_return(Request $request)
     {
 
-        $data=$request->post();
-        if($data['TxnStatus']==1){
+        $res=$request->post();
+
+        //异步接口返回成功
+        if($res['TxnStatus']==1){
+            $url = Scancode::$url . "sdkQryBarcodePay.json";
+
+            //查询订单数据
+            $data=Order::alias('a')
+                ->field('a.txnTime,a.trmTyp,a.trmNo,b.mercId')
+                ->join('merchant_incom b','b.merchant_id=a.merchant_id')
+                ->where('a.tradeNo',$res['tradeNo'])
+                ->select();
+            $data=$data[0];
+            //公共接口请求参数
+            $data[ 'opSys' ] = 3;
+            $data[ 'characterSet' ] = 00;
+            $data[ 'signType' ] = 'MD5';
+            $data[ 'version' ] = 'V1.0.0';
+            $data['qryNo']=$res['TxnLogId'];
+            $data[ 'signValue' ] = sign_ature(0000, $data);
+            //订单查询
+            $utle=$this->orderInquiry($data);
+            if($utle['Result']=='S' && $utle['returnCode']==0){
+                $result=['RspCode'=>000000,'RspDes'=>''];
+                return json_encode($result);
+            }else{
+                Order::where('tradeNo', $data[ 'TxnLogId' ])->update(['status' => 5]);
+
+                $result=['RspCode'=>000002,'RspDes'=>'查询失败'];
+                return $result;
+            }
+
+
+
+        }else{
 
         }
 
-        
+
 
     }
 
@@ -231,13 +277,10 @@ class Scancode extends Controller
      * @param $resu
      * qryNo 1 查询流水   可根据logNo 、orderNo 、tradeNo 的值做查询
      */
-    public function orderInquiry($resu)
+    public function orderInquiry($data)
     {
 
         //公共参数
-        $data['qryNo']=$resu;
-        $data=$this->publics();
-
         $url=Scancode::$url."sdkQryBarcodePay.json";
 
         //获取返回结果 */
@@ -253,19 +296,20 @@ class Scancode extends Controller
                 //判断状态码
                 if ($par[ 'returnCode' ] == '000000') {
                     if ($par[ 'signValue' ] == $return_sign) {
-                        Order::where('id', $data[ 'order_id' ])->update(['pay_time' => time, 'status' => 1, 'LogNo' => $par[ 'LogNo' ],'order_no'=>$par['orderNo'],'selOrderNo'=>$par['selOrderNo'],'payChannel'=>$par['payChannel']]);
+
+                        Order::where('tradeNo', $data[ 'TxnLogId' ])->update(['pay_time' => time(), 'status' => 1, 'LogNo' => $par[ 'LogNo' ],'orderNo'=>$par['orderNo'],'selOrderNo'=>$par['selOrderNo'],'payChannel'=>$par['payChannel']]);
 
                         return $par;
                     } else {
-                        return false;
+                        return $par;
                     }
                 } else {
 
-                    return false;
+                    return $par;
                 }
 
             } else {
-                return false;
+                return $par;
             }
         }else{
             //result 返回A，Z，需发起查询判断具体交易状态
@@ -296,17 +340,29 @@ class Scancode extends Controller
         $order_no=generate_order_no();
         //创建会员充值订单
         $resuoo=MemberRecharge::insert(['recharge_time' => time(),'member_id'=>$data['member_id'],'order_money'=>$data['order_money'],'shop_id'=>$data['shop_id'],'order_no'=>$order_no,'pay_type'=>$data['payChannel'],'merchant_id'=>$data['merchant_id'],'amount'=>$par['Amount '], 'status' => 1, 'LogNo' => $par[ 'LogNo' ]]);
-       if (!$resuoo){
-           return false;
-       }
+        if (!$resuoo){
+            return false;
+        }
         $money=$data['order_money']+$money;
-       //更新会员余额
-       $member=MerchantMember::where('id',$data['member_id'])->update(['recharge_money'=>$data['order_money'],'recharge_time'=>time(),'money'=>['inc',$money]]);
-       if (!$member){
-           return false;
-       }else{
-           return true;
-       }
+        //更新会员余额
+        $member=MerchantMember::where('id',$data['member_id'])->update(['recharge_money'=>$data['order_money'],'recharge_time'=>time(),'money'=>['inc',$money]]);
+        if (!$member){
+            return false;
+        }else{
+            return true;
+        }
     }
+    public  function  ddd()
+    {
 
+        $shop = MerchantShop::alias('a')
+            ->field('b.orgNo,b.mercId')
+            ->join('merchant_incom b','b.merchant_id=a.merchant_id')
+            ->where('a.id', 119)
+            ->select();
+        //获取orgNo mercId
+//        $resu = MerchantIncom::where('merchant_id', $shop[ 'merchant_id' ])->field('orgNo,mercId')->find();
+        $resu = $shop[0]->toArray();
+        var_dump($resu);
+    }
 }
