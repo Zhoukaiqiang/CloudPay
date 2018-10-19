@@ -16,7 +16,7 @@ use think\Controller;
 use think\Db;
 use think\Request;
 
-class Reconciliation extends Controller
+class Reconciliation extends Commonality
 {
 
     /**对账首页
@@ -28,20 +28,22 @@ class Reconciliation extends Controller
     public function index()
     {
         //判断是否是商户还是门店
-        $id=1;
-        if (session('merchant_id')) {
-            $merchant_id = session('merchant_id');
-            $merchant_id = 1;
+        $id=$this->id;
+        if ($this->role==-1) {
+
             //取出商户所有门店以及员工
             $shop = Db::table('cloud_merchant_shop')->alias('a')
                 ->field(['a.shop_name', 'a.id as shopid', 'b.id as userid', 'b.name'])
                 ->join('cloud_merchant_user b', 'a.id=b.shop_id')
-                ->where('a.merchant_id', $merchant_id)
+                ->where('a.merchant_id', $id)
                 ->select();
+            if(!$shop){
+                return_msg(400,'error',$shop);
+            }
             //取出第一家店的id
-            $shop_id = $shop[ 0 ][ 'shopid' ];
+            $shop_id = $shop[0]['shopid'];
             //取第一家的数据
-            $data = Db::query("select pay_type,count(id) as count,sum(received_money) as received_money,sum(discount) as discount,sum(order_money) as order_money,sum(refund_money) as refund_money from cloud_order where shop_id=$shop_id group By pay_type");
+            $data = Db::query("select pay_type,sum(order_money),count(id) as count,sum(received_money) as received_money,sum(discount) as discount,sum(order_money) as order_money,sum(refund_money) as refund_money from cloud_order where shop_id=$shop_id group By pay_type");
             if (!$data){
                 return_msg(400,'error','没有记录');
             }
@@ -50,13 +52,11 @@ class Reconciliation extends Controller
             return_msg(200,'success',$success) ;
 
         } else {
-            $shop_id = session('shop_id');
-            $shop_id = 1;
             //取出门店以及员工
             $shop = Db::table('cloud_merchant_shop')->alias('a')
                 ->field(['a.shop_name', 'a.id as shop_id', 'b.id as user_id', 'b.name'])
                 ->join('merchant_user b', 'a.id=b.shop_id')
-                ->where('a.id', $shop_id)
+                ->where('a.id', $id)
                 ->select();
 
             //取第一家的数据
@@ -147,11 +147,14 @@ class Reconciliation extends Controller
         $refund=0;
         //订单笔数
         $ordercount=0;
+        //订单金额
+        $order_money=0;
         foreach ($data as $k=>$v){
             $proceeds+=$v['received_money'];
             $discounts+=$v['discount'];
             $refund+=$v['refund_money'];
             $ordercount+=$v['count'];
+            $order_money+=$v['order_money'];
         }
         ////实收总金额
         $money['proceeds']=$proceeds;
@@ -161,6 +164,8 @@ class Reconciliation extends Controller
         $money['refund']=$refund;
         //订单笔数
         $money['ordercount']=$ordercount;
+        //订单金额
+        $money['order_money']=$order_money;
        return ['shop'=>$shop,'data'=>$data,'money'=>$money];
     }
 
@@ -173,6 +178,7 @@ class Reconciliation extends Controller
     {
         //门店id
         $shop_id=$request->param('shop_id');
+
         //获取今天结束时间
         $time=mktime(23, 59, 59, date('m'), date('d'), date('Y'));
 
@@ -203,9 +209,10 @@ class Reconciliation extends Controller
      */
     public function oneday_bill($createtime,$endtime,$shop_id)
     {
+
         $data=Db::query("select FROM_UNIXTIME(pay_time,'%Y%m%d') days,FROM_UNIXTIME(pay_time,'%H%i%s') minutes,pay_time,received_money,status,id from cloud_order where shop_id=$shop_id and status=1 and pay_time between $createtime and $endtime order by pay_time desc");
         $arr=[];
-
+//        var_dump($shop_id);die;
         foreach ($data as $k=>&$v){
                 $v['status']='已付款';
                 $v['minutes']=substr_replace($v['minutes'],':',2,0);
@@ -213,7 +220,7 @@ class Reconciliation extends Controller
             for ($i=0;$i<count($data);$i++){
                 if ($v['days']==$data[$i]['days']){
                     if($v['id']==$data[$i]['id']){
-                        $arr[$v['days']][]=$v;
+                        $arr['d'.$v['days']][]=$v;
                     }
                     }
             }

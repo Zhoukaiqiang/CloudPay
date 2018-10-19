@@ -13,7 +13,7 @@ use think\Controller;
 use think\Db;
 use think\Request;
 
-class Coupon extends Controller
+class Coupon extends Commonality
 {
     /**
      * 核销页面
@@ -26,6 +26,7 @@ class Coupon extends Controller
         //核销优惠券id
         $id=$request->param('id');
 
+
         //判断是否核销
         if($sncode){
             //优惠券查询     状态 0已核销 1进行中
@@ -37,10 +38,9 @@ class Coupon extends Controller
             return_msg(200,'success',$data);
         }else if($id){
             //核销优惠券
-//            $user_id=Session::get('username_', 'app')['user_id'];
-//            $role=Sessin::get('username_', 'app')['role_id'];
-            $user_id=1;
-            $data=MemberExclusive::where('id',$request->param('id'))->update(['status'=>0,'cancel_time'=>time(),'usre_id'=>$user_id]);
+
+            $user_id=$this->id;
+            $data=MemberExclusive::where('id',$id)->update(['status'=>0,'cancel_time'=>time(),'usre_id'=>$user_id]);
             if($data){
                 return_msg(200,'success','核销成功');
             }else{
@@ -50,6 +50,7 @@ class Coupon extends Controller
 
     }
     /**
+     *
      * 核销纪录
      */
     public function cancel_list()

@@ -11,12 +11,14 @@ namespace app\merchant\controller;
 
 use app\agent\model\MerchantIncom;
 use app\merchant\model\MerchantShop;
+use app\merchant\model\MerchantUser;
+use app\merchant\model\Order;
 use app\merchant\model\TotalMerchant;
 use think\Controller;
 use think\Db;
 use think\Request;
 
-class Proceeds extends Controller
+class Proceeds extends Scancode
 {
     /**
      * 现金支付
@@ -26,10 +28,14 @@ class Proceeds extends Controller
     public function cash_income(Request $request)
     {
         $money=$request->param('cash_money');
-        $merchant_id=session('merchant_id');
-        $merchant_id=1;
+        $id=$this->id;
+        if($this->role==1 ||$this->role==2 || $this->role==3){
+            $rulew=MerchantUser::where('id',$id)->field('merchant_id')->find();
+            $id=$rulew->merchant_id;
+        }
 
-        $resu=Db::name('total_merchant')->where('id',$merchant_id)
+
+        $resu=Db::name('total_merchant')->where('id',$id)
             ->setInc('cash_money',$money);
 
 
@@ -107,12 +113,14 @@ class Proceeds extends Controller
     {
         $data=$request->post();
         //oprId  操作员号暂时没有
-        $data['payChannel']="WXPAY";
+//        $data['payChannel']="WXPAY";
 //        $data['payChannel']=
         //公共参数
-       $data= Scancode::publics($data);
+//
+       $data= $this->publics($data);
        //调用接口
-       return Scancode::lord_esau($data);
+//        return json_encode($data);
+       return $this->lord_esau($data);
 
     }
 
@@ -121,20 +129,32 @@ class Proceeds extends Controller
      * @param Request $request
      */
 
-    public function client_Lordesau(Request $request)
+    public function clientLordesau(Request $request)
     {
         $data=$request->post();
         //oprId  操作员号暂时没有
 
         //公共参数
-        $data= Scancode::publics($data);
+        $data= $this->publics($data);
         //调用接口
-        return Scancode::client_lordesau($data);
+        return $this->client_lordesau($data);
 
     }
 
-    public function order_inquiry()
+    /**
+     * 客户主扫  查询订单详情
+     *
+     */
+    public function order_inquiry(Request $request)
     {
+        $logNo = $request->param('logNo');
+        $resu = Order::where('lonNo', $logNo)->field('status')->find();
+        //是否支付成功
+        if ($resu->status == 1) {
+            return_msg(200, 'success', '支付成功');
+        } else{
+            return_msg(200, 'success', '支付失败');
+        }
 
     }
 }

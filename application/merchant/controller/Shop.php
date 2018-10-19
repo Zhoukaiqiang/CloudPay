@@ -2,7 +2,7 @@
 
 namespace app\merchant\controller;
 
-use app\admin\model\MerchantIncom;
+use app\agent\model\MerchantIncom;
 use app\merchant\model\MerchantShop;
 
 use app\merchant\model\SubBranch;
@@ -15,10 +15,10 @@ use think\Session;
 use app\admin\controller\Incom;
 use app\admin\model\IncomImg;
 
-class Shop extends Common
+class Shop extends Commonality
 {
 
-    public $url = 'https://gateway.starpos.com.cn/emercapp';
+    public $url = 'http://sandbox.starpos.com.cn/emercapp';//测试环境
 
     protected function _initialize()
     {
@@ -27,16 +27,40 @@ class Shop extends Common
     }
     public function index()
     {
-        $merchant_id=\session('merchant_id');
+        $merchant_id=$this->id;
         $merchant_id=87;
         //bnk_acnm 户名  wc_lbnk_no 开户行  stl_sign 结算标志  stl_oac结算账户 icrp_id_no 结算人身份证号    crp_exp_dt_tmp结算人身份证有限期
         $data=MerchantIncom::where('merchant_id',$merchant_id)->field('icrp_id_no,crp_exp_dt_tmp,stl_oac,bnk_acnm,wc_lbnk_no,stl_sign')->find();
-        //1 - 对私  0 - 对公
-        if($data->stl_sign==1){
-            $data=[];
-            $data['stl_sign']=1;
-        }
+       if(!$data->stl_sign){
+           $name=SubBranch::where('lbnk_no',$data['wc_lbnk_no'])->field('lbnk_nm')->find();
+           $data['lbnk_nm']=$name['lbnk_nm'];
+       }
+
         return_msg(200,'success',$data);
+    }
+
+    /**
+     * 查询支行名称   联号
+     * @param Request $request
+     * @throws DbException
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     */
+    public function index_query(Request $request)
+    {
+        //lbnk_nm 支行名称
+        $name=$request->param('lbnk_nm');
+        if($name){
+            $data=SubBranch::where('lbnk_nm','like',"%$name%")->field('lbnk_nm,lbnk_no')->select();
+            if($data){
+                return_msg(200,'success',$data);
+            }else{
+                return_msg(400,'error','支行名称填写错误,请重新填写');
+            }
+        }else{
+            return_msg(500,'error','请输入支行名称');
+        }
+
     }
 
     /**
@@ -58,17 +82,20 @@ class Shop extends Common
         //fee_rat借记卡费率(%)  max_fee_amt借记卡封顶(元） fee_rat1贷记卡费率（%）
         $datatel = $request->post();
         $data = $datatel;
+        $datatel['merchant_id']=87;
 
 
         //查询商户的log_no流水号、mercId识别号    stl_sign结算标志 1对私 2对公
-        $log_no = Db::name('merchant_incom')->where('merchant_id', $data['merchant_id'])
-            ->field('mcc_cd,stl_sign,wc_lbnk_no,stl_oac,icrp_id_no,crp_exp_dt_tmp,bnk_acnm ,mercId,status,suptDbfreeFlg,cardTyp,alipay_flg, yhkpay_flg,
-           fee_rat_scan,fee_rat1_scan,fee_rat,max_fee_amt,fee_rat1')
+        $log_no = Db::name('merchant_incom')->where('merchant_id', $datatel['merchant_id'])
+            ->field('fee_rat2_scan,ysfdebitfee,ysfcreditfee,fee_rat1,max_fee_amt,
+            fee_rat,fee_rat2_scan,fee_rat1_scan,fee_rat3_scan,fee_rat_scan,yhkpay_flg
+            ,alipay_flg,tranTyps,log_no,mercId,suptDbfreeFlg,cardTyp,stl_typ,
+            orgNo,mcc_cd')
             ->find();
-//        dump($log_no);die;
+
 
         //status判断商户状态是否是注册未完成、修改未完成
-//        if (in_array($log_no[ 0 ][ 'status' ], [1, 2])) {
+//        if(in_array($log_no[ 0 ][ 'status' ], [1, 2])) {
 
 
         //存入门店数据
@@ -81,20 +108,23 @@ class Shop extends Common
             return_msg(400, '数据不正确');
         }
 
-        $data['orgNo'] = ORG_NO;
-        //fee_rat2_scan
-
-        $data['fee_rat2_scan'] = "0.6";
-        $data['serviceId'] = 6060602;
-        $data['version'] = 'V1.0.1';
-        $data['log_no'] = "201810110001103896";
-        $data['tranTyps'] = "C1";
+        $adress=$this->address($datatel['stoe_adds']);
+        if(!$adress){
+            return_msg(400,'error','地址格式错误');
+        }
+        $data['stoe_area_cod']=$adress;
+        $data['serviceId'] = 6060602;//交易码
+        $data['version'] = 'V1.0.4';//版本号
+//        $data['log_no'] = "201810110001103896";
+        $data['stoe_nm']=$data['shop_name'];
         $data = array_merge($data, $log_no);
 //        unset($data['']);
         unset($data['merchant_id']);
         unset($data['status']);
+        unset($data['shop_name']);
 //        return json_encode($data);
         //签名域
+//        return_msg(200,'e',$data);
         $sign_value = sign_ature(0000, $data);
 //            dump($sign_value);die;
         $data['signValue'] = $sign_value;
@@ -127,29 +157,119 @@ class Shop extends Common
 //        }
     }
 
-    public function upload_pictures(Request $request)
+    /**
+     * 上传图片
+     * imgTyp   图片类型    6 - 门头照  7 - 场景照   8 - 收银台照
+     * imgNm  图片名称  汉字数字和字母，不允许有特殊字符
+     * imgFile   图片（不参与验签）  图片转成十六进制，图片不能超过500KB
+     * @param Request $request
+     */
+    public function image(Request $request)
     {
-        $info = $request->post();
-        $merchant_id = Session::get("username_")["id"];
+        // 获取表单上传文件
+        $val=$request->post();
+
+        $file = $request->file('imgFile');
+
+
+            // 移动到框架应用根目录/public/uploads/ 目录下
+            $info = $file->validate(['size'=>512000,'ext'=>'jpg,png,jpeg'])->move(ROOT_PATH . 'public' . DS . 'uploads');
+
+            if($info){
+
+                $data['imgFile'] = bin2hex(file_get_contents($file->getRealPath()));//进件参数  图片
+                $data['imgTyp']=$val['imgTyp'];//图片类型    6 - 门头照  7 - 场景照   8 - 收银台照
+                $data['imgNm']=$val['imgNm'].$info->getExtension(); //图片名称  汉字数字和字母，不允许有特殊字符
+
+                $result=$this->upload_pictures($data);//调进件公共参数   传入图片信息
+                if($result){
+                    $arr['imgTyp']=$val['imgTyp'];
+                    $arr['imgFile']=$info->getPathname();
+                    $cudle=$this->warehousing($val['shop_id'],$arr); //入库
+
+
+                    if(!$cudle){
+                        return_msg(400,'error','图片保存失败');
+                    }else{   //保存成功
+                        return_msg(200,'success',['file_path'=>$arr['imgFile']]);
+
+                    }
+                }else{
+                    return_msg(400,'error','图片进件失败，请重新上传');
+                }
+
+
+
+            }else{
+                // 上传失败获取错误信息
+               return_msg(400,'error','图片格式错误');
+            }
+
+
+
+
+    }
+
+    /**
+     * 图片入库
+     * @param $id
+     * @param $arr
+     * @param $val
+     * @return bool
+     * @throws DbException
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     */
+    public function warehousing($id,$arr)
+    {
+
+
+            //取出之前存入的图片 整合再存入
+            $valls=MerchantShop::where('id',$id)->field('imgFile')->find();
+
+                $val=[];
+            if($valls->imgFile) {   //是否有值
+                $valls=json_decode($valls->imgFile,true);
+                $valls[$arr['imgTyp']]=$arr['imgFile'];
+                $val=$valls;
+
+            }else{
+                $val[$arr['imgTyp']]=$arr['imgFile'];
+
+            }
+
+        $data=MerchantShop::where('id',$id)->update(['imgFile'=>json_encode($val)]);
+        return $data ? true : false;
+    }
+
+    /**
+     * 上传图片公共参数进件
+     * @param Request $request
+     * @throws DbException
+     * @throws Exception
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     */
+    public function upload_pictures($arr)
+    {
+
+        $merchant_id = $this->id;
+        $merchant_id=87;
 
         $data = MerchantIncom::alias('a')
             ->field('a.mercId,a.orgNo,b.log_no,b.stoe_id')
             ->join('merchant_shop b', 'b.merchant_id=a.merchant_id')
-            ->where('a.merchant_id', $info['merchant_id'])
+            ->where('a.merchant_id', $merchant_id)
             ->find();
 
+        $data['imgTyp']=$arr['imgTyp'];
+        $data['imgNm']=$arr['imgNm'];
+        $data['imgFile']=$arr['imgFile'];
         $data['serviceId'] = '6060606';
         $data['version'] = 'V1.0.1';
-        $data['imgTyp'] = $info['imgTyp'];
-        $data['imgNm'] = $info['imgNm'];
-        $data['merchant_id'] = $info['merchant_id'];
+//        $data['merchant_id'] = $merchant_id     ;
         $data = $data->toArray();
-        $file = $request->file('imgFile');
-        $data['imgFile'] = bin2hex(file_get_contents($file->getRealPath()));
-        $img = $this->upload_pics($file);
-        $this->send($data, $img);
-
-
+       return $this->send($data);
     }
 
     /**
@@ -158,7 +278,7 @@ class Shop extends Common
      * @param  int $id
      * @return \think\Response
      */
-    public function send($data, $img)
+    public function send($data)
     {
         //获取签名
         $data['signValue'] = sign_ature(0000, $data);
@@ -172,53 +292,14 @@ class Shop extends Common
         return_msg(200, 'success', $result);
 //        return json_encode($result);
         if ($result['msg_cd'] == '000000' && $result['signValue'] == $signValue) {
-            //取出数据库中的图片
-            $file_img = IncomImg::field('img')->where('merchant_id', $data['merchant_id'])->find();
-            if ($file_img == null) {
-                //没有图片
-                $data['img'] = json_encode($img);
-                IncomImg::create($data, true);
-            } elseif (is_array(json_decode($file_img['img']))) {
-                //有多张图片
 
-                $arr = json_decode($file_img['img']);
-                $arr[] = $img;
-                IncomImg::where('merchant_id', $data['merchant_id'])->update(['img' => json_encode($arr)]);
-            } else {
-                //只有一张图片
-
-                $arr[] = json_decode($file_img['img']);
-                $arr[] = $img;
-
-                IncomImg::where('merchant_id', $data['merchant_id'])->update(['img' => json_encode($arr)]);
-            }
-//            $file_img=$file_img['img'].$img;
-            $res = [
-                'merchant_id' => $data['merchant_id'],
-                'img' => $img
-            ];
-            return_msg(200, 'success', $res);
+           return true;
         } else {
-            return_msg(400, 'failure');
+            return false;
         }
     }
 
-    public function upload_pics()
-    {
-        //移动图片
-        $file = request()->file('imgFile');
-        $info = $file->validate(['size' => 5 * 1024 * 1024, 'ext' => 'jpg,png,gif,jpeg'])->move(ROOT_PATH . 'public' . DS . 'uploads');
-        if ($info) {
-            //文件上传成功,生成缩略图
-            //获取文件路径
-            $goods_logo = DS . 'uploads' . DS . $info->getSaveName();
-            $goods_logo = str_replace('\\', '/', $goods_logo);
-            return $goods_logo;
-        } else {
-            $error = $file->getError();
-            $this->error($error);
-        }
-    }
+
 
     /**
      * 新增门店页面展示及mcc码查询
@@ -258,7 +339,9 @@ class Shop extends Common
     public function image_uplode(Request $request)
     {
         $file = $request->file('image');
+
         $a = substr($file->getMime(), 0, 5);
+
 
         if ($a === 'image') {
             return image_thumbnail($file);
@@ -391,5 +474,94 @@ class Shop extends Common
         } else {
             return true;
         }
+    }
+    /**
+     * 区域码查询
+     * @param $data
+     * @throws DbException
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     */
+    public function address($data)
+    {
+
+        $name = explode(',', $data);
+
+        if (!count($name )< 4) {
+
+            $area = $name[2];//区
+            $city = $name[1];//市
+
+            $data = Db::name('area_code')->where(['area_nm'=>['like', "%$area"],'city_nm'=>['like',"%$city"]])->field('merc_area')->find();
+            if($data){
+                return $data->merc_area;
+            }else{
+                return false;
+            }
+
+        }else{
+            return false;
+        }
+    }
+
+    /**
+     * 我的门店
+     * @throws DbException
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     */
+    public function pc_myShop()
+    {
+        $merchant_id=$this->id;
+        $data=MerchantShop::where('merchant_id',$merchant_id)->field('shop_name,id,stoe_adds,stoe_cnt_tel')->select();
+        if($data){
+            return_msg(200,'success',$data);
+
+        }else{
+            return_msg(400,'error','此商户没有添加门店');
+        }
+    }
+
+    /**
+     * 我的门店 查询
+     * shop_name   门店名称
+     * paymentorder  付款顺序   1先上菜后付款   2先付款后上菜
+     * @param Request $request
+     * @throws DbException
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     */
+    public function pc_myShopQuery(Request $request)
+    {
+        $merchant_id=$this->id;
+        //门店名称
+        $shop_name=$request->param('shop_name') ? $request->param('shop_name') : '0';
+        $shopsymbol=$shop_name ? 'like' : '<>';
+        //付款顺序   1先上菜后付款   2先付款后上菜
+        $paymentorder=$request->param('paymentorder') ? $request->param('paymentorder') : 0;
+        $paysymbol=$paymentorder ? '=' : '<>';
+
+        $data=MerchantShop::where(['merchant_id'=>$merchant_id,'shop_name'=>[$shopsymbol,$shop_name],'paymentorder'=>[$paysymbol,$paymentorder]])
+        ->field('shop_name,id,stoe_adds,stoe_cnt_tel')->select();
+//        var_dump($data);die;
+
+        return $data ? return_msg(200,'success',$data) : return_msg(400,'error','没有满足条件的门店');
+
+    }
+
+    /**
+     * 门店详情
+     * shop_id  门店id
+     * @param Request $request
+     * @throws DbException
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     */
+    public function pc_particulars(Request $request)
+    {
+        $shop_id=$request->param('shop_id');
+        $data=MerchantShop::where(['id'=>$shop_id])
+            ->field('shop_name,id,stoe_adds,stoe_cnt_tel,mailbox,stoe_cnt_nm,imgFile')->select();
+        return_msg(200,'success',$data);
     }
 }
