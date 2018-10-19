@@ -11,6 +11,7 @@
 use think\Db;
 use think\Validate;
 
+
 // 应用公共文件
 if (!function_exists('encrypt_password')) {
     /**
@@ -291,7 +292,7 @@ if (!function_exists('sign_ature')) {
 //        dump($arr);die;
         ksort($arr);
         if ($ids == 0000) {
-            $data = ['serviceId', 'version', 'incom_type', 'stl_typ', 'stl_sign', 'stl_oac', 'bnk_acnm', 'wc_lbnk_no', 'bus_lic_no', 'bse_lice_nm', 'crp_nm', 'mercAdds', 'bus_exp_dt', 'crp_id_no', 'crp_exp_dt', 'stoe_nm', 'stoe_cnt_nm', 'stoe_cnt_tel', 'mcc_cd', 'stoe_area_cod', 'stoe_adds', 'trm_rec', 'mailbox', 'alipay_flg', 'yhkpay_flg', 'mercId', 'orgNo', 'imgTyp', 'imgNm', 'log_no', 'stoe_id', 'lbnk_nm'];
+            $data = ['payChannel','authCode','total_amount','amount','trmNo','tradeNo','txnTime','signType','opSys','characterSet','serviceId', 'version', 'incom_type', 'stl_typ', 'stl_sign', 'stl_oac', 'bnk_acnm', 'wc_lbnk_no', 'bus_lic_no', 'bse_lice_nm', 'crp_nm', 'mercAdds', 'bus_exp_dt', 'crp_id_no', 'crp_exp_dt', 'stoe_nm', 'stoe_cnt_nm', 'stoe_cnt_tel', 'mcc_cd', 'stoe_area_cod', 'stoe_adds', 'trm_rec', 'mailbox', 'alipay_flg', 'yhkpay_flg' , 'mercId', 'orgNo', 'imgTyp', 'imgNm', 'log_no', 'stoe_id', 'lbnk_nm'];
             $stra = '';
 
             foreach ($arr as $k => $v) {
@@ -302,7 +303,7 @@ if (!function_exists('sign_ature')) {
             }
 //            var_dump($stra);die;
         } else if ($ids == 1111) {
-            $data = ['check_flag', 'msg_cd', 'msg_dat', 'mercId', 'log_no', 'stoe_id', 'mobile', 'sign_stats', 'deliv_stats'];
+            $data = ['result','logNo','tradeNo','sysTime','message','returnCode','check_flag', 'msg_cd', 'msg_dat', 'mercId', 'log_no', 'stoe_id', 'mobile', 'sign_stats', 'deliv_stats'];
             $stra = '';
             foreach ($arr as $key1 => $val) {
                 if (in_array($key1, $data)) {
@@ -340,6 +341,26 @@ if (!function_exists('upload_logo')) {
     }
 }
 
+//                if (!function_exists('upload_logo')) {
+//                    function upload_pics($files)
+//                    {
+//                        $goods_pics = [];
+//                        foreach ($files as $file) {
+//                            $info = $file->validate(['size' => 500 * 1024 * 1024, 'ext' => 'jpg,jpeg,gif,png'])->move(ROOT_PATH . 'public' . DS . 'uploads');
+//                            if ($info) {
+//                                //图片上传成功
+//                                $goods_logo = DS . 'uploads' . DS . $info->getSaveName();
+//                                $goods_logo = str_replace('\\', '/', $goods_logo);
+//                                $goods_pics[] = $goods_logo;
+//                            } else {
+//                                $error = $info->getError();
+//                                return_msg(400, $error);
+//
+//                            }
+//                        }
+//                        return $goods_pics;
+//                    }
+//                }
 if (!function_exists('upload_pics_pay')) {
     function upload_pics_pay($files)
     {

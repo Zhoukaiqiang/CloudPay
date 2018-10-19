@@ -9,7 +9,10 @@ use app\merchant\model\MerchantMemberCart;
 use app\merchant\model\MerchantShop;
 use app\merchant\model\MerchantUser;
 use app\merchant\model\Order;
+use app\merchant\model\ShopActiveDiscount;
+use app\merchant\model\ShopActiveExclusive;
 use app\merchant\model\ShopActiveRecharge;
+use app\merchant\model\ShopActiveShare;
 use think\Controller;
 use think\Request;
 
@@ -446,6 +449,7 @@ class Member extends Common
         $data['recharge_total']=MemberRecharge::where('merchant_id',$this->merchant_id)
             ->whereTime('recharge_time','today')
             ->sum('order_money');
+        $data['member_total']=$row;
         $data['page']=$pages;
         check_data($data);
     }
@@ -472,6 +476,7 @@ class Member extends Common
                 ->where($where)
                 ->limit($pages['offset'],$pages['limit'])
                 ->select();
+            $data['page']=$pages;
         }else{
             $where = [
                 'member_name'=>['like',$search.'%'],
@@ -480,7 +485,9 @@ class Member extends Common
             $row = MerchantMember::where($where)->count();
             $pages = page($row);
             //姓名搜索
-            $data = MerchantMember::field('id,member_name,money,member_phone,register_time')->where($where)->limit($pages['offset'],$pages['limit'])->select();
+            $data['list'] = MerchantMember::field('id,member_name,money,member_phone,register_time')->where($where)->limit($pages['offset'],$pages['limit'])->select();
+
+            $data['page'] = $pages;
         }
         check_data($data);
     }
@@ -621,4 +628,42 @@ class Member extends Common
         }
     }
 
+    /**
+     *会员活动列表
+     * @param Request $request
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function pc_member_active_list()
+    {
+        $data['discount']=ShopActiveDiscount::alias('a')
+            ->field('a.id,a.discount,a.active_time,a.start_time,a.end_time,a.apply_name,b.shop_name')
+            ->join('cloud_merchant_shop b','a.shop_id=b.id','left')
+            ->where('a.merchant_id',$this->merchant_id)
+            ->select();
+        //会员专享??
+        $data['exclusive']=ShopActiveExclusive::field('id,name,start_time,end_time,consump_number,last_consump,recharge_total,consump_total,register_status')
+            ->where('merchant_id',$this->merchant_id)
+            ->select();
+        //充值送
+//        halt($data);
+        $data['recharge']=ShopActiveRecharge::alias('a')
+            ->field('a.id,a.name,a.recharge_money,a.give_money,a.active_time,a.start_time,a.end_time,b.shop_name')
+            ->join('cloud_merchant_shop b','a.shop_id=b.id','left')
+            ->where('a.merchant_id',$this->merchant_id)
+            ->select();
+        //分享
+        $data['share']=ShopActiveShare::alias('a')
+            ->field('a.id,a.start_time,a.end_time,b.shop_name')
+            ->join('cloud_merchant_shop b','a.shop_id=b.id','left')
+            ->where('a.merchant_id',$this->merchant_id)
+            ->select();
+        check_data($data);
+    }
+
+    public function pc_stop_active()
+    {
+
+    }
 }

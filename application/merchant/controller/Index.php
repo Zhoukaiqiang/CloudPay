@@ -17,12 +17,12 @@ use think\Db;
 use think\Request;
 use think\Session;
 
+
 class Index extends Common
 {
     /**
      * APP首页展示
      * @param Request $request
-     * @return string
      * @throws \think\db\exception\DataNotFoundException
      * @throws \think\db\exception\ModelNotFoundException
      * @throws \think\exception\DbException
@@ -32,19 +32,16 @@ class Index extends Common
         //$role 1服务员 2店长 3收银员 -1商户
 //            $id=Session::get('username_', 'app')['user_id'];
 //            $role=Sessin::get('username_', 'app')['role_id'];
-        $role = -1;
-        $name = 'merchant_id';
-        $id = 2;
-        if ($role == 1 || $role == 3) {
-            $name = 'person_info_id';
-        }
-        if ($role == 2) {
-            $id = MerchantUser::where('id', $id)->field('shop_id')->find();
-            $name = 'shop_id';
-        }
-        if ($role == -1) {
-            $name = 'merchant_id';
-        }
+            $role=$this->role;
+            $name=$this->name;
+            $id=$this->id;
+            if($role==1 || $role==3){
+                $name='person_info_id';
+            }
+            if($role==2){
+                $id=MerchantUser::where('id',$id)->field('shop_id')->find();
+                $id=$id->shop_id;
+                }
 
 
         //查询今天的收银金额和订单笔数
@@ -224,6 +221,9 @@ class Index extends Common
         }
 
     }
+
+
+
 
 
     /**

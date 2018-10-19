@@ -15,7 +15,7 @@ use think\Controller;
 use think\Db;
 use think\Request;
 
-class Deposit extends Controller
+class Deposit extends Commonality
 {
     public $url='http://139.196.141.163:4243/emercapp';
 
@@ -31,8 +31,7 @@ class Deposit extends Controller
     public function withdraw_list(Request $request)
     {
         //获取商户id
-        $merchant_id=session('merchant_id');
-        $merchant_id=3;
+      $merchant_id=$this->id;
         //账户可提现余额
         $data=TotalMerchant::where('id',$merchant_id)->field(['money','password'])->select();
 //        return json_encode($data);
@@ -105,7 +104,8 @@ class Deposit extends Controller
      */
     public function Withdrawal_record()
     {
-        $merchant_id=session('merchant_id');
+
+        $merchant_id=$this->id;
         $merchant_id=1;
         $data=Db::name('merchant_withdrawal')->where(['merchant_id'=>$merchant_id])->select();
         return json_encode($data);
@@ -120,7 +120,7 @@ class Deposit extends Controller
      */
     public function Withdrawal_record_query(Request $request)
     {
-        $merchant_id=session('merchant_id');
+        $merchant_id=$this->id;
         $merchant_id=1;
         //提现方式 1普通提现 2自动提现 3快速提现 0全部方式
         $way=$request->param('way') ? $request->param('way') : 0;
@@ -159,7 +159,8 @@ class Deposit extends Controller
      */
     public function withdraw()
     {
-        $merchant_id=17;
+        $merchant_id=$this->id;
+
         $del=MerchantIncom::where('merchant_id',$merchant_id)
             ->field(['serviceId','version','orgNo','mercId'])
             ->select();
@@ -208,7 +209,7 @@ class Deposit extends Controller
      */
     public function Withdrawal_information()
     {
-        $merchant_id=session('merchant_id');
+        $merchant_id=$this->id;
         $del=MerchantIncom::where('merchant_id',$merchant_id)
             ->field(['orgNo','mercId'])
             ->select();
@@ -276,7 +277,7 @@ class Deposit extends Controller
     {
         //获取日期
         $ac_dt=$request->param('create_time');
-        $merchant_id=session('merchant_id');
+        $merchant_id=$this->id;
         $del=MerchantIncom::where('merchant_id',$merchant_id)
             ->field(['orgNo','mercId'])
             ->select();
@@ -312,7 +313,7 @@ class Deposit extends Controller
 
         //获取门店号
         $shop_id=$request->param('shop_id');
-        $merchant_id=session('merchant_id');
+        $merchant_id=$this->id;
         $del=Db::name('merchant_incom')->alias('a')
             ->field(['a.orgNo','a.mercId','b.stoe_id'])
             ->join('merchant_shop b','a.merchant_id=b.merchant_id','left')

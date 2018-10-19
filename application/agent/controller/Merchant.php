@@ -264,7 +264,6 @@ class Merchant extends Incom
             $insert_id=TotalMerchant::insertGetId($data,true);
             $arr=[];
             if($insert_id){
-
                 $arr['merchant_id']=$insert_id;//商户id
                 $arr['stl_sign']=$data['account_type'];//账户类型
                 $arr['stl_oac']=$data['account_no'];//账户号
