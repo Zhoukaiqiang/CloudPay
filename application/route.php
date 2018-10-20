@@ -25,4 +25,12 @@ use think\Route;
  *
  */
 
-Route::rule('test', 'admin/user/test', "GET|POST");
+Route::rule('test', 'merchant/capital/test', "GET|POST");
+/** 商户后台资金管理 */
+
+Route::rule('pc_cash', 'merchant/capital/pc_cash', "GET");
+Route::rule('pc_cash_search', 'merchant/capital/pc_cash_search', "GET|POST");
+Route::rule('pc_profile', 'merchant/capital/pc_profile', "GET");
+Route::rule('pc_bind', 'merchant/capital/pc_bind', "GET|POST");
+Route::rule('pc_bill', 'merchant/capital/pc_bill', "GET");
+

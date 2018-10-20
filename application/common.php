@@ -223,15 +223,17 @@ if (!function_exists("getSN")) {
     }
 }
 /**
- * 设置curl
+ * 发送curl
+ * @param [string] $url 请求地址
+ * @param [bool]   $post POST|GET
+ * @param [array]  $params 请求参数
+ * @param [bool]   $https 是否使用HTTPS
  */
 if (!function_exists('curl_request')) {
     //使用curl函数库发送请求
     function curl_request($url, $post = false, $params = [], $https = false)
     {
         $params = json_encode($params);
-        /*$params=json_encode($params);
-        return $params;*/
         //①使用curl_init初始化请求会话
         $ch = curl_init();
         //②使用curl_setopt设置请求一些选项

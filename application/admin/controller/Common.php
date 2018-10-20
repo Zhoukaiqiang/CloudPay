@@ -249,8 +249,8 @@ class Common extends Controller
         /* 检测是否超时 创建session */
         $last_time = session($user_name . '_last_send_time');
 
-        if (time() - $last_time > 300) {
-            $this->return_msg(400, '验证超时，请在5分钟内验证！');
+        if (time() - $last_time > 60) {
+            $this->return_msg(400, '验证超时，请在1分钟内验证！');
         }
 
         /* 检测验证码是否正确 */
