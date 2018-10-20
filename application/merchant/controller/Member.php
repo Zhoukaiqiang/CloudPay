@@ -655,24 +655,40 @@ class Member extends Common
             ->select();
         //分享
         $data['share']=ShopActiveShare::alias('a')
-            ->field('a.id,a.start_time,a.end_time,b.shop_name')
+            ->field('a.id,a.lowest_consump,a.money,a.start_time,a.end_time,b.shop_name')
             ->join('cloud_merchant_shop b','a.shop_id=b.id','left')
             ->where('a.merchant_id',$this->merchant_id)
             ->select();
         check_data($data);
     }
 
-
+    /**
+     *微信会员卡
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
     public function wx_member_card()
     {
         //获取用户appid
-        $appid=1;
+        $openid=request()->param('open_id');
+        $openid=1;
         //取出会员信息
-        $data['list']=MerchantMember::field('merchant_id,money')->where('appid',$appid)->select();
+        $data['list']=MerchantMember::field('id,merchant_id,money,member_phone')->where('openid',$openid)->select();
         //取出会员活动
         foreach($data['list'] as &$v){
             $v['recharge']=ShopActiveRecharge::field('recharge_money,give_money')->where('merchant_id',$v['merchant_id'])->select();
-            $v['discount']=ShopActiveDiscount::field('discount')->where('merchant_id',$v['merchant_id'])->select();
+            $v['member_card']=MerchantMemberCard::field('member_color,member_content,member_cart_name')->where('merchant_id',$v['merchant_id'])->find();
         }
+        check_data($data);
     }
+
+
+   /* public function wx_member_recharge(Request $request)
+    {
+        //获取会员id
+        $id = $request->param('id');
+        //取出会员活动
+        $data=MerchantMember::field('')
+    }*/
 }
