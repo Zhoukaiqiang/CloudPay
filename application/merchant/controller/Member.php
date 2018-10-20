@@ -662,8 +662,17 @@ class Member extends Common
         check_data($data);
     }
 
-    public function pc_stop_active()
-    {
 
+    public function wx_member_card()
+    {
+        //获取用户appid
+        $appid=1;
+        //取出会员信息
+        $data['list']=MerchantMember::field('merchant_id,money')->where('appid',$appid)->select();
+        //取出会员活动
+        foreach($data['list'] as &$v){
+            $v['recharge']=ShopActiveRecharge::field('recharge_money,give_money')->where('merchant_id',$v['merchant_id'])->select();
+            $v['discount']=ShopActiveDiscount::field('discount')->where('merchant_id',$v['merchant_id'])->select();
+        }
     }
 }

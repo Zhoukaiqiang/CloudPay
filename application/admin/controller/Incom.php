@@ -16,7 +16,7 @@ use think\Request;
 class Incom extends Controller
 {
 
-   public $url = 'https://gateway.starpos.com.cn/emercapp';
+   public $url = 'http://sandbox.starpos.com.cn/emercapp';
 
 
     /**
@@ -400,20 +400,18 @@ class Incom extends Controller
     {
         $merchant_id=$request->post('merchant_id');
         //取出数据表中数据
-        $data=MerchantIncom::where('merchant_id',$merchant_id)->field('log_no,mercId,orgNo')->find();
+
+        $data=MerchantIncom::where('merchant_id',$merchant_id)->field('mercId,orgNo,log_no')->find();
         $data = $data->toArray();
         $data['serviceId']='6060603';
         $data['version']='V1.0.1';
-//        $data['log_no']=201810110001103896;
+//        $data['log_no']="201810110001103896";
 
         $data['signValue'] = sign_ature(0000,$data);
-
+//        halt($data);
         $result=curl_request($this->url,true,$data,true);
-        return $result;
         $result = json_decode($result,true);
-        if (!empty($result)) {
-            return_msg(400, $result);
-        }
+//        halt($result);
         //生成签名
         $signValue = sign_ature(1111,$result);
         if( $signValue == $result['signValue'] ){

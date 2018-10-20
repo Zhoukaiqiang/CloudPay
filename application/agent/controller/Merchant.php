@@ -254,16 +254,18 @@ class Merchant extends Incom
 //            $data['attachment']=$this->upload_logo();
 //            $data['agent_id']=$agent_id;
 //            $data['attachment']=json_encode($data['attachment']);
-            if(empty($data['wc_lbnk_no'])){
-                //用户自己输入支行
-                $open_branch=$this->bank_query($data['open_branch']);
-                $arr['wc_lbnk_no']=$open_branch;
-            }else{
-                $arr['wc_lbnk_no']=$data['wc_lbnk_no'];
-            }
+
+
             $insert_id=TotalMerchant::insertGetId($data,true);
             $arr=[];
             if($insert_id){
+                if(empty($data['wc_lbnk_no'])){
+                    //用户自己输入支行
+                    $open_branch=$this->bank_query($data['open_branch']);
+                    $arr['wc_lbnk_no']=$open_branch;
+                }else{
+                    $arr['wc_lbnk_no']=$data['wc_lbnk_no'];
+                }
                 $arr['merchant_id']=$insert_id;//商户id
                 $arr['stl_sign']=$data['account_type'];//账户类型
                 $arr['stl_oac']=$data['account_no'];//账户号
@@ -288,6 +290,7 @@ class Merchant extends Incom
                 $arr['stoe_area_cod']=$data['stoe_area_cod'];//地区码
                 $arr['orgNo']=ORG_NO;//合作商机构号
                 $arr['crp_nm']=$data['contact'];//法人姓名
+//                halt($arr);
                 MerchantIncom::insert($arr,true);
                 $this->merchant_incom($insert_id);
 //                return_msg(200,'添加成功');
