@@ -346,30 +346,32 @@ class Capital extends Common
     /** 交易查询接口测试 */
     public function test()
     {
+        /** @var [string] 客户主扫 $url */
         $url = "http://139.196.77.69:8280/adpweb/ehpspos3/sdkBarcodePosPay.json";
         $true_url = "http://gateway.starpos.com.cn/adpweb/ehpspos3/sdkBarcodePosPay.json ";
         $param = [
             "amount" => "100",
             "total_amount" => "120",
-            "payChannel" => "3",
+            "payChannel" => "WXPAY",
             "subject"  => "云商付测试收款",
-            "selOrderNo"  => generate_order_no(12),
+            "selOrderNo"  => (string)generate_order_no(12),
             "goods_tag"   => "会员优惠20",
             "attach"    => '',
             //public
             "opSys"  => "3",
-            "characterSet"  => "00-GBK",
+            "characterSet"  => "00",
             "orgNo"    => "518",
             "mercId"   => "800332000002146",
             "trmNo"    => "95445645",
-            "tradeNo"  => generate_order_no(12),
-            "txnTime"  => date("YmdHms", time()),
+            "tradeNo"  => (string)generate_order_no(12),
+            "txnTime"  => (string)date("YmdHms", time()),
             "signType"  => "MD5",
-            "version"   => "v1.0.0"
+            "version"   => "V1.0.0"
 
         ];
         $param["signValue"] = sign_ature(0000, $param);
-        $res = curl_request($url, true, $param, true);
-        halt($res);
+
+        $res = curl_request($true_url, true, $param, true);
+        halt(urldecode($res));
     }
 }
