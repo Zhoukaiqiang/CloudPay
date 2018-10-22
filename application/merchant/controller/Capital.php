@@ -5,8 +5,10 @@ namespace app\merchant\controller;
 use app\merchant\model\MerchantShop;
 use app\merchant\model\Order;
 use app\merchant\model\TotalMerchant;
+use Endroid\QrCode\QrCode;
 use think\Controller;
 use think\Db;
+use think\Exception;
 use think\Loader;
 use think\Request;
 
@@ -130,23 +132,26 @@ class Capital extends Common
         if ($request->isPost()) {
             $param = [];
             /** 请求bank_query */
-            check_params("bind_card", $param, "MerchantValidate");
+
+            $card = TotalMerchant::get($this->merchant_id)["id_card"];
 
             $param["id"] = $this->merchant_id;
+            $param["id_card"] = $card;
+            $param["account_name"] = $request->param("account_name");
+            $param["phone"] = $request->param("phone");
             $param["account_no"] = $request->param("account_no");
-            $param["id_card"] = $request->param("id_card");
+
             $param["open_bank"] = $request->param("open_bank");
 
-            /** 获取改开户行支行联行行号 */
+            /** 获取开户行支行联行行号 */
             $param["open_branch"] = $request->param("open_branch");
 
-            $param["phone"] = $request->param("phone");
-            $param["account_name"] = $request->param("account_name");
+            check_params("bind_card", $param, "MerchantValidate");
 
 
-            $check_bank = $this->check_bank($param);
+            $this->check_bank($param);
             /** 请求商户修改接口 */
-            $this->merchant_edit();
+            $this->merchant_edit($param);
             /** 存入数据库 */
 
         }
@@ -156,11 +161,60 @@ class Capital extends Common
     /**
      * 银行卡绑定查询 -- 走聚合数据接口
      * @param $arg
+     * @return bool / msg
      */
-    public function check_bank($arg)
+    protected function check_bank($arg)
     {
-        return 1;
+
+        $param = [
+            "realname" => $arg["account_name"],
+            "idcard" => (string)$arg["id_card"],
+            "bankcard" => (string)$arg["account_no"],
+            "mobile" => (string)$arg["phone"],
+            "key" => "4c0307cd5fafa19a2da4ffe877370313",
+        ];
+        /** @var [string] 聚合支付请求API $url */
+        $url = "http://v.juhe.cn/verifybankcard4/query";
+        $res = $this->curl_request($url, true, $param, false);
+
+
+        $res = json_decode($res, true);
+        if ($res["result"]["res"] == "2") {
+            return_msg(400, $res["result"]["message"]);
+        } else {
+            return true;
+        }
     }
+
+
+    /**
+     * Curl 请求
+     * @param $url
+     * @param bool $post
+     * @param array $params
+     * @param bool $https
+     * @return mixed
+     */
+    protected function curl_request($url, $post = false, $params = [], $https = false)
+    {
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_HEADER, 0);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        if ($post) {
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $params);
+
+            curl_setopt($ch, CURLOPT_HTTPHEADER, array("application/json;") );
+        }
+        if ($https) {
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        }
+        $res = curl_exec($ch);
+        curl_close($ch);
+        return $res;
+    }
+
 
     /*
      * 商户修改申请
@@ -206,25 +260,31 @@ class Capital extends Common
     }
 
     /**
-     * 商户资料修改
-     * 商户资料修改是的状态（注册未完成，修改未完成，注册拒绝，修改拒绝）
+     * @rule 商户资料修改
+     * @rule 商户资料修改是的状态（注册未完成，修改未完成，注册拒绝，修改拒绝）
      * @param Request $request
+     * @throws Exception
+     * @return [bool / string] msg
      */
-    protected function commercial_edit(Request $request)
+    public function commercial_edit(Request $request)
     {
         $del = $request->post();
 
         $del['serviceId'] = 6060604;
         $del['version'] = 'V1.0.1';
-        $data = Db::name('merchant_incom')->where('merchant_id', $del['merchant_id'])->field('log_no,mercId,stoe_id,mcc_cd,status')->select();
-        //查看商户是否是完成状态
-        if ($data[0]['status'] != 1) {
+
+        $data = Db::name('merchant_incom')->where('merchant_id', $this->merchant_id)->field('log_no,mercId,stoe_id,mcc_cd,status')->find();
+        //商户为未完成状态才可以修改
+
+        if ($data['status'] !== 0) {
             $aa = [];
-            foreach ($data[0] as $k => $v) {
+            foreach ($data as $k => $v) {
                 $aa[$k] = $v;
             }
             $dells = $del + $aa;
+            //mark 调试到这里 by--端木
             $sign_ature = sign_ature(0000, $del);
+
             $dells['signValue'] = $sign_ature;
             //向新大陆接口发送信息验证
 
@@ -232,14 +292,13 @@ class Capital extends Common
 
             $par = json_decode($par, true);
             //返回数据的签名域
-//        dump($par);die;
 
             $return_sign = sign_ature(1111, $par);
 
             if ($par['msg_cd'] === 000000) {
                 if ($par['signValue'] == $return_sign) {
                     $del['status'] = 0;
-                    Db::table('merchant_incom')->where('merchant_id', $del['merchant_id'])->update($del);
+                    Db::name('merchant_incom')->where('merchant_id', $del['merchant_id'])->update($del);
 
                     return_msg(200, 'error', $par['msg_dat']);
                 } else {
@@ -347,31 +406,72 @@ class Capital extends Common
     public function test()
     {
         /** @var [string] 客户主扫 $url */
-        $url = "http://139.196.77.69:8280/adpweb/ehpspos3/sdkBarcodePosPay.json";
-        $true_url = "http://gateway.starpos.com.cn/adpweb/ehpspos3/sdkBarcodePosPay.json ";
+        $true_url = "http://gateway.starpos.com.cn/adpweb/ehpspos3/sdkBarcodePosPay.json";
+        session("msg", ["tradeNo" => (string)generate_order_no(12), "txnTime" => (string)date("YmdHms", time())]);
         $param = [
-            "amount" => "100",
-            "total_amount" => "120",
+            "amount" => "001",
+            "total_amount" => "001",
             "payChannel" => "WXPAY",
-            "subject"  => "云商付测试收款",
-            "selOrderNo"  => (string)generate_order_no(12),
-            "goods_tag"   => "会员优惠20",
-            "attach"    => '',
-            //public
-            "opSys"  => "3",
-            "characterSet"  => "00",
-            "orgNo"    => "518",
-            "mercId"   => "800332000002146",
-            "trmNo"    => "95445645",
-            "tradeNo"  => (string)generate_order_no(12),
-            "txnTime"  => (string)date("YmdHms", time()),
-            "signType"  => "MD5",
-            "version"   => "V1.0.0"
-
+//            "subject"  => "云商付测试收款",
+//            "selOrderNo"  => (string)generate_order_no(12),
+//            "goods_tag"   => "会员优惠20",
+//            "attach"    => '',
+            /*public 公共参数 */
+            "opSys" => "3",
+            "characterSet" => "00",
+            "orgNo" => ORG_NO,
+            "mercId" => "800332000002146",
+            "trmNo" => "95445645",
+            "tradeNo" => session("msg")["tradeNo"],
+            "txnTime" => session("msg")["txnTime"],
+            "signType" => "MD5",
+            "version" => "V1.0.0"
         ];
-        $param["signValue"] = sign_ature(0000, $param);
+        $param["signValue"] = sign_ature(0000, $param, "0FF9606C39C2CCF1515E5CE108B506F0");
 
         $res = curl_request($true_url, true, $param, true);
+
+        $res = json_decode($res, true);
+
+        if ($res["returnCode"] !== "000000") {
+            return_msg(400, urldecode($res["message"]));
+        } else {
+            /** 成功 返回二维码 */
+            $qrcode = new QrCode($res["payCode"]);
+            header("Content-type:" . $qrcode->getContentType());
+            echo $qrcode->writeString();
+            exit;
+        }
+    }
+
+    /**
+     * 订单查询
+     */
+    public function order_query($param = [])
+    {
+
+        $true_url = "http://gateway.starpos.com.cn/adpweb/ehpspos3/sdkQryBarcodePay.json";
+
+        $query = [
+            "qryNo" => "20181022141651", //查询流水
+            /** 公共参数 */
+            "opSys" => "3",
+            "characterSet" => "00",
+            "orgNo" => ORG_NO,
+            "mercId" => "800332000002146",
+            "trmNo" => "95445645",    //设备号
+            "tradeNo" => session("msg")["tradeNo"],
+            "txnTime" => session("msg")["txnTime"],
+            "signType" => "MD5",
+            "version" => "V1.0.0"
+        ];
+
+        $query["signValue"] = sign_ature("0000", $query, "0FF9606C39C2CCF1515E5CE108B506F0");
+
+        $res = curl_request($true_url, true, $query, true);
+
         halt(urldecode($res));
     }
+
 }
+

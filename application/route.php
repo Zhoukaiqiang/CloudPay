@@ -34,3 +34,6 @@ Route::rule('pc_profile', 'merchant/capital/pc_profile', "GET");
 Route::rule('pc_bind', 'merchant/capital/pc_bind', "GET|POST");
 Route::rule('pc_bill', 'merchant/capital/pc_bill', "GET");
 
+
+Route::rule('callback', 'admin/index/callback', "POST");
+

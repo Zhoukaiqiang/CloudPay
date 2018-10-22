@@ -14,6 +14,8 @@ use app\admin\model\TotalAd;
 use app\admin\controller\Common;
 use app\admin\model\TotalAdmin;
 use think\Controller;
+use think\Exception;
+use think\exception\DbException;
 use think\Loader;
 use think\Db;
 use think\Request;
@@ -44,6 +46,7 @@ class User extends Common
      * @param [strin]   user_name 用户名（电话）
      * @param [stirng]  password  用户密码
      * @return [json] 返回信息
+     * @throws DbException
      */
     public function login()
     {
@@ -53,7 +56,7 @@ class User extends Common
         $db_res = Db('total_admin')->field('id,name,phone,status,password,is_super_vip')
             ->where('phone', $data['phone'])->find();
 
-        if ($db_res['password'] !== $this->encrypt_password($data['password'], $data["phone"])) {
+        if ($db_res['password'] !== encrypt_password($data['password'], $data["phone"])) {
             $this->return_msg(400, '用户密码不正确！');
         } else {
             unset($db_res['password']); //密码不返回
