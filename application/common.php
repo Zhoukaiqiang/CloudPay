@@ -312,8 +312,8 @@ if (!function_exists('sign_ature')) {
             }
 
         }
-
-        return md5($stra . KEY);
+        $k="9773BCF5BAC01078C9479E67919157B8";
+        return md5($stra.$k);
     }
 }
 

@@ -16,7 +16,7 @@ use think\Request;
 class Incom extends Controller
 {
 
-   public $url = 'https://gateway.starpos.com.cn/emercapp';
+   public $url = 'http://sandbox.starpos.com.cn/emercapp';
 
 
     /**
@@ -398,7 +398,7 @@ class Incom extends Controller
      */
     public function merchant_create(Request $request)
     {
-        $merchant_id=$request->post('merchant_id');
+        $merchant_id=$request->param('merchant_id');
         //取出数据表中数据
         $data=MerchantIncom::where('merchant_id',$merchant_id)->field('log_no,mercId,orgNo')->find();
         $data = $data->toArray();
@@ -549,9 +549,10 @@ class Incom extends Controller
             //获取签名域
             $resul_age = sign_ature(0000, $resul);
             $resul[ 'signValue' ] = $resul_age;
+//            return json_encode($resul);
             //向新大陆接口发送信息验证
             $par = curl_request($this->url, true, $resul, true);
-
+//return $par;
             $bbntu = json_decode($par, true);
             $return_sign = sign_ature(1111, $resul);
 

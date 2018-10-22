@@ -259,5 +259,45 @@ class Index extends Common
 
         check_data($data["list"], $data, 1);
     }
+    public function ddd()
+    {
+        $data="{
+    \"stoe_cnt_nm\": \"蔡双庆\",       1
+    \"stoe_cnt_tel\": \"15823645094\",  1
+    \"mailbox\": \"2537033935@qq.com\", 1
+    \"trm_rec\": \"5\",              1
+    \"stoe_adds\": \"上海市闵行区七宝镇九星村星港街中心区4幢4号\",   1
+    \"stl_sign\": \"1\",                    1
+    \"bnk_acnm\": \"蔡双庆\",                   1
+    \"stl_oac\": \"6217001180021015444\",     1
+    \"icrp_id_no\": \"330329197907132077\",    1
+    \"crp_exp_dt_tmp\": \"2032-02-20\",        1
+    \"wc_lbnk_no\": \"105290078215\",          1
+    \"stoe_area_cod\": 310112,                  1
+    \"serviceId\": 6060602,           1
+    \"version\": \"V1.0.4\",         1
+    \"stoe_nm\": \"上海市诚香坊文化传播有限公司\", 1
+    \"fee_rat2_scan\": \"0.60\",           1
+    \"ysfdebitfee\": \"0.38\",     1
+    \"ysfcreditfee\": \"0.38\",     1
+    \"fee_rat1\": \"0.60\",          1
+    \"max_fee_amt\": \"20.00\",       1
+    \"fee_rat\": \"0.55\",              1
+    \"fee_rat1_scan\": \"0.22\",      1
+    \"fee_rat3_scan\": \"0.38\",     1
+    \"fee_rat_scan\": \"0.38\",     1
+    \"yhkpay_flg\": \"Y\",               1
+    \"alipay_flg\": \"Y\",              1
+    \"tranTyps\": \"C1\",                 1
+    \"log_no\": \"201810190000053676\",     1
+    \"mercId\": \"800290000008424\",       1
+    \"suptDbfreeFlg\": 0,                  1
+    \"cardTyp\": \"01\",                    1
+    \"stl_typ\": 1,                        1
+    \"orgNo\": \"518\",                     1
+    \"mcc_cd\": 7311,                        1
+    \"signValue\": \"36c959ea3f33d12e4d1e66a3d50586ca\"     1
+}";
+    }
 
 }

@@ -54,7 +54,6 @@ class Scancode extends Commonality
     public function publics($data)
     {
         /**设备号*/
-
         $data[ 'opSys' ] = 3;
         $data[ 'characterSet' ] = "00";
         $data[ 'signType' ] = 'MD5';
@@ -123,6 +122,7 @@ class Scancode extends Commonality
 
         //获取返回结果 */
         $res = curl_request($url, true, $data, true);
+        return $res;
         // json转成数组
 
         $par = json_decode($res, true);
@@ -178,16 +178,17 @@ class Scancode extends Commonality
      * goods_tag  0 订单优惠说明
      * Attach  0  附加数据
      */
-    public static function client_lordesau($data)
+    public  function client_lordesau($data)
     {
-        $url = Scancode::$url . "sdkBarcodePosPay.json";
+        $url = $this->url . "sdkBarcodePosPay.json";
 
         //获取返回结果 */
         $res = curl_request($url, true, $data, true);
-
+return $res;
         // json转成数组
         $par = json_decode($res, true);
         $return_sign = sign_ature(1111, $par);
+
         //result 交易接查  为空交易失败  S - 交易成功 F - 交易失败 A - 等待授权  Z - 交易未知
         if ($par[ 'Result' ] != 'Z' || $par[ 'Result' ] != 'A') {
             if ($par[ 'Result' ] == 'S') {
