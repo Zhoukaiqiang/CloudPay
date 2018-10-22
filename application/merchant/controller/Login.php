@@ -191,6 +191,7 @@ class Login extends Controller
 
 
     /**
+     * 验证验证码
      * @param string $user_name [用户名]
      * @param int $code [验证码]
      */

@@ -26,6 +26,7 @@ class Capital extends Common
     {
         if ($request->isGet()) {
             $param["status"] = $request->param("status");
+
             if (isset($param["status"])) {
                 $param["status_flag"] = "eq";
             } else {
@@ -45,6 +46,26 @@ class Capital extends Common
             $res["pages"]["rows"] = $rows;
             check_data($res["list"], $res);
         }
+    }
+
+    /**
+     * @param array $param
+     * @return array [处理并返回数组参数]
+     */
+    protected function search_item(Array $param)
+    {
+        $arr = [];
+        foreach ($param as $k => &$v) {
+            $flag = $k . "_flag";
+            if (!$v) {
+                $arr[$flag] = "<>";
+                $v = -2;
+            } else {
+                $arr[$flag] = "eq";
+            }
+        }
+        $query = $arr + $param;
+        return $query;
     }
 
     /**
@@ -89,15 +110,21 @@ class Capital extends Common
      */
     public function pc_profile()
     {
-        $res = TotalMerchant::get($this->merchant_id);
+        if (\request()->isGet()) {
+            $res = TotalMerchant::get($this->merchant_id);
 
-        $amount = Order::where(["merchant_id" => $this->merchant_id, "pay_time" => [">", 0]])->sum("received_money");
+            $amount = Order::where(["merchant_id" => $this->merchant_id, "pay_time" => [">", 0]])->sum("received_money");
 
-        $data = $res->visible(["name", "phone", "id_card", "account_no"], true)->toArray();
-        $data["amount"] = $amount;
-        check_data($data);
+            $data = $res->visible(["name", "phone", "id_card", "account_no"], true)->toArray();
+            $data["amount"] = $amount;
+            check_data($data);
+        }
     }
 
+    /**
+     * PC端--绑定银行卡
+     * @param Request $request
+     */
     public function pc_bind(Request $request)
     {
         if ($request->isPost()) {
@@ -115,10 +142,11 @@ class Capital extends Common
 
             $param["phone"] = $request->param("phone");
             $param["account_name"] = $request->param("account_name");
-            $this->mermachant_edit();
+
 
             $check_bank = $this->check_bank($param);
-
+            /** 请求商户修改接口 */
+            $this->merchant_edit();
             /** 存入数据库 */
 
         }
@@ -126,7 +154,7 @@ class Capital extends Common
 
 
     /**
-     * 银行卡绑定查询
+     * 银行卡绑定查询 -- 走聚合数据接口
      * @param $arg
      */
     public function check_bank($arg)
@@ -139,9 +167,8 @@ class Capital extends Common
      * 商户审核通过后，修改商户为修改未完成状态
      * @param Request $request
      */
-    public function merchant_edit($arg)
+    protected function merchant_edit($arg)
     {
-
         $id = $arg["id"];
         $serviceId = 6060605;
         $version = 'V1.0.1';
@@ -183,7 +210,7 @@ class Capital extends Common
      * 商户资料修改是的状态（注册未完成，修改未完成，注册拒绝，修改拒绝）
      * @param Request $request
      */
-    public function commercial_edit(Request $request)
+    protected function commercial_edit(Request $request)
     {
         $del = $request->post();
 
@@ -230,7 +257,7 @@ class Capital extends Common
 
     /**
      * PC端--对账列表
-     * @param Request $request
+     * @param Request $request [name] 门店搜索
      * @throws \think\db\exception\DataNotFoundException
      * @throws \think\db\exception\ModelNotFoundException
      * @throws \think\exception\DbException
@@ -238,51 +265,111 @@ class Capital extends Common
     public function pc_bill(Request $request)
     {
         if ($request->isGet()) {
-            $res = MerchantShop::all(["merchant_id" => $this->merchant_id]);
+            /** @var  $rows */
+            $param["name"] = $request->param("name");
+            $rows = MerchantShop::where(["merchant_id" => $this->merchant_id])->count("id");
+            $pages = page($rows, 2);
+            $res = MerchantShop::where(["merchant_id" => $this->merchant_id])->limit($pages["offset"], $pages["limit"])->select();
             check_data($res, $res, 0);
             $shop_ids = [];
             foreach ($res as $v) {
                 $shop_ids[] = $v["id"];
             }
+            $query = $this->search_item($param);
 
             $where = [
-                "ms.merchant_id" => $this->merchant_id,
+                "ms.shop_name" => [$query["name_flag"], $query["name"]],
             ];
-            $field = ["ms.shop_name", "o.pay_type", "count(o.id) money_num", "sum(o.order_money) order_money", "sum(o.discount) discount", "sum(o.refund_money) refund_money", "sum(o.received_money) received_money"];
+            $field = ["ms.id", "ms.shop_name", "o.pay_type", "count(o.id) money_num", "sum(o.order_money) order_money", "sum(o.discount) discount", "sum(o.refund_money) refund_money", "sum(o.received_money) received_money"];
+
+
+            $pay_type = ["wxpay", "alipay", "etc", "cash"];
+
 
             foreach ($shop_ids as $i) {
-                $refund[$i] = MerchantShop::alias("ms")
-                    ->join("cloud_order o", "o.shop_id = ms.id", "RIGHT")
-                    ->where($where)
-                    ->where("refund_time", "<>", null)
-                    ->where("ms.id", $i)
-                    ->field($field)
-                    ->group("o.id")
-                    ->count("ms.id");
-            }
-            foreach ($shop_ids as $i) {
-                $data["list"][] = MerchantShop::alias("ms")
-                    ->join("cloud_order o", "o.shop_id = ms.id", "RIGHT")
-                    ->where($where)
-                    ->where("ms.id", $i)
-                    ->field($field)
-                    ->group("o.id")
-                    ->find();
 
-            }
+                foreach ($pay_type as $type) {
+                    /** 退款次数 */
+                    $refund[$i][$type] = MerchantShop::alias("ms")
+                        ->join("cloud_order o", "o.shop_id = ms.id", "RIGHT")
+                        ->where("refund_time", ">", 0)
+                        ->where($where)
+                        ->where("ms.id", $i)
+                        ->where("o.pay_type", $type)
+                        ->whereTime("pay_time", "d")
+                        ->group("o.id")
+                        ->count("ms.id");
 
-            foreach ($data["list"] as &$list) {
+                    $data["list"][$i][$type] = MerchantShop::alias("ms")
+                        ->join("cloud_order o", "o.shop_id = ms.id", "RIGHT")
+                        ->where("ms.id", $i)
+                        ->where($where)
+                        ->whereTime("pay_time", "d")
+                        ->where("o.pay_type", $type)
+                        ->field($field)
+//                        ->group("o.id")
+                        ->find();
 
-                foreach ($refund as $i) {
-                    $list["refund_num"] = $i;
+
+                    if (empty($data["list"][$i][$type]["id"])) {
+                        unset($data["list"][$i]);
+                    } elseif (empty($data["list"][$i][$type]["pay_type"])) {
+                        unset($data["list"][$i][$type]);
+                    }
+                }
+                if (isset($data["list"][$i]) && !count($data["list"][$i])) {
+                    unset($data["list"][$i]);
                 }
 
             }
-            /** 退款笔数 */
+
+
+            foreach ($data["list"] as $k => &$list) {
+
+                /** 退款笔数 */
+                foreach ($pay_type as $type) {
+                    if (isset($list[$type])) {
+                        $list[$type]["refund_num"] = $refund[$k][$type];
+
+                    }
+                }
+            }
+
+            $data["pages"] = $pages;
+            $data["pages"]["rows"] = $rows;
 
             check_data($data["list"], $data);
         }
     }
 
 
+    /** 交易查询接口测试 */
+    public function test()
+    {
+        $url = "http://139.196.77.69:8280/adpweb/ehpspos3/sdkBarcodePosPay.json";
+        $true_url = "http://gateway.starpos.com.cn/adpweb/ehpspos3/sdkBarcodePosPay.json ";
+        $param = [
+            "amount" => "100",
+            "total_amount" => "120",
+            "payChannel" => "3",
+            "subject"  => "云商付测试收款",
+            "selOrderNo"  => generate_order_no(12),
+            "goods_tag"   => "会员优惠20",
+            "attach"    => '',
+            //public
+            "opSys"  => "3",
+            "characterSet"  => "00-GBK",
+            "orgNo"    => "518",
+            "mercId"   => "800332000002146",
+            "trmNo"    => "95445645",
+            "tradeNo"  => generate_order_no(12),
+            "txnTime"  => date("YmdHms", time()),
+            "signType"  => "MD5",
+            "version"   => "v1.0.0"
+
+        ];
+        $param["signValue"] = sign_ature(0000, $param);
+        $res = curl_request($url, true, $param, true);
+        halt($res);
+    }
 }

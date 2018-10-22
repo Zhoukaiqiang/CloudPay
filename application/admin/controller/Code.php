@@ -15,7 +15,7 @@ class Code extends Common
 
         $username_type = $this->check_username($user_type);
 
-        //$username_type = 'phone';
+//        $username_type = 'phone';
 
         switch ($username_type) {
             case "phone":
@@ -46,9 +46,9 @@ class Code extends Common
         }
         /* 检测手机号是否存在 */
         $this->check_exist($username, $type, $exist);
-        /* 加测验证码请求频率 30秒一次 */
+        /* 加测验证码请求频率 60秒一次 */
         if (session("?", $username . '_last_send_time')) {
-            if (time() - session($username . '_last_send_time') < 30) {
+            if (time() - session($username . '_last_send_time') < 60) {
                 $this->return_msg(400, $type_name . '验证码，每30秒只能发送一次');
             }
         }

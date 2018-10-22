@@ -223,7 +223,7 @@ return $res;
 
 
 
-}
+    }
 
     /**
      * 客户扫码  异步返回接口
@@ -270,7 +270,7 @@ return $res;
 
         }
 
-        
+
 
     }
 
@@ -343,17 +343,17 @@ return $res;
         $order_no=generate_order_no();
         //创建会员充值订单
         $resuoo=MemberRecharge::insert(['recharge_time' => time(),'member_id'=>$data['member_id'],'order_money'=>$data['order_money'],'shop_id'=>$data['shop_id'],'order_no'=>$order_no,'pay_type'=>$data['payChannel'],'merchant_id'=>$data['merchant_id'],'amount'=>$par['Amount '], 'status' => 1, 'LogNo' => $par[ 'LogNo' ]]);
-       if (!$resuoo){
-           return false;
-       }
+        if (!$resuoo){
+            return false;
+        }
         $money=$data['order_money']+$money;
-       //更新会员余额
-       $member=MerchantMember::where('id',$data['member_id'])->update(['recharge_money'=>$data['order_money'],'recharge_time'=>time(),'money'=>['inc',$money]]);
-       if (!$member){
-           return false;
-       }else{
-           return true;
-       }
+        //更新会员余额
+        $member=MerchantMember::where('id',$data['member_id'])->update(['recharge_money'=>$data['order_money'],'recharge_time'=>time(),'money'=>['inc',$money]]);
+        if (!$member){
+            return false;
+        }else{
+            return true;
+        }
     }
         public  function  ddd()
         {
