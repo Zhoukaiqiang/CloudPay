@@ -2,6 +2,7 @@
 
 namespace app\merchant\controller;
 
+use app\admin\model\MerchantIncom;
 use app\merchant\model\MerchantShop;
 use app\merchant\model\Order;
 use app\merchant\model\TotalMerchant;
@@ -14,8 +15,8 @@ use think\Request;
 
 class Capital extends Common
 {
-    public $url = 'https://gateway.starpos.com.cn/emercapp';
-
+//    public $url = 'https://gateway.starpos.com.cn/emercapp';//正式
+     public $url = 'http://sandbox.starpos.com.cn/emercapp';//正式
     /**
      * 结算列表
      * @status  1--成功 2--提现中 3--失败
@@ -221,12 +222,13 @@ class Capital extends Common
      * 商户审核通过后，修改商户为修改未完成状态
      * @param Request $request
      */
-    protected function merchant_edit($arg)
+    public function merchant_edit($arg)
     {
         $id = $arg["id"];
-        $serviceId = 6060605;
+//        $id=102;
+        $serviceId = '6060605';
         $version = 'V1.0.1';
-        $data = Db::name('merchant_incom')->where('merchant_id', $id)->field('mercId,orgNo,check_flag')->select();
+        $data = Db::name('merchant_incom')->where('merchant_id', $id)->field('mercId,orgNo')->select();
 
         //商户是否通过审核
 //        if($data[0]['check_flag']==1) {
@@ -234,10 +236,12 @@ class Capital extends Common
         //获取签名域
         $resul_age = sign_ature(0000, $resul);
         $resul['signValue'] = $resul_age;
+//        halt($resul);
         //向新大陆接口发送信息验证
         $par = curl_request($this->url, true, $resul, true);
 
         $bbntu = json_decode($par, true);
+//        halt($bbntu);
         $return_sign = sign_ature(1111, $resul);
 
 
@@ -268,48 +272,56 @@ class Capital extends Common
      */
     public function commercial_edit(Request $request)
     {
-        $del = $request->post();
+//        $merchant_id=102;
+        if($request->isPost()){
+            $del = $request->post();
+            $del['serviceId'] = 6060604;
+            $del['version'] = 'V1.0.1';
+            $data = Db::name('merchant_incom')->where('merchant_id', $this->merchant_id)->field('log_no,mercId,stoe_id,status')->find();
+            //商户为未完成状态才可以修改
+//        halt($data);
+            if ($data['status'] == 2) {
+                $aa = [];
+                foreach ($data as $k => $v) {
+                    $aa[$k] = $v;
+                }
+                $dells = $del + $aa;
+//            halt($dells);
+                //mark 调试到这里 by--端木
+                $sign_ature = sign_ature(0000, $del);
 
-        $del['serviceId'] = 6060604;
-        $del['version'] = 'V1.0.1';
+                $dells['signValue'] = $sign_ature;
+                //向新大陆接口发送信息验证
 
-        $data = Db::name('merchant_incom')->where('merchant_id', $this->merchant_id)->field('log_no,mercId,stoe_id,mcc_cd,status')->find();
-        //商户为未完成状态才可以修改
+                $par = curl_request($this->url, true, $del, true);
 
-        if ($data['status'] !== 0) {
-            $aa = [];
-            foreach ($data as $k => $v) {
-                $aa[$k] = $v;
-            }
-            $dells = $del + $aa;
-            //mark 调试到这里 by--端木
-            $sign_ature = sign_ature(0000, $del);
+                $par = json_decode($par, true);
+                //返回数据的签名域
 
-            $dells['signValue'] = $sign_ature;
-            //向新大陆接口发送信息验证
+                $return_sign = sign_ature(1111, $par);
 
-            $par = curl_request($this->url, true, $del, true);
+                if ($par['msg_cd'] === 000000) {
+                    if ($par['signValue'] == $return_sign) {
+                        $del['status'] = 0;
+                        Db::name('merchant_incom')->where('merchant_id', $del['merchant_id'])->update($del);
 
-            $par = json_decode($par, true);
-            //返回数据的签名域
-
-            $return_sign = sign_ature(1111, $par);
-
-            if ($par['msg_cd'] === 000000) {
-                if ($par['signValue'] == $return_sign) {
-                    $del['status'] = 0;
-                    Db::name('merchant_incom')->where('merchant_id', $del['merchant_id'])->update($del);
-
-                    return_msg(200, 'error', $par['msg_dat']);
+                        return_msg(200, 'success', $par['msg_dat']);
+                    } else {
+                        return_msg(400, 'error', $par['msg_dat']);
+                    }
                 } else {
-                    return_msg(400, 'error', $par['msg_dat']);
+                    return_msg(500, 'error', $par['msg_dat']);
                 }
             } else {
-                return_msg(500, 'error', $par['msg_dat']);
+                return_msg(100, 'error', '商户为审核完成状态，请先申请修改');
             }
-        } else {
-            return_msg(100, 'error', '商户为审核完成状态，请先申请修改');
+        }else{
+            //取出商户信息
+            $data = MerchantIncom::where('merchant_id',$this->merchant_id)->find();
+
+            return_msg(200,'success',$data);
         }
+
 
 
     }

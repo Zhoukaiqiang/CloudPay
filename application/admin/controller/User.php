@@ -19,6 +19,7 @@ use think\exception\DbException;
 use think\Loader;
 use think\Db;
 use think\Request;
+use think\Session;
 
 /**
  * Class User
@@ -53,13 +54,15 @@ class User extends Common
         $data = $this->params;
         $user_name_type = 'phone';
         $this->check_exist($data['phone'], 'phone', 1);
-        $db_res = Db('total_admin')->field('id,name,phone,status,password,is_super_vip')
+        $db_res = Db('total_admin')->field('id,name,phone,status,password,is_super_vip,role_id')
             ->where('phone', $data['phone'])->find();
 
         if ($db_res['password'] !== encrypt_password($data['password'], $data["phone"])) {
             $this->return_msg(400, '用户密码不正确！');
         } else {
             unset($db_res['password']); //密码不返回
+            //存储session信息
+            Session::set('role_id',$db_res['role_id']);
             $this->return_msg(200, '登录成功！', $db_res);
         }
     }

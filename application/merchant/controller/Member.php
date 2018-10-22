@@ -100,7 +100,7 @@ class Member extends Common
     {
         //获取会员id
         $id=$request->param('id');
-        $data=MerchantMember::field('id,member_head,recharge_money,consumption_money,member_name,member_phone,money,consump_number,register_time')
+        $data=MerchantMember::field('id,member_head,recharge_money,consumption_money,member_name,member_phone,money,consump_number,register_time,member_birthday')
             ->where('id',$id)
             ->find();
         check_data($data);
@@ -435,7 +435,7 @@ class Member extends Common
         //取出商户下所有会员
         $row=MerchantMember::where('merchant_id',$this->merchant_id)->count();
         $pages=page($row);
-        $data['list']=MerchantMember::field("id,member_name,money,member_phone, register_time")
+        $data['list']=MerchantMember::field("id,member_name,money,member_phone,register_time,member_birthday")
             ->where('merchant_id',$this->merchant_id)
             ->limit($pages['offset'],$pages['limit'])
             ->select();
@@ -674,7 +674,7 @@ class Member extends Common
         $openid=request()->param('open_id');
         $openid=1;
         //取出会员信息
-        $data['list']=MerchantMember::field('id,merchant_id,money,member_phone')->where('openid',$openid)->select();
+        $data['list']=MerchantMember::field('id,merchant_id,shop_id,money,member_phone')->where('openid',$openid)->select();
         //取出会员活动
         foreach($data['list'] as &$v){
             $v['recharge']=ShopActiveRecharge::field('recharge_money,give_money')->where('merchant_id',$v['merchant_id'])->select();
@@ -691,4 +691,86 @@ class Member extends Common
         //取出会员活动
         $data=MerchantMember::field('')
     }*/
+
+    /**
+     *充值记录
+     * @param Request $request
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function wx_member_recharge_record(Request $request)
+    {
+        //获取商户id
+        $merchant_id = $request->param('merchant_id');
+        $data = MemberRecharge::alias('a')
+            ->field('a.id,a.order_money,a.status,a.recharge_time,b.member_head')
+            ->join('cloud_merchant_member b','a.member_id=b.id','left')
+            ->where('a.merchant_id',$merchant_id)
+            ->select();
+        check_data($data);
+    }
+
+    /**
+     *会员充值详情
+     * @param Request $request
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function wx_member_recharge_detail(Request $request)
+    {
+        //获取充值记录id
+        $id = $request->param('id');
+        $data=MemberRecharge::alias('a')
+            ->field('a.amount,a.order_money,a.discount_amount,a.recharge_time,a.order_no,b.shop_name')
+            ->join('cloud_merchant_shop b','a.shop_id=b.id','left')
+            ->where('a.id',$id)
+            ->find();
+        check_data($data);
+    }
+
+    /**
+     *会员消费记录
+     * @param Request $request
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function wx_member_consump_record(Request $request)
+    {
+        //获取商户id
+        $merchant_id = $request->param('merchant_id');
+        //取出当前商户下会员消费信息
+        $where=[
+            'a.merchant_id'=>$merchant_id,
+            'a.status'=>1,
+            'a.member_id'=>['>',0]
+        ];
+        $data = Order::alias('a')
+            ->field('a.id,a.order_money,a.status,a.pay_time,b.member_head')
+            ->join('cloud_merchant_member b','a.member_id=b.id','left')
+            ->where($where)
+            ->select();
+        check_data($data);
+    }
+
+    /**
+     *会员消费详情
+     * @param Request $request
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function wx_member_consump_detail(Request $request)
+    {
+        //获取id
+        $id = $request->param('id');
+        $data=Order::alias('a')
+            ->field('a.discount,a.order_money,a.received_money,a.pay_time,a.order_number,b.shop_name')
+            ->join('cloud_merchant_shop b','a.shop_id=b.id','left')
+            ->where('a.id',$id)
+            ->find();
+        check_data($data);
+    }
 }

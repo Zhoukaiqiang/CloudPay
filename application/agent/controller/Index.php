@@ -45,6 +45,32 @@ class Index extends Controller
     }
 
     /**
+     *一键登录代理商系统
+     * @param Request $request
+     * @throws DbException
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     */
+    public function agent_login(Request $request)
+    {
+        $data=$request->param('phone');
+        $this->check_exist($data['phone'],'phone',1);
+        $status=TotalAgent::field('status')->where('agent_phone',$data['phone'])->find();
+        if($status['status']==0){
+            return_msg(400,'该代理商不能进入代理商系统');
+        }
+        $info=TotalAgent::field('id,agent_name,agent_phone,status')
+            ->where('agent_phone',$data['phone'])
+            ->find();
+        if($info){
+            Session::set("username_", $info);
+            $this->return_msg(200,'登录成功',$info);
+        }else{
+            $this->return_msg(400,'登录失败');
+        }
+    }
+
+    /**
      * 登出
      */
     public function logout()
