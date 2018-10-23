@@ -3,11 +3,12 @@
 namespace app\admin\controller;
 
 use app\admin\model\TotalAdmin;
+use app\admin\controller\Admin;
 use think\Controller;
 use think\Request;
 use think\Loader;
 
-class Personal extends Controller
+class Personal extends Admin
 {
     /**
      * 显示人员列表
@@ -46,11 +47,11 @@ class Personal extends Controller
     {
         if(request()->isPost()){
             $data=request()->post();
-//            $validate = Loader::validate('AdminValidate');
-//            if(!$validate->scene('user')->check($data)){
-//                $error=$validate->getError();
-//                return_msg(400,$error);
-//            }
+            $validate = Loader::validate('AdminValidate');
+            if(!$validate->scene('user')->check($data)){
+                $error=$validate->getError();
+                return_msg(400,$error);
+            }
             //查询用户名是否存在
             $user=TotalAdmin::where('name',$data['name'])->find();
             if($user){
@@ -86,6 +87,12 @@ class Personal extends Controller
        if(request()->isPost()){
            //需要传一个主键id
            $data=request()->post();
+           //验证
+           $validate = Loader::validate('AdminValidate');
+           if(!$validate->scene('user_edit')->check($data)){
+               $error=$validate->getError();
+               return_msg(400,$error);
+           }
            if ($data['status'] == -1) {
                $data['status'] = 0;
            }
@@ -107,7 +114,11 @@ class Personal extends Controller
            if($result){
                return_msg(400,'用户账号已经存在');
            }
-           $data['password']=encrypt_password(addslashes($data['password']));
+
+           if(isset($data['password'])){
+
+               $data['password']=encrypt_password(addslashes($data['password']));
+           }
 
            $info=TotalAdmin::update($data,true);
            if($info){
@@ -118,6 +129,7 @@ class Personal extends Controller
        }else{
            $id=request()->param('id');
            $data=TotalAdmin::where('id',$id)->find();
+           unset($data['password']);
            return_msg(200,'success',$data);
        }
     }

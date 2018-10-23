@@ -53,7 +53,13 @@ class Index extends Controller
      */
     public function agent_login(Request $request)
     {
-        $data=$request->param('phone');
+        $data=$request->post();
+        if(!isset($data['token'])){
+            return_msg(400,'非法登录');
+        }
+        if(md5($data['phone'].'token')!=$data['token']){
+            return_msg(400,'token验证失败');
+        }
         $this->check_exist($data['phone'],'phone',1);
         $status=TotalAgent::field('status')->where('agent_phone',$data['phone'])->find();
         if($status['status']==0){

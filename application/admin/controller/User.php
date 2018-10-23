@@ -63,6 +63,7 @@ class User extends Common
             unset($db_res['password']); //密码不返回
             //存储session信息
             Session::set('role_id',$db_res['role_id']);
+            Session::set('admin_id',$db_res['id']);
             $this->return_msg(200, '登录成功！', $db_res);
         }
     }

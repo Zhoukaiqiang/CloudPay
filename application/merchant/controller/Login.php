@@ -99,12 +99,24 @@ class Login extends Controller
 
     }
 
+    /**
+     *一键登录商户后台
+     * @throws Exception
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
     public function merchant_login()
     {
         if (request()->isPost()) {
             $data = request()->post();
             /** 检验参数 */
-
+            if(!isset($data['token'])){
+                return_msg(400,'非法登录');
+            }
+            if(md5($data['phone'].'token')!=$data['token']){
+                return_msg(400,'token验证失败');
+            }
             $this->check_exist($data['phone'], 'phone', 1);
 
             $db_res = TotalMerchant::where("phone", $data['phone'])->field("id,name,phone,status")->find();

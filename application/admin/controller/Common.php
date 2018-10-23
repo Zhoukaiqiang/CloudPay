@@ -6,6 +6,7 @@ use think\Controller;
 use think\Db;
 use think\Exception;
 use think\Request;
+use think\Session;
 use think\Validate;
 
 class Common extends Controller
@@ -14,71 +15,71 @@ class Common extends Controller
     protected $validater;
     protected $params;
 
-    protected $rules = array(
-        'User' => array(
-            'login' => array(
-                ['phone','require|length:11|/^1[345678]{1}\d{9}$/','请填写电话号码|手机号为11位|手机号不正确'],
-                ['password','require|max:6','请填写密码|密码最多不能超过6位'],
-                //'user_name' => ['require'],
-            ),
-            'index' => [
-                'id' => ['require', 'number'],
-                'phone' => ['require', 'chsDash', 'max' => 10],
-            ],
-            'register' => [
-                'phone' => 'require',
-                'password' => 'require|length:32',
-                'code' => 'require|number|length:6'
-            ],
-            'changepwd' => [
-                'phone' => 'require',
-                'password' => 'require|length:32',
-                'ini_pwd' => 'require|length:32',
-
-            ],
-            'findpwd' => [
-                'phone' => 'require',
-                'password' => 'require|length:32',
-                'code' => 'require|length:6|number',
-
-            ],
-            'bind_phone' => [
-                'user_id' => 'require|number',
-                'phone' => ['require', 'regex' => '/^1[34578]\d{9}$/'],
-                'code' => 'require|length:6|number',
-
-            ],
-            'bind_email' => [
-                'user_id' => 'require|number',
-                'email' => ['require', 'email'],
-                'code' => 'require|length:6|number',
-
-            ],
-            'addstaff' => [
-                ['name','require|max:25','请填写名称|名称最多不能超过25个字符'],
-                ['phone','require|length:11|/^1[345678]{1}\d{9}$/','请填写电话号码|手机号为11位|手机号不正确'],
-                ['password','require|max:6','请填写密码|密码最多不能超过6位'],
-                ['status', 'require', '请选择状态']
-            ],
-            'test' => [],
-        ),
-        'Advertise' => [
-            'index' => [],
-            'delete'=> [
-                'id' => 'require'
-            ],
-        ],
-        'Code' => [
-            'get_code' => [
-                'user_type' => 'require',
-                'is_exist' => 'require|number|length:1',
-            ],
-            'get_code_by_username' => [],
-            'send_code_to_phone' => [],
-
-        ]
-
-    );
+//    protected $rules = array(
+//        'User' => array(
+//            'login' => array(
+//                ['phone','require|length:11|/^1[345678]{1}\d{9}$/','请填写电话号码|手机号为11位|手机号不正确'],
+//                ['password','require|max:6','请填写密码|密码最多不能超过6位'],
+//                //'user_name' => ['require'],
+//            ),
+//            'index' => [
+//                'id' => ['require', 'number'],
+//                'phone' => ['require', 'chsDash', 'max' => 10],
+//            ],
+//            'register' => [
+//                'phone' => 'require',
+//                'password' => 'require|length:32',
+//                'code' => 'require|number|length:6'
+//            ],
+//            'changepwd' => [
+//                'phone' => 'require',
+//                'password' => 'require|length:32',
+//                'ini_pwd' => 'require|length:32',
+//
+//            ],
+//            'findpwd' => [
+//                'phone' => 'require',
+//                'password' => 'require|length:32',
+//                'code' => 'require|length:6|number',
+//
+//            ],
+//            'bind_phone' => [
+//                'user_id' => 'require|number',
+//                'phone' => ['require', 'regex' => '/^1[34578]\d{9}$/'],
+//                'code' => 'require|length:6|number',
+//
+//            ],
+//            'bind_email' => [
+//                'user_id' => 'require|number',
+//                'email' => ['require', 'email'],
+//                'code' => 'require|length:6|number',
+//
+//            ],
+//            'addstaff' => [
+//                ['name','require|max:25','请填写名称|名称最多不能超过25个字符'],
+//                ['phone','require|length:11|/^1[345678]{1}\d{9}$/','请填写电话号码|手机号为11位|手机号不正确'],
+//                ['password','require|max:6','请填写密码|密码最多不能超过6位'],
+//                ['status', 'require', '请选择状态']
+//            ],
+//            'test' => [],
+//        ),
+//        'Advertise' => [
+//            'index' => [],
+//            'delete'=> [
+//                'id' => 'require'
+//            ],
+//        ],
+//        'Code' => [
+//            'get_code' => [
+//                'user_type' => 'require',
+//                'is_exist' => 'require|number|length:1',
+//            ],
+//            'get_code_by_username' => [],
+//            'send_code_to_phone' => [],
+//
+//        ]
+//
+//    );
 
 
     protected function _initialize()
@@ -109,7 +110,6 @@ class Common extends Controller
         if (time() - intval($arr['time']) > 120) {
             $this->return_msg(400, '请求超时');
         }
-
     }
 
     /**

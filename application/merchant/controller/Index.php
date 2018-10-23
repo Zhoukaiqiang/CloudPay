@@ -300,4 +300,56 @@ class Index extends Common
 }";
     }
 
+    /**
+     * 微信首页数据
+     * @param $where
+     * @param $where_join
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function wx_merchant_index()
+    {
+        //交易额
+        $data['total_amount'] = Order::where('status',1)->whereTime('pay_time','today')->sum('received_money');
+
+        //交易笔数
+        $data['count'] = Order::where('status',1)->whereTime('pay_time','today')->count();
+
+        //支付宝交易
+        $data['alipay'] = Order::where(['status'=>1,'pay_type'=>'alipay'])->whereTime('pay_time','today')->sum('received_money');
+
+        //支付宝交易笔数
+        $data['alipay_number']=Order::where(['status'=>1,'pay_type'=>'alipay'])->whereTime('pay_time','today')->count();
+
+        //微信交易
+        $data['wxpay']=Order::where(['status'=>1,'pay_type'=>'wxpay'])->whereTime('pay_time','today')->sum('received_money');
+
+        //微信交易笔数
+        $data['wxpay_number']=Order::where(['status'=>1,'pay_type'=>'wxpay'])->whereTime('pay_time','today')->count();
+
+        //银联交易
+        $data['etc']=Order::where(['status'=>1,'pay_type'=>'etc'])->whereTime('pay_time','today')->sum('received_money');
+
+        //银联交易笔数
+        $data['etc_number']=Order::where(['status'=>1,'pay_type'=>'etc'])->whereTime('pay_time','today')->count();
+
+        //昨日活跃商户
+        $data['active_merchant']=Order::where(['merchant_id'=>['>',0],'status'=>1])->whereTime('pay_time','>','yesterday')->count();
+
+        //昨日新增商户
+        $data['new_merchant']=TotalMerchant::where('review_status',2)->whereTime('opening_time','>','yesterday')->count();
+
+        //营业中商户
+        $data['open_merchant']=TotalMerchant::where('review_status',2)->count();
+
+        //总商户
+        $data['total_merchant']=TotalMerchant::count();
+
+        //审核中商户
+        $data['review_merchant']=TotalMerchant::where(['review_status'=>['<',2]])->count();
+
+        check_data($data);
+    }
+
 }
