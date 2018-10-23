@@ -410,26 +410,33 @@ class Incom extends Controller
         $data['signValue'] = sign_ature(0000,$data);
 //        halt($data);
         $result=curl_request($this->url,true,$data,true);
+
         $result = json_decode($result,true);
+
 //        halt($result);
         //生成签名
         $signValue = sign_ature(1111,$result);
-        if( $signValue == $result['signValue'] ){
-            if(isset($result['check_flag'])){
-                //修改数据表状态
-                $res = MerchantIncom::where('merchant_id',$merchant_id)->update(['check_flag'=>$result['check_flag'],
-                    'key' => $result["key"],
-                    'rec' => $result['REC']
+        if($result['msg_cd']=='000000') {
+
+            if ($signValue == $result[ 'signValue' ]) {
+                if (isset($result[ 'check_flag' ])) {
+                    //修改数据表状态
+                    $res = MerchantIncom::where('merchant_id', $merchant_id)->update(['check_flag' => $result[ 'check_flag' ],
+                        'key' => $result[ "key" ],
+                        'rec' => $result[ 'REC' ]
                     ]);
 
-                if($res){
-                    return_msg(200,'success');
-                }else{
-                    return_msg(400,'failure');
+                    if ($res) {
+                        return_msg(200, 'success');
+                    } else {
+                        return_msg(400, 'error');
+                    }
+                } else {
+                    return_msg(400, 'error', $result[ 'msg_dat' ]);
                 }
-            }else{
-                return_msg(400,'failure',$result['msg_dat']);
             }
+        }else{
+
         }
     }
 
@@ -632,22 +639,28 @@ class Incom extends Controller
 
     public function mercachant_inquire(Request $request)
     {
+
         $id=$request->param('id');
         $arr=Db::name('merchant_incom')->where('merchant_id',$id)->field('mercId,orgNo')->select();
-        $data=['serviceId'=>6060300,'version'=>'V1.0.1','mercId'=>$arr[0]['mercId'],'orgNo'=>$arr[0]['orgNo']];
+        $data=['serviceId'=>'6060300','version'=>'V1.0.1','mercId'=>$arr[0]['mercId'],'orgNo'=>$arr[0]['orgNo']];
         //签名域
-        $signValue=sign_ature(0000,$data);
 
-        $data['signValue']=$signValue;
+        $data['signValue']=sign_ature(0000,$data);
+//return json_encode($data);die;
         //向新大陆接口发送请求信息
         $par= curl_request($this->url,true,$data,true);
-//        $par=json_decode($par,true);
 //        return $par;
+        $par=json_decode($par,true);
+
+
         //获取签名域
+
         $return_sign = sign_ature(1111,$par);
-        if ($par['msg_cd']==000000){
+
+        if ($par['msg_cd']=='000000'){
+
             if($par['signValue'] == $return_sign){
-                Db::name('merchant_incom')->where('merchant_id',$id)->update(['status'=>0]);
+               MerchantIncom::where('merchant_id',$id)->update(['status'=>0]);
                 return_msg(200,'success',$par);
             }else{
                 return_msg(400,'error',$par['msg_dat']);

@@ -208,7 +208,7 @@ class Shop extends Commonality
 
             }else{
                 // 上传失败获取错误信息
-               return_msg(400,'error','图片格式错误');
+               return_msg(400,'error','图片格式错误或照片过大，照片不得大于500KB');
             }
 
 
@@ -523,7 +523,8 @@ class Shop extends Commonality
     public function pc_myShop()
     {
         $merchant_id=$this->id;
-        $data=MerchantShop::where('merchant_id',$merchant_id)->field('shop_name,id,stoe_adds,stoe_cnt_tel')->select();
+
+        $data=MerchantShop::where('merchant_id',2)->field('shop_name,id,stoe_adds,stoe_cnt_tel')->select();
         if($data){
             return_msg(200,'success',$data);
 
