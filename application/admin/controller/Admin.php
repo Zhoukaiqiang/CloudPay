@@ -19,8 +19,7 @@ class Admin extends Controller
             $this->admin_id=Session::get('admin_id');
             $this->role_id=Session::get('role_id');
         }else {
-            echo 1;die;
-            $this->redirect('/admin/user/login');
+            return_msg(400,'请登录');
         }
     }
 }
