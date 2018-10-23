@@ -289,12 +289,15 @@ function is_user_can($id)
 }
 
 if (!function_exists('sign_ature')) {
-    function sign_ature($ids, Array $arr)
+    function sign_ature($flag, Array $arr, $key =null)
     {
-//        dump($arr);die;
+        $key = $key ? $key : KEY;
         ksort($arr);
-        if ($ids == 0000) {
-            $data = ['payChannel','authCode','total_amount','amount','trmNo','tradeNo','txnTime','signType','opSys','characterSet','serviceId', 'version', 'incom_type', 'stl_typ', 'stl_sign', 'stl_oac', 'bnk_acnm', 'wc_lbnk_no', 'bus_lic_no', 'bse_lice_nm', 'crp_nm', 'mercAdds', 'bus_exp_dt', 'crp_id_no', 'crp_exp_dt', 'stoe_nm', 'stoe_cnt_nm', 'stoe_cnt_tel', 'mcc_cd', 'stoe_area_cod', 'stoe_adds', 'trm_rec', 'mailbox', 'alipay_flg', 'yhkpay_flg' , 'mercId', 'orgNo', 'imgTyp', 'imgNm', 'log_no', 'stoe_id', 'lbnk_nm'];
+        if ($flag == 0000) {
+            $data = [
+                //客户主扫
+                //查询
+                "qryNo",'payChannel','authCode','total_amount','amount','trmNo','tradeNo','txnTime','signType','opSys','characterSet','serviceId', 'version', 'incom_type', 'stl_typ', 'stl_sign', 'stl_oac', 'bnk_acnm', 'wc_lbnk_no', 'bus_lic_no', 'bse_lice_nm', 'crp_nm', 'mercAdds', 'bus_exp_dt', 'crp_id_no', 'crp_exp_dt', 'stoe_nm', 'stoe_cnt_nm', 'stoe_cnt_tel', 'mcc_cd', 'stoe_area_cod', 'stoe_adds', 'trm_rec', 'mailbox', 'alipay_flg', 'yhkpay_flg' , 'mercId', 'orgNo', 'imgTyp', 'imgNm', 'log_no', 'stoe_id', 'lbnk_nm'];
             $stra = '';
 
             foreach ($arr as $k => $v) {
@@ -303,8 +306,8 @@ if (!function_exists('sign_ature')) {
                     $stra .= $v;
                 }
             }
-//            var_dump($stra);die;
-        } else if ($ids == 1111) {
+
+        } elseif ($flag == 1111) {
             $data = ['result','logNo','tradeNo','sysTime','message','returnCode','check_flag', 'msg_cd', 'msg_dat', 'mercId', 'log_no', 'stoe_id', 'mobile', 'sign_stats', 'deliv_stats'];
             $stra = '';
             foreach ($arr as $key1 => $val) {
@@ -315,8 +318,8 @@ if (!function_exists('sign_ature')) {
 
 
         }
-        $k="9773BCF5BAC01078C9479E67919157B8";
-        return md5($stra.$k);
+
+        return md5($stra . $key);
     }
 }
 

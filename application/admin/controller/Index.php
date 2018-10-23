@@ -657,4 +657,51 @@ class Index extends Controller
         }
     }
 
+    /**
+     * 接收星POS给的消息
+     * @param null $param
+     */
+    public function callback($param = null)
+    {
+        $Order =new Order();
+        if (empty($param)) {
+            return_msg(400, "fail");
+        }
+        /** @var [array] 接收参数 $data */
+        if (isset($param["TxnCode"]) && ($param["TxnCode"] == "L020" || $param["TxnCode"] == "L030") ) {
+            /** 银行卡消费 */
+            $data["pay_type"] = "etc";
+        } elseif (isset($param["PayChannel"])) {
+            switch ($param["PayChannel"]) {
+
+                case 1:
+                    $data["pay_type"] = "alipay";
+                    break;
+                case 2:
+                    $data["pay_type"] = "wxpay";
+                    break;
+            }
+        }
+        $data = [
+            "pay_time" => strtotime($param["TxnDate"] + $param["TxnTime"]),    //结算日期
+            "merId"  =>        $param["AgentId"],    // 合作商号
+            "orderNo"  =>   $param["logNo"],  //交易流水号
+            "received_money" => $param["TxnAmt"],  //实际金额
+            "order_money" => $param["TxnAmt"],  //交易金额
+            "status"      => $param["TxnStatus"], //交易状态
+            "order_remark"    => $param["attach"],  //附加信息
+        ];
+
+        /** 根据流水号，判断要更新哪个订单 */
+
+        /** @var [int] $res */
+        $res = $Order->where("LogNo", $param["logNo"])->save($data);
+        if ($res) {
+            return_msg(200, "success");
+        }else {
+            return_msg(400, "fail");
+        }
+
+    }
+
 }
