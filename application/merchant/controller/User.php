@@ -255,9 +255,15 @@ class User extends Common
             $where = [
                 "merchant_id" => $this->merchant_id
             ];
+            $where2 = [
+                "mu.merchant_id" => $this->merchant_id
+            ];
             $rows = MerchantUser::where($where)->count("id");
             $pages = page($rows);
-            $data["list"] = MerchantUser::where($where)->select();
+            $data["list"] = MerchantUser::alias("mu")
+                ->join("cloud_merchant_shop ms", "ms.id = mu.shop_id")
+                ->field("mu.name, mu.id, mu.phone, mu.role, mu.create_time, ms.shop_name, mu.shop_id")
+                ->where($where2)->select();
 
             foreach ($data["list"] as $v) {
                 unset($v["password"]);
@@ -288,7 +294,7 @@ class User extends Common
             }
             $result = MerchantUser::update($data);
 
-            check_params("add_user", $data, "MerchantValidate");
+            check_params("edit_user", $data, "MerchantValidate");
             if ($result) {
                 return_msg(200, "修改成功");
             } else {
@@ -302,7 +308,7 @@ class User extends Common
             ];
             //获取员工信息
             $data['list'] = MerchantUser::alias('a')
-                ->field('a.id,a.name,a.phone,a.role,b.shop_name, a.create_time')
+                ->field('a.id,a.name,a.phone,a.role,b.shop_name, a.create_time, a.shop_id')
                 ->join('cloud_merchant_shop b', 'a.shop_id=b.id', 'left')
                 ->where($where)
                 ->find();
