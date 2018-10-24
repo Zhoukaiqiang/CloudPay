@@ -4,13 +4,14 @@ namespace app\admin\controller;
 
 use app\admin\model\TotalAdmin;
 use app\admin\model\TotalAgent;
+use app\admin\controller\Admin;
 use think\Controller;
 use think\Loader;
 use think\Request;
 use think\Validate;
 use think\Db;
 
-class Agent extends Controller
+class Agent extends Admin
 {
     /**
      * 代理商首页
@@ -21,17 +22,74 @@ class Agent extends Controller
     public function index()
     {
         //获取总行数
-        $rows = TotalAgent::count();
-        $pages = page($rows);
-        //取出数据表中的数据
-        $data['data'] = TotalAgent::alias('a')
-            ->field('a.id,a.agent_name,a.contact_person,a.agent_mode,a.agent_area,a.create_time,a.contract_time,a.status,b.name')
-            ->join('cloud_total_admin b', 'a.admin_id=b.id', 'left')
-            ->limit($pages['offset'], $pages['limit'])
-            ->select();
-        $data['pages'] = $pages;
-        return_msg('200', 'success', $data);
+        if($this->role_id==1){
+            $rows = TotalAgent::count();
+            $pages = page($rows);
+            //取出数据表中的数据
+            $data['data'] = TotalAgent::alias('a')
+                ->field('a.id,a.agent_name,a.contact_person,a.agent_mode,a.agent_area,a.create_time,a.contract_time,a.status,b.name')
+                ->join('cloud_total_admin b', 'a.admin_id=b.id', 'left')
+                ->limit($pages['offset'], $pages['limit'])
+                ->select();
+            $data['pages'] = $pages;
+            return_msg('200', 'success', $data);
+        }elseif($this->role_id==0){
+            //运营专员
+            $rows=TotalAgent::where('admin_id',$this->admin_id)->count();
+
+            $pages = page($rows);
+
+            $data['data'] = TotalAgent::alias('a')
+                ->field('a.id,a.agent_name,a.contact_person,a.agent_mode,a.agent_area,a.create_time,a.contract_time,a.status,b.name')
+                ->join('cloud_total_admin b', 'a.admin_id=b.id', 'left')
+                ->where('a.admin_id',$this->admin_id)
+                ->limit($pages['offset'], $pages['limit'])
+                ->select();
+
+            $data['pages'] = $pages;
+
+            return_msg('200', 'success', $data);
+        }
+
     }
+
+//    public function entry_agent(Request $request)
+//    {
+//        //获取代理商id
+//        $id=$request->param('id');
+//        //取出代理商状态
+//        $status=TotalAgent::field('status')->where('id',$id)->find();
+//        if($status['status']==0){
+//            return_msg(400,'该代理商不能进入代理商系统');
+//        }
+//        $data=TotalAgent::field('agent_phone')->where('id',$id)->find();
+//        $arr=[
+//            'phone'=>$data['agent_phone']
+//        ];
+//        $this->https_post('http://local.cloud.com/agent/user/agent_login',$arr);
+////        $this->redirect('/agent/user/agent_login?phone='.$data['agent_phone']);
+//    }
+//
+//    public function https_post($url,$post_data)
+//    {
+//        $post_data=json_encode($post_data);
+//        $ch = curl_init();
+//        curl_setopt($ch, CURLOPT_URL, $url);
+//        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
+//        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, FALSE);
+//        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+//// post数据
+//        curl_setopt($ch, CURLOPT_POST, 1);
+//// post的变量
+//        curl_setopt($ch, CURLOPT_POSTFIELDS,$post_data);
+//        curl_setopt($ch, CURLOPT_HEADER, 0);
+////设置头部信息
+//        $headers = array('Content-Type:application/json; charset=utf-8','Content-Length: '.strlen($post_data));
+//        curl_setopt($ch, CURLOPT_HTTPHEADER,$headers);
+////执行请求
+//        $output = curl_exec($ch);
+//
+//    }
 
     /**
      * 新增代理商

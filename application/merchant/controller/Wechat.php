@@ -2,6 +2,8 @@
 
 namespace app\merchant\controller;
 
+use app\merchant\model\Order;
+use app\merchant\model\TotalMerchant;
 use think\Controller;
 use think\Request;
 
@@ -14,8 +16,8 @@ class Wechat extends Controller
     {
         parent::_initialize();
 
-        $this->appid = 'wx193727ba2313b0d8';//appid
-        $this->secret = 'fe7c3669faec17d3e681c4c938af12a6'; //secrect
+        $this->appid = 'wxa86067c2fcad9c29';//appid
+        $this->secret = '175fef1031207c84f1eb6b5ec4d5004a'; //secrect
         $this->redirect_uri = 'http://47.92.212.66/index.php/merchant/wechat/back_url';//返回的域名网址
 
     }
@@ -87,4 +89,6 @@ class Wechat extends Controller
         curl_close($curl);
         return $data;
     }
+
+
 }

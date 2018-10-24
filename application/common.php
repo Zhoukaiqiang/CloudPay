@@ -318,6 +318,7 @@ if (!function_exists('sign_ature')) {
                 }
             }
 
+
         }
 
         return md5($str . $key);
@@ -348,26 +349,6 @@ if (!function_exists('upload_logo')) {
     }
 }
 
-//                if (!function_exists('upload_logo')) {
-//                    function upload_pics($files)
-//                    {
-//                        $goods_pics = [];
-//                        foreach ($files as $file) {
-//                            $info = $file->validate(['size' => 500 * 1024 * 1024, 'ext' => 'jpg,jpeg,gif,png'])->move(ROOT_PATH . 'public' . DS . 'uploads');
-//                            if ($info) {
-//                                //图片上传成功
-//                                $goods_logo = DS . 'uploads' . DS . $info->getSaveName();
-//                                $goods_logo = str_replace('\\', '/', $goods_logo);
-//                                $goods_pics[] = $goods_logo;
-//                            } else {
-//                                $error = $info->getError();
-//                                return_msg(400, $error);
-//
-//                            }
-//                        }
-//                        return $goods_pics;
-//                    }
-//                }
 if (!function_exists('upload_pics_pay')) {
     function upload_pics_pay($files)
     {

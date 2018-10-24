@@ -316,28 +316,32 @@ class Capital extends Common
             //向新大陆接口发送信息验证
             $par = curl_request($this->url, true, $data, true);
 
-            $par = json_decode($par, true);
-            //返回数据的签名域
+                $par = json_decode($par, true);
+                //返回数据的签名域
 
 
             $return_sign = sign_ature(1111, $par);
 
-            if ($par['msg_cd'] === 000000) {
-                if ($par['signValue'] == $return_sign) {
-                    $del['status'] = 0;
-                    Db::name('merchant_incom')->where('merchant_id', $del['merchant_id'])->update($del);
+                if ($par['msg_cd'] === 000000) {
+                    if ($par['signValue'] == $return_sign) {
+                        $del['status'] = 0;
+                        Db::name('merchant_incom')->where('merchant_id', $del['merchant_id'])->update($del);
 
 
                     return_msg(200, 'error', $par['msg_dat']);
                 } else {
-                    return_msg(400, 'error', $par['msg_dat']);
+                    return_msg(500, 'error', $par['msg_dat']);
                 }
             } else {
-                return_msg(500, 'error', $par['msg_dat']);
+                return_msg(100, 'error', '商户为审核完成状态，请先申请修改');
             }
-        } else {
-            return_msg(100, 'error', '商户为审核完成状态，请先申请修改');
+        }else{
+            //取出商户信息
+            $data = MerchantIncom::where('merchant_id',$this->merchant_id)->find();
+
+            return_msg(200,'success',$data);
         }
+
 
 
     }

@@ -143,7 +143,7 @@ class Deposit extends Commonality
             'create_time'=>['between time',[$create_time,$end_time]]])
             ->select();
         if($data){
-            return_msg(200,'success',json_encode($data));
+            return_msg(200,'success',$data);
 
         }else{
             return_msg(400,'error','查无此记录');

@@ -39,6 +39,7 @@ class Waiter extends Commonality
         $id=$this->id;
         $role=$this->role;
         $name=$this->name;
+
         //判断是否是商户
         if($role==-1) {
             //门店名称及id
@@ -213,26 +214,36 @@ class Waiter extends Commonality
     }
 
 
+
     /**
      * //生成二维码
      */
     public function qrcode2(){
+        $shop_id=\request()->param('shop_id');
+        $name=\request()->param('name');
+        if(empty($shop_id) || empty($name)){
+            return_msg(400,'error','请输入桌位名称或传入门店');
+        }
         header("content-type:text/html;charset=utf-8");
         Vendor('phpqrcode.phpqrcode');
         import('phpqrcode.phpqrcode', EXTEND_PATH,'.php');
-        $path = "/Uploads/QRcode/";//创建路径
-//        if(!file_exists($path)){
-//            mkdir($path, 0700,true);//创建目录
-//        }
+        $path = "/uploads/QRcode/".date("Ymd").DS;//创建路径
+
 //
         $time = time().'.png'; //创建文件名
-        $fileName = $path.$time;//1.命名生成的二维码文件
-//        dump($fileName);die;
-        $file_name = iconv("utf-8","gb2312",$time);
-//        var_dump($fileName);die;
-        $file_path = $_SERVER['DOCUMENT_ROOT'].$fileName;
 
-        $data = "https://www.baidu.com";//2.生成二维码的数据(扫码显示该数据)
+
+        $file_name = iconv("utf-8","gb2312",$time);
+
+        $file_path = $_SERVER['DOCUMENT_ROOT'].$path;
+
+        if(!file_exists($file_path)){
+            mkdir($file_path, 0700,true);//创建目录
+        }
+        $file_path = $file_path.$this->runningWater().'.png';//1.命名生成的二维码文件
+//        $data = "http://47.92.212.66/index.php/merchant/Ordermeals/returntime?shop_id=$shop_id&name=$name";//2.生成二维码的数据(扫码显示该数据)
+        $data = "http://api.hzyspay.com/login";//2.生成二维码的数据(扫码显示该数据)
+//        $data="http://www.saomenu.com/saomenu/error/nonecode.html";
         $level = 'L';  //3.纠错级别：L、M、Q、H
         $size = 4;//4.点的大小：1到10,用于手机端4就可以了
         ob_end_clean();//清空缓冲区
@@ -242,22 +253,25 @@ class Waiter extends Commonality
         //生成桌位編號
 //        return $file_path;
         return_msg(200,'success',$file_path);
-        $code=$this->unique_rand(10000000,99999999,1);
-
-
-        //當前時間
-        $date=time();
-
-        $resu=ShopTable::insert(['create_time'=>$date,'code'=>$code[0],'image'=>$file_path]);
-        var_dump($resu);die;
+//        $code=$this->unique_rand(10000000,99999999,1);
+//
+//
+//        //當前時間
+//        $date=time();
+//
+//        $resu=ShopTable::insert(['create_time'=>$date,'code'=>$code[0],'image'=>$file_path]);
+//        var_dump($resu);die;
         //获取下载文件的大小
         $file_size = filesize($file_path);
 
+
         $file_temp = fopen ( $file_path, "r" );
+//        var_dump($file_temp);die;
         //返回的文件
         header("Content-type:application/octet-stream");
         //按照字节大小返回
         header("Accept-Ranges:bytes");
+
 
         //返回文件大小
         header("Accept-Length:".$file_size);
@@ -281,11 +295,10 @@ class Waiter extends Commonality
        $data= $request->post();
         list($usec, $sec) = explode(" ", microtime());
         $times=str_replace('.','',$usec + $sec);
-        //當前時間
-        $date=time();
+
 
         //入库
-        $resu=ShopTable::insert(['create_time'=>$date,'code'=>$times,'image'=>$data['image'],'name'=>$data['name'],'shop_id'=>$data['shop_id']]);
+        $resu=ShopTable::insert(['create_time'=>time(),'code'=>$times,'image'=>$data['image'],'name'=>$data['name'],'shop_id'=>$data['shop_id']]);
         if($resu){
             return_msg(200,'success','保存桌码成功');
         }else{
@@ -388,78 +401,7 @@ class Waiter extends Commonality
 
     }
 
-    /**
-     * 菜品设置  点菜
-     * @param Request $request
-     * @return string
-     * @throws \think\db\exception\DataNotFoundException
-     * @throws \think\db\exception\ModelNotFoundException
-     * @throws \think\exception\DbException
-     */
-    public function cuisine_list(Request $request)
-    {
-        $shop_id = $request->param('shop_id');
-        if(Request::instance()->isGET()) {
 
-            $data = MerchantDish::where(['shop_id'=>$shop_id,'status'=>1])->field(['dish_label,shop_id','dish_name','norm_id', 'dish_introduce', 'money','dish_img', 'id'])->select();
-//            var_dump($data);
-            $type=MerchantDishNorm::where(['shop_id'=>$shop_id])->select();
-
-            //菜品分类
-
-            $array=$this->array;
-            //菜品推荐 菜品标签
-            foreach ($data as $a=>&$v){
-                $arr=ltrim($v['dish_label'],'[');
-                $arr=rtrim($arr,']');
-                $arr=explode(',',$arr);
-
-
-
-
-                $v['dish_label']='';
-
-                    for ($i=0;$i<count($arr);$i++){
-
-                        $v['dish_label'].=$array[$arr[$i]].',';
-                    }
-
-                $v['dish_label']=rtrim($v['dish_label'],',');
-                $v['dish_introduce']=$array[$v['dish_introduce']];
-
-            }
-            //菜品分类名称
-            $rew=[];
-            foreach ($data as $k=>&$v){
-                foreach ($type as $it=>$val){
-
-                    if($val['id']==$v['norm_id']){
-                        $v['norm_id']=$val['dish_norm'];
-                    }
-                }
-                $rew[]=$v['norm_id'];
-
-            }
-            //菜品分类去重
-            $data['rew']=array_unique($rew);
-//            $rew=array_filter(array_unique(explode(',',$rew)));
-
-            if($data){
-                return_msg(200,'success',$data);
-            }else{
-                return_msg(400,'error','此店未来得及上传菜品');
-            }
-        }else if($request->param('dish_name')){
-            //搜索菜品
-            $dish_name=$request->param('dish_name');
-            $data=MerchantDish::where(['dish_name'=>['like','%'.$dish_name.'%'],'shop_id'=>$shop_id,'status'=>1])->select();
-            if($data){
-                return_msg(200,'success',$data);
-            }else{
-                return_msg(400,'error','查无此菜品');
-            }
-        }
-    }
 
     /**
      * 菜品下架
@@ -795,7 +737,7 @@ class Waiter extends Commonality
      */
     public function choose_table(Request $request)
     {
-        $shop_id=$this->id;
+        $shop_id=$request->param('shop_id');
         //服务员端
         if($this->role==1){
             $shop_id=MerchantUser::where('id',$this->id)->field(['shop_id'])->find();
@@ -997,9 +939,10 @@ class Waiter extends Commonality
     public function  proceeds(Request $request)
     {
         $id=$request->param('id');
-        $url=ShopTable::where('id',$id)->field('image')->find();
+        $url=ShopTable::where('id',$id)->field('name,image')->find();
 //        return $url->image;
-        return $this->download($url->image);
+        return_msg(200,'success',$url);
+//        return $this->download($url->image);
     }
 
     /**
@@ -1028,6 +971,15 @@ class Waiter extends Commonality
         //输出文件内容
         echo fread($file_type,filesize($file_url));
         fclose($file_type);
+    }
+
+    /**
+     * 修改用餐人数
+     */
+    public function modidyNumberPeople()
+    {
+//        $id=\request()->param('id');
+//        $data=Order::where("id",$id)->update()
     }
 
     public function shiyan()

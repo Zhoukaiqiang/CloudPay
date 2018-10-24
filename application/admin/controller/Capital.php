@@ -4,12 +4,13 @@ namespace app\admin\controller;
 
 use app\admin\model\TotalAgent;
 use app\admin\model\TotalCapital;
+use app\admin\controller\Admin;
 use think\Controller;
 use think\Db;
 use think\Request;
 
 
-class Capital extends Controller
+class Capital extends Admin
 {
     /**
      * 显示未结算的首页列表

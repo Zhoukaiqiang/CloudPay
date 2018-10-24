@@ -359,7 +359,7 @@ class Incom extends Controller
      */
     public function merchant_create(Request $request)
     {
-        $merchant_id=$request->post('merchant_id');
+        $merchant_id=$request->param('merchant_id');
         //取出数据表中数据
 
         $data=MerchantIncom::where('merchant_id',$merchant_id)->field('mercId,orgNo,log_no')->find();
@@ -370,26 +370,33 @@ class Incom extends Controller
         $data['signValue'] = sign_ature(0000,$data);
 
         $result=curl_request($this->url,true,$data,true);
+
         $result = json_decode($result,true);
 
+//        halt($result);
         //生成签名
         $signValue = sign_ature(1111,$result);
-        if( $signValue == $result['signValue'] ){
-            if(isset($result['check_flag'])){
-                //修改数据表状态
-                $res = MerchantIncom::where('merchant_id',$merchant_id)->update(['check_flag'=>$result['check_flag'],
-                    'key' => $result["key"],
-                    'rec' => $result['REC']
+        if($result['msg_cd']=='000000') {
+
+            if ($signValue == $result[ 'signValue' ]) {
+                if (isset($result[ 'check_flag' ])) {
+                    //修改数据表状态
+                    $res = MerchantIncom::where('merchant_id', $merchant_id)->update(['check_flag' => $result[ 'check_flag' ],
+                        'key' => $result[ "key" ],
+                        'rec' => $result[ 'REC' ]
                     ]);
 
-                if($res){
-                    return_msg(200,'success');
-                }else{
-                    return_msg(400,'failure');
+                    if ($res) {
+                        return_msg(200, 'success');
+                    } else {
+                        return_msg(400, 'error');
+                    }
+                } else {
+                    return_msg(400, 'error', $result[ 'msg_dat' ]);
                 }
-            }else{
-                return_msg(400,'failure',$result['msg_dat']);
             }
+        }else{
+
         }
     }
 
@@ -507,9 +514,10 @@ class Incom extends Controller
             //获取签名域
             $resul_age = sign_ature(0000, $resul);
             $resul[ 'signValue' ] = $resul_age;
+//            return json_encode($resul);
             //向新大陆接口发送信息验证
             $par = curl_request($this->url, true, $resul, true);
-
+//return $par;
             $bbntu = json_decode($par, true);
             $return_sign = sign_ature(1111, $resul);
 
@@ -591,22 +599,29 @@ class Incom extends Controller
 
     public function mercachant_inquire(Request $request)
     {
+
         $id=$request->param('id');
         $arr=Db::name('merchant_incom')->where('merchant_id',$id)->field('mercId,orgNo')->select();
-        $data=['serviceId'=>6060300,'version'=>'V1.0.1','mercId'=>$arr[0]['mercId'],'orgNo'=>$arr[0]['orgNo']];
+        $data=['serviceId'=>'6060300','version'=>'V1.0.1','mercId'=>$arr[0]['mercId'],'orgNo'=>$arr[0]['orgNo']];
         //签名域
-        $signValue=sign_ature(0000,$data);
 
-        $data['signValue']=$signValue;
+        $data['signValue']=sign_ature(0000,$data);
+//return json_encode($data);die;
         //向新大陆接口发送请求信息
         $par= curl_request($this->url,true,$data,true);
-//        $par=json_decode($par,true);
+//        halt($par);
+        $par=json_decode($par,true);
 //        return $par;
+
+
         //获取签名域
+
         $return_sign = sign_ature(1111,$par);
-        if ($par['msg_cd']==000000){
+
+        if ($par['msg_cd']=='000000'){
+
             if($par['signValue'] == $return_sign){
-                Db::name('merchant_incom')->where('merchant_id',$id)->update(['status'=>0]);
+               MerchantIncom::where('merchant_id',$id)->update(['status'=>0]);
                 return_msg(200,'success',$par);
             }else{
                 return_msg(400,'error',$par['msg_dat']);
@@ -674,6 +689,53 @@ class Incom extends Controller
         }else{
             return_msg(100,'error','请先申请商户修改');
         }
+    }
+
+    /**
+     *微信公众号查询
+     * @param Request $request
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function wx_query(Request $request)
+    {
+        $merchant_id=$request->param('merchant_id');
+        $data=MerchantIncom::field('mercId')->where('merchant_id',$merchant_id)->find();
+        $arr=[
+            'mercId'=>$data['mercId'],
+            'trmNo'=>'95081598',
+            'orgNo'=>ORG_NO,
+            'txnTime'=>'20170527153245',
+            'signType'=>'MD5',
+            'version'=>' V1.0.0',
+            'opSys'=>3,
+            ''
+        ];
+        $arr['signValue']=sign_ature(0000,$arr);
+        $shop_api = curl_request($this->url, true, $arr, true);
+        $shop_api = json_decode($shop_api, true);
+        halt($shop_api);
+    }
+
+    public function wx_pay(Request $request)
+    {
+        $merchant_id=$request->param('merchant_id');
+        $data=MerchantIncom::field('mercId')->where('merchant_id',$merchant_id)->find();
+        $arr=[
+            'mercId'=>$data['mercId'],
+            'trmNo'=>'95081598',
+            'orgNo'=>ORG_NO,
+            'txnTime'=>'20170527153245',
+            'signType'=>'MD5',
+            'version'=>' V1.0.0',
+            'amount'=>'9',
+            'total_amount'=>'10'
+        ];
+        $arr['signValue']=sign_ature(0000,$arr);
+        $shop_api = curl_request($this->url, true, $arr, true);
+        $shop_api = json_decode($shop_api, true);
+        halt($shop_api);
     }
 
 }

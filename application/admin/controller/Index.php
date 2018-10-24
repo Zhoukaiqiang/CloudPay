@@ -5,6 +5,7 @@ namespace app\admin\controller;
 use app\admin\model\TotalAgent;
 use app\admin\model\TotalMerchant;
 use app\agent\model\Order;
+use app\admin\controller\Admin;
 use think\Controller;
 use think\Db;
 use think\Request;
@@ -17,7 +18,7 @@ use think\Loader;
  * Class Index
  * @package app\index\controller
  */
-class Index extends Controller
+class Index extends Admin
 {
     protected $params = [];
     protected $query = [];

@@ -3,10 +3,11 @@
 namespace app\admin\controller;
 
 use app\admin\model\TotalAd;
+use app\admin\controller\Admin;
 use think\Request;
 use think\Db;
 
-class Advertise extends Common
+class Advertise extends Admin
 {
     /**
      * 显示广告

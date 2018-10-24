@@ -63,4 +63,12 @@ class Commonality extends Controller
             $this->error($error);
         }
     }
+
+    public function runningWater()
+    {
+        list($usec, $sec) = explode(" ", microtime());
+        $times=str_replace('.','',$usec + $sec);
+        //當前時間
+        return time().$times;
+    }
 }

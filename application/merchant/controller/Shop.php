@@ -52,7 +52,7 @@ class Shop extends Commonality
         //lbnk_nm 支行名称
         $name=$request->param('lbnk_nm');
         if($name){
-            $data=SubBranch::where('lbnk_nm','like',"%$name%")->field('lbnk_nm,lbnk_no')->select();
+            $data=SubBranch::where('lbnk_nm','like',"$name%")->field('lbnk_nm,lbnk_no')->select();
             if($data){
                 return_msg(200,'success',$data);
             }else{
@@ -83,7 +83,7 @@ class Shop extends Commonality
         //fee_rat借记卡费率(%)  max_fee_amt借记卡封顶(元） fee_rat1贷记卡费率（%）
         $datatel = $request->post();
         $data = $datatel;
-        $datatel['merchant_id']=87;
+        $datatel['merchant_id']=88;
 
 
         //查询商户的log_no流水号、mercId识别号    stl_sign结算标志 1对私 2对公
@@ -91,10 +91,10 @@ class Shop extends Commonality
             ->field('fee_rat2_scan,ysfdebitfee,ysfcreditfee,fee_rat1,max_fee_amt,
             fee_rat,fee_rat2_scan,fee_rat1_scan,fee_rat3_scan,fee_rat_scan,yhkpay_flg
             ,alipay_flg,tranTyps,log_no,mercId,suptDbfreeFlg,cardTyp,stl_typ,
-            orgNo,mcc_cd')
+            orgNo,mcc_cd,log_no')
             ->find();
 
-
+//        return json_encode($log_no);die;
         //status判断商户状态是否是注册未完成、修改未完成
 //        if(in_array($log_no[ 0 ][ 'status' ], [1, 2])) {
 
@@ -106,21 +106,23 @@ class Shop extends Commonality
 
         $create_id = Db::name('merchant_shop')->insertGetId($result);
         if (!$create_id) {
-            return_msg(400, '数据不正确');
+            return_msg(400,'success', '数据不正确');
+        }else{
+            return_msg(200,'success',['shop_id'=>$create_id]);
         }
 
-        $adress=$this->address($datatel['stoe_adds']);
-        if(!$adress){
-            return_msg(400,'error','地址格式错误');
-        }
-        $data['stoe_area_cod']=$adress;
-        $data['serviceId'] = 6060602;//交易码
+//        $adress=$this->address($datatel['stoe_adds']);
+//        if(!$adress){
+//            return_msg(400,'error','地址格式错误');
+//        }
+        $data['stoe_area_cod']="310112";
+        $data['serviceId'] = "6060602";//交易码
         $data['version'] = 'V1.0.4';//版本号
 //        $data['log_no'] = "201810110001103896";
         $data['stoe_nm']=$data['shop_name'];
         $data = array_merge($data, $log_no);
 //        unset($data['']);
-        unset($data['merchant_id']);
+//        unset($data['merchant_id']);
         unset($data['status']);
         unset($data['shop_name']);
 //        return json_encode($data);
@@ -129,17 +131,18 @@ class Shop extends Commonality
         $sign_value = sign_ature(0000, $data);
 //            dump($sign_value);die;
         $data['signValue'] = $sign_value;
+//        return json_encode($data);
 
         //向新大陆接口发送请求信息
 //        var_dump($data);die;
 
         $shop_api = curl_request($this->url, true, $data, true);
-//            return $shop_api;
+            return $shop_api;
         $shop_api = json_decode($shop_api, true);
         //获取签名域
 //        var_dump($shop_api);die;
         $return_sign = sign_ature(1111, $shop_api);
-        if ($shop_api['msg_cd'] === 000000) {
+        if ($shop_api['msg_cd'] === '000000') {
             if ($shop_api['signValue'] == $return_sign) {
                 $datle = ['id' => $create_id, 'stoe_id' => $shop_api['stoe_id'], 'log_no' => $shop_api['log_no']];
                 Db::name('merchant_incom')->where('merchant_id', $data['merchant_id'])->update(['status' => 0]);
@@ -172,18 +175,19 @@ class Shop extends Commonality
 
         $file = $request->file('imgFile');
 
-
+//        var_dump($file->getRealPath());die;
+        $data['imgFile'] = bin2hex(file_get_contents($file->getRealPath()));//进件参数
             // 移动到框架应用根目录/public/uploads/ 目录下
             $info = $file->validate(['size'=>512000,'ext'=>'jpg,png,jpeg'])->move(ROOT_PATH . 'public' . DS . 'uploads');
 
+
             if($info){
 
-                $data['imgFile'] = bin2hex(file_get_contents($file->getRealPath()));//进件参数  图片
                 $data['imgTyp']=$val['imgTyp'];//图片类型    6 - 门头照  7 - 场景照   8 - 收银台照
-                $data['imgNm']=$val['imgNm'].$info->getExtension(); //图片名称  汉字数字和字母，不允许有特殊字符
-
+                $data['imgNm']=$val['imgNm'].'.'.$info->getExtension(); //图片名称  汉字数字和字母，不允许有特殊字符
+//                    var_dump($data);die;
                 $result=$this->upload_pictures($data);//调进件公共参数   传入图片信息
-                if($result){
+                if($result==1){
                     $arr['imgTyp']=$val['imgTyp'];
                     $arr['imgFile']=$info->getPathname();
                     $cudle=$this->warehousing($val['shop_id'],$arr); //入库
@@ -196,14 +200,15 @@ class Shop extends Commonality
 
                     }
                 }else{
-                    return_msg(400,'error','图片进件失败，请重新上传');
+                    return_msg(400,'error',$result['msg_dat']);
+
                 }
 
 
 
             }else{
                 // 上传失败获取错误信息
-               return_msg(400,'error','图片格式错误');
+               return_msg(400,'error','图片格式错误或照片过大，照片不得大于500KB');
             }
 
 
@@ -232,10 +237,12 @@ class Shop extends Commonality
             if($valls->imgFile) {   //是否有值
                 $valls=json_decode($valls->imgFile,true);
                 $valls[$arr['imgTyp']]=$arr['imgFile'];
-                $val=$valls;
+                $val=json_encode($valls);
+
 
             }else{
                 $val[$arr['imgTyp']]=$arr['imgFile'];
+                $val=json_encode($val);
 
             }
 
@@ -255,10 +262,10 @@ class Shop extends Commonality
     {
 
         $merchant_id = $this->id;
-        $merchant_id=87;
+        $merchant_id=88;
 
         $data = MerchantIncom::alias('a')
-            ->field('a.mercId,a.orgNo,b.log_no,b.stoe_id')
+            ->field('a.mercId,a.log_no,b.stoe_id')
             ->join('merchant_shop b', 'b.merchant_id=a.merchant_id')
             ->where('a.merchant_id', $merchant_id)
             ->find();
@@ -268,6 +275,7 @@ class Shop extends Commonality
         $data['imgFile']=$arr['imgFile'];
         $data['serviceId'] = '6060606';
         $data['version'] = 'V1.0.1';
+        $data['orgNo']="518";
 //        $data['merchant_id'] = $merchant_id     ;
         $data = $data->toArray();
        return $this->send($data);
@@ -283,20 +291,21 @@ class Shop extends Commonality
     {
         //获取签名
         $data['signValue'] = sign_ature(0000, $data);
+//        var_dump($data);die;
         //发送给新大陆
         $result = json_decode(curl_request($this->url, true, $data, true), true);
-        if ($result['msg_cd'] !== '000000') {
-            return_msg(400, $result["msg_dat"]);
-        }
+//        if ($result['msg_cd'] !== '000000') {
+//            return_msg(400, $result["msg_dat"]);
+//        }
+//        var_dump($result);die;
         //生成签名
         $signValue = sign_ature(1111, $result);
-        return_msg(200, 'success', $result);
+//        return_msg(200, 'success', $result);
 //        return json_encode($result);
         if ($result['msg_cd'] == '000000' && $result['signValue'] == $signValue) {
-
-           return true;
+           return 1;
         } else {
-            return false;
+            return $result;
         }
     }
 
@@ -514,7 +523,8 @@ class Shop extends Commonality
     public function pc_myShop()
     {
         $merchant_id=$this->id;
-        $data=MerchantShop::where('merchant_id',$merchant_id)->field('shop_name,id,stoe_adds,stoe_cnt_tel')->select();
+
+        $data=MerchantShop::where('merchant_id',2)->field('shop_name,id,stoe_adds,stoe_cnt_tel')->select();
         if($data){
             return_msg(200,'success',$data);
 
@@ -562,7 +572,10 @@ class Shop extends Commonality
     {
         $shop_id=$request->param('shop_id');
         $data=MerchantShop::where(['id'=>$shop_id])
-            ->field('shop_name,id,stoe_adds,stoe_cnt_tel,mailbox,stoe_cnt_nm,imgFile')->select();
+            ->field('shop_name,id,stoe_adds,stoe_cnt_tel,mailbox,stoe_cnt_nm,imgFile')->find();
+
+        $data['imgFile'] =json_decode($data->imgFile,true);
+
         return_msg(200,'success',$data);
     }
 }
