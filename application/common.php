@@ -372,43 +372,43 @@ if (!function_exists('upload_pics_pay')) {
 
 //图片上传
 
-if (!function_exists('upload_picspay')) {
-    function upload_picspay($file)
-    {
-        //移动图片
-        $info = $file->move(ROOT_PATH . 'public' . DS . 'uploads');
-
-        if ($info) {
-            //文件上传成功,生成缩略图
-            //获取文件路径
-            $goods_logo = DS . 'uploads' . DS . $info->getSaveName();
-            $goods_logo = str_replace('\\', '/', $goods_logo);
-            return $goods_logo;
-        } else {
-            $error = $file->getError();
-            $this->error($error);
-        }
-    }
-}
-
-if (!function_exists('upload_pics')) {
-    function upload_pics($file)
-    {
-        //移动图片
-        $info = $file->validate(['size' => 5 * 1024 * 1024, 'ext' => 'jpg,png,gif,jpeg'])->move(ROOT_PATH . 'public' . DS . 'uploads');
-
-        if ($info) {
-            //文件上传成功,生成缩略图
-            //获取文件路径
-            $goods_logo = DS . 'uploads' . DS . $info->getSaveName();
-            $goods_logo = str_replace('\\', '/', $goods_logo);
-            return $goods_logo;
-        } else {
-            $error = $file->getError();
-            $this->error($error);
-        }
-    }
-}
+//if (!function_exists('upload_picspay')) {
+//    function upload_picspay($file)
+//    {
+//        //移动图片
+//        $info = $file->move(ROOT_PATH . 'public' . DS . 'uploads');
+//
+//        if ($info) {
+//            //文件上传成功,生成缩略图
+//            //获取文件路径
+//            $goods_logo = DS . 'uploads' . DS . $info->getSaveName();
+//            $goods_logo = str_replace('\\', '/', $goods_logo);
+//            return $goods_logo;
+//        } else {
+//            $error = $file->getError();
+//            $this->error($error);
+//        }
+//    }
+//}
+//
+//if (!function_exists('upload_pics')) {
+//    function upload_pics($file)
+//    {
+//        //移动图片
+//        $info = $file->validate(['size' => 5 * 1024 * 1024, 'ext' => 'jpg,png,gif,jpeg'])->move(ROOT_PATH . 'public' . DS . 'uploads');
+//
+//        if ($info) {
+//            //文件上传成功,生成缩略图
+//            //获取文件路径
+//            $goods_logo = DS . 'uploads' . DS . $info->getSaveName();
+//            $goods_logo = str_replace('\\', '/', $goods_logo);
+//            return $goods_logo;
+//        } else {
+//            $error = $file->getError();
+//            $this->error($error);
+//        }
+//    }
+//}
 
 
 if (!function_exists("check_time")) {

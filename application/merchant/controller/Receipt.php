@@ -224,7 +224,7 @@ class Receipt extends Common
     public function search(Request $request)
     {
         $data['shop_id']=$request->param('shop_id') ? $request->param('shop_id') : null;
-        $data['status']=$request->param('status') ? $request->param('status') : null;
+        $data['status']=$request->param('status');
         if(!empty($data['shop_id']) && empty($data['status'])){
             //显示当前门店下所有账单
             $data=Order::field('id,status,order_money,pay_type,create_time')
@@ -241,6 +241,12 @@ class Receipt extends Common
             check_data($data);
         }elseif(empty($data['shop_id']) && !empty($data['status'])){
             //当前商户下所有状态
+            $data=Order::field('id,status,order_money,pay_type,create_time')
+                ->where(['merchant_id'=>$this->merchant_id,'status'=>$data['status']])
+                ->order('create_time desc')
+                ->select();
+            check_data($data);
+        }elseif(empty($data['shop_id']) && $data['status']==0){
             $data=Order::field('id,status,order_money,pay_type,create_time')
                 ->where(['merchant_id'=>$this->merchant_id,'status'=>$data['status']])
                 ->order('create_time desc')
