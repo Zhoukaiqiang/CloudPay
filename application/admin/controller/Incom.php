@@ -16,27 +16,8 @@ use think\Request;
 class Incom extends Controller
 {
 
-   public $url = 'http://sandbox.starpos.com.cn/emercapp';
+   public $url = "https://gateway.starpos.com.cn/emercapp";
 
-
-    /**
-     * 验证签名域是否正确
-     * @param $old_sign
-     * @param $res
-     * @return bool
-     * @return string
-     */
-    protected function check_sign_value($query_sign, Array $res)
-    {
-        if ($query_sign !== sign_ature(1111, $res)) {
-            return_msg(400, "签名域不正确");
-
-        } elseif ($res['msg_cd'] !== "000000") {
-            return_msg(400, "操作失败!");
-        } else {
-            return true;
-        }
-    }
 
     /**
      * 验证成功更新数据库
@@ -64,28 +45,20 @@ class Incom extends Controller
      *                     'mercId'   =>   string      商户识别号（15位数字）
      *                     'orgNo'   =>   string       机构号
      *                 ]
-     * @description array  {
-     *                      "check_flag"  : "string"          审核结果 1-通过 2-驳回 3-转人工
-     *                      "msg_cd"      : "string"          返回码   000000 成功
-     *                      "msg_dat"     : "string"          返回信息
-     *                      "mercId"      : "string"          商户识别号
-     *                      "signValue"   : "string"          签名域
-     *                      "key"         : "string"          商户密钥
-     *                      **如果check_flag=1
-     *                      "trmNo"       : "string"          设备号
-     *                      "stoe_id"     : "string"          门店号
-     *                }
      * @throws Exception
      * @return NULL
      */
     public function merchant_query(Request $request)
     {
         $merchant_id = $request->param('merchant_id');
+
         if (empty($merchant_id)) {
-            return false;
+            return_msg(400, "请输入商户ID");
         }
-        $arr = MerchantIncom::where("merchant_id = $merchant_id")->field(["mercId", "orgNo"])->select();
-        //mark
+        $arr = MerchantIncom::where("merchant_id = $merchant_id")->field(["mercId", "orgNo", "key"])->find();
+        check_data($arr, '', 0);
+        $arr = $arr->toArray();
+
         /**  查询参数 */
         $query = [
             'serviceId' => "6060300", //交易码
@@ -93,28 +66,16 @@ class Incom extends Controller
             'mercId' => $arr['mercId'], //商户识别号（15 位数字）
             'orgNo' => $arr['orgNo'], //机构号
         ];
-
         /** 得到当前请求的签名，用于和返回参数验证 */
         $query['signValue'] = sign_ature(0000, $query);
+
         /** 获取返回结果 */
         $res = curl_request($this->url, true, $query, true);
         /** json转成数组 */
         $res = json_decode($res, true);
-        $check = $this->check_sign_value($query['signValue'], $res);
 
-        if ($check == true) {
-            /** 条件验证成功 更新数据库 */
-            $where = [
-                'merchant_id' => $merchant_id,
-                "mercId" => $res['mercId'],
-            ];
-            $prev_update_data = [
-                "trmNo" => $res['trmNo'],
-                "stoe_id" => $res['stoeNo'],
-            ];
-            $this->insert_to_incom_table('cloud_merchant_incom', $where, $prev_update_data);
-        }
 
+        return_msg(200, "msg", $res);
 
     }
 
@@ -405,10 +366,9 @@ class Incom extends Controller
         $data = $data->toArray();
         $data['serviceId']='6060603';
         $data['version']='V1.0.1';
-//        $data['log_no']="201810110001103896";
 
         $data['signValue'] = sign_ature(0000,$data);
-//        halt($data);
+
         $result=curl_request($this->url,true,$data,true);
 
         $result = json_decode($result,true);

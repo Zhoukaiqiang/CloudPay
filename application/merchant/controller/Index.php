@@ -161,6 +161,56 @@ class Index extends Common
     }
 
     /**
+     * PC端---图表
+     * @param Request $request
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+
+    public function pc_diagram(Request $request)
+    {
+        if ($request->get()) {
+            $shop_id =  $request->param("shop_id");
+
+            if(isset($shop_id)) {
+                $shop_flag = "eq";
+            }else {
+                $shop_flag = "<>";
+                $shop_id = -2;
+            }
+
+            $i = -7;
+            /** 默认展示7天数据 */
+            while($i < 0) {
+                $morning = strtotime(date('Y-m-d 00:00:00', strtotime($i .' days')));
+                $night = strtotime(date('Y-m-d 23:59:59', strtotime($i .' days')));
+                $date = [$morning, $night];
+
+                $data['chartData'][] = Order::where("merchant_id", $this->merchant_id)
+                    ->where(["shop_id" => [$shop_flag, $shop_id]])
+                    ->whereTime('pay_time', "between", $date)
+                    ->field("sum(received_money) received_money, count(id) num")
+                    ->find();
+                $i++;
+            }
+
+            check_data(collection($data["chartData"])->toArray(), '',false);
+            foreach($data["chartData"] as $k => $v) {
+
+                $filted_data[] = [
+                    "amount" => $v["received_money"],
+                    "count"    => $v["num"],
+                    "average" =>  (int)$v["num"] ? (int)$v["received_money"] / (int)$v["num"] : 0,
+                    "pay_time" => date('Y-m-d', strtotime($i + $k . ' days')),
+                ];
+            }
+
+            check_data($filted_data);
+        }
+    }
+
+    /**
      * PC端首页数据-- 今日交易数据
      * @param Request $request
      * @throws \think\db\exception\DataNotFoundException

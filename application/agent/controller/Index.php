@@ -190,11 +190,7 @@ class Index extends Controller
             }
 
 
-            if (count($filted_data)) {
-               return_msg(200, '成功取出数据', $filted_data);
-            } else {
-                return_msg(400, '没有数据');
-            }
+            check_data($filted_data);
         }
     }
     /**
