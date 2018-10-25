@@ -602,3 +602,32 @@ function check_data($data, $return_data = null, $return = 1)
     }
 
 }
+
+/**
+ *公共参数
+ * @param $info 数据表取出的信息
+ * @param $msg 接口参数
+ * @param $key 商户key
+ * @return mixed
+ */
+function request_head($info,$msg)
+{
+    $info['rec']=json_decode($info['rec']);
+    /**设备号*/
+    $data[ 'opSys' ] = "3";
+    $data[ 'characterSet' ] = "00";
+    $data[ 'signType' ] = 'MD5';
+
+    $data[ 'version' ] = 'V1.0.0';
+//        return $data;
+    $data[ 'txnTime' ] = date("Ymdhis");
+
+    $data['trmNo'] = (string)$info['rec'][0]->trmNo;
+    $data['orgNo'] = "27573";
+    $data['mercId'] = $info['mercId'];
+    $data['tradeNo'] = (string)generate_order_no();
+    //合并数组
+    $arr = array_merge($data,$msg);
+    $arr['signValue'] = sign_ature(0000,$arr,$info['key']);
+    return $arr;
+}

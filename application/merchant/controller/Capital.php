@@ -290,9 +290,9 @@ class Capital extends Common
      * @return [bool / string] msg
      */
 
-    public function commercial_edit()
+    public function commercial_edit($arg)
     {
-        $arg=request()->post();
+//        $arg=request()->post();
         $del['serviceId'] = '6060604';
         $del['version'] = 'V1.0.4';
         $data = Db::name('merchant_incom')->where('merchant_id', $arg['id'])->field('log_no,mercId,stoe_id,status,fee_rat1_scan,fee_rat3_scan,fee_rat_scan, incom_type,stl_typ,stl_sign,bus_lic_no,bse_lice_nm,crp_nm,mercAdds,bus_exp_dt,crp_id_no,crp_exp_dt,stoe_nm,stoe_area_cod,stoe_adds,trm_rec,mailbox,yhkpay_flg,alipay_flg,orgNo,cardTyp,suptDbfreeFlg,tranTyps,crp_exp_dt_tmp,fee_rat,max_fee_amt,fee_rat1,ysfcreditfee,ysfdebitfee')->find();
@@ -354,11 +354,11 @@ class Capital extends Common
      * @throws \think\db\exception\ModelNotFoundException
      * @throws \think\exception\DbException
      */
-    public function merchant_create()
+    public function merchant_create($id)
     {
 //        $merchant_id=$request->param('merchant_id');
         //取出数据表中数据
-        $id=102;
+//        $id=102;
         $data=MerchantIncom::where('merchant_id',$id)->field('mercId,orgNo,log_no')->find();
         $data = $data->toArray();
         $data['serviceId']='6060603';
@@ -377,7 +377,16 @@ class Capital extends Common
         if($result['msg_cd']=='000000') {
 
             if ($signValue == $result[ 'signValue' ]) {
-                if (isset($result[ 'check_flag' ])) {
+                if ($result[ 'check_flag' ]==3) {
+                    //修改数据表状态
+                    $res = MerchantIncom::where('merchant_id', $id)->update(['check_flag' => $result[ 'check_flag' ]]);
+
+                    if ($res) {
+                        return_msg(200, 'success');
+                    } else {
+                        return_msg(400, 'error');
+                    }
+                }elseif($result['check_flag']==1){
                     //修改数据表状态
                     $res = MerchantIncom::where('merchant_id', $id)->update(['check_flag' => $result[ 'check_flag' ],
                         'key' => $result[ "key" ],

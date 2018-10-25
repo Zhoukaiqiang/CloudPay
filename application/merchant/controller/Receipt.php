@@ -2,6 +2,7 @@
 
 namespace app\merchant\controller;
 
+use app\admin\model\MerchantIncom;
 use app\merchant\model\MerchantMember;
 use app\merchant\model\MerchantShop;
 use app\merchant\model\MerchantUser;
@@ -13,7 +14,7 @@ use think\Request;
 
 class Receipt extends Common
 {
-    public $url = 'http://sandbox.starpos.com.cn/emercapp';
+    public $url = 'http://gateway.starpos.com.cn/adpweb/ehpspos3/sdkRefundBarcodePay.json';
 
     /**
      * 显示账单详情
@@ -49,15 +50,22 @@ class Receipt extends Common
             if($param['password']!=$data['password']){
                 return_msg(400,'密码不正确');
             }
-            //取出订单号
-            $order=Order::field('order_no')->where('id',$param['id'])->find();
-            $arr=[
-                'orderNo'=>$order['order_no'],
-                'txnAmt'=>$param['txnAmt']
+            //取出支付渠道订单号
+            $order = Order::field('order_no')->where('id',$param['id'])->find();
+
+            //取出商户信息
+            $data=MerchantIncom::field('mercId,rec,key')->where('merchant_id',$this->merchant_id)->find();
+//            echo $data['key'];die;
+            $msg=[
+                'orderNo'=>$order['order_no']
             ];
+            $res=request_head($data,$msg);
+//            halt($arr);
             //发给新大陆
-            $result = curl_request($this->url, true, $arr, true);
-            $result = json_decode($result, true);
+            $result = curl_request($this->url, true, $res, true);
+
+            $result = urldecode($result);
+
             if($result['result']=='S'){
                 //修改状态
                 Order::where('id',$param['id'])->update(['status'=>2]);
@@ -68,8 +76,8 @@ class Receipt extends Common
             }
         }elseif(empty($this->merchant_id) && !empty($this->user_id)){
             //取出用户手机和密码
-            $data = MerchantUser::field('phone,password')->where('id',$this->user_id)
-                ->find();
+            $data = MerchantUser::field('phone,password,merchant_id')->where('id',$this->user_id)->find();
+
             $param['password']=encrypt_password($param['password'],$data['phone']);
             //判断
             if($param['password']!=$data['password']){
@@ -77,11 +85,21 @@ class Receipt extends Common
             }
             //取出订单号
             $order=Order::field('order_no')->where('id',$param['id'])->find();
-            $order=$order->toArray($order);
+
+            //取出商户信息
+            $data=MerchantIncom::field('mercId,rec,key')->where('merchant_id',$data['merchant_id'])->find();
+            $msg=[
+                'orderNo'=>$order['order_no']
+            ];
+            $res=request_head($data,$msg);
+//            halt($arr);
             //发给新大陆
-            $result = curl_request($this->url, true, $order, true);
-            $result = json_decode($result, true);
+            $result = curl_request($this->url, true, $res, true);
+
+            $result = urldecode($result);
+
             if($result['result']=='S'){
+                //修改状态
                 Order::where('id',$param['id'])->update(['status'=>2]);
                 return_msg(200,'退款中');
             }else{
@@ -132,10 +150,11 @@ class Receipt extends Common
      */
     public function filter(Request $request)
     {
+
         $data['today']=$request->param('today') ? $request->param('today') : null;
         $data['week']=$request->param('week') ? $request->param('week') : null;
         $data['shop_id']=$request->param('shop_id') ? $request->param('shop_id') : null;
-        $data['status']=$request->param('status') ? $request->param('status') : null;
+        $data['status']=$request->param('status');
         $data['start_time']=$request->param('start_time') ? $request->param('start_time') : null;
         if(!empty($data['start_time'])){
             $data['end_time']=$request->param('end_time') ? $request->param('end_time') : '';
@@ -212,6 +231,13 @@ class Receipt extends Common
                 ->whereTime('create_time',$param,$time)
                 ->select();
             check_data($data);
+        }elseif(empty($data['shop_id']) && $data['status']==0){
+            //当前商户下所有状态
+            $data=Order::field('id,status,order_money,pay_type,create_time')
+                ->where(['merchant_id'=>$this->merchant_id,'status'=>$data['status']])
+                ->whereTime('create_time',$param,$time)
+                ->select();
+            check_data($data);
         }
     }
 
@@ -254,6 +280,5 @@ class Receipt extends Common
             check_data($data);
         }
     }
-
 
 }
