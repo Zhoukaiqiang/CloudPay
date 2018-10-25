@@ -58,16 +58,17 @@ class Incom extends Controller
         $arr = MerchantIncom::where("merchant_id = $merchant_id")->field(["mercId", "orgNo", "key"])->find();
         check_data($arr, '', 0);
         $arr = $arr->toArray();
-
-        /**  查询参数 */
+        $key = $arr["key"] ? $arr["key"] : KEY;
+            /**  查询参数 */
         $query = [
             'serviceId' => "6060300", //交易码
             'version' => "V1.0.1",
             'mercId' => $arr['mercId'], //商户识别号（15 位数字）
             'orgNo' => $arr['orgNo'], //机构号
         ];
+        halt($query);
         /** 得到当前请求的签名，用于和返回参数验证 */
-        $query['signValue'] = sign_ature(0000, $query);
+        $query['signValue'] = sign_ature(0000, $query, $key);
 
         /** 获取返回结果 */
         $res = curl_request($this->url, true, $query, true);

@@ -662,6 +662,7 @@ class Member extends Common
         check_data($data);
     }
 
+    /** 公众号-------------------------------------------------------- */
     /**
      *微信会员卡
      * @throws \think\db\exception\DataNotFoundException
@@ -671,7 +672,7 @@ class Member extends Common
     public function wx_member_card()
     {
         //获取用户appid
-        $openid=request()->param('open_id');
+        $openid = request()->param('open_id');
         $openid=1;
         //取出会员信息
         $data['list']=MerchantMember::field('id,merchant_id,shop_id,money,member_phone')->where('openid',$openid)->select();
@@ -722,7 +723,7 @@ class Member extends Common
     {
         //获取充值记录id
         $id = $request->param('id');
-        $data=MemberRecharge::alias('a')
+        $data = MemberRecharge::alias('a')
             ->field('a.amount,a.order_money,a.discount_amount,a.recharge_time,a.order_no,b.shop_name')
             ->join('cloud_merchant_shop b','a.shop_id=b.id','left')
             ->where('a.id',$id)
