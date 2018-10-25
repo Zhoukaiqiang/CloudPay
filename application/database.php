@@ -13,13 +13,13 @@ return [
     // 数据库类型
     'type'            => 'mysql',
     // 服务器地址
-    'hostname'        => '127.0.0.1',
+    'hostname'        => '47.92.212.66',
     // 数据库名
     'database'        => 'cloud',
     // 用户名
-    'username'        => 'root',
+    'username'        => 'cloud',
     // 密码
-    'password'        => '',
+    'password'        => 'cloudpay',
     // 端口
     'hostport'        => '3306',
     // 连接dsn
@@ -49,5 +49,5 @@ return [
     // 时间字段取出后的默认时间格式
     'datetime_format' => 'Y-m-d H:i:s',
     // 是否需要进行SQL性能分析
-    'sql_explain'     => false,
+    'sql_explain'     => true,
 ];

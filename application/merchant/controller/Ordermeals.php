@@ -11,6 +11,7 @@ namespace app\merchant\controller;
 
 use app\merchant\model\MerchantShop;
 use think\Controller;
+use think\Request;
 
 class Ordermeals extends Controller
 {
@@ -42,7 +43,7 @@ class Ordermeals extends Controller
 
     }
     /**
-     * 菜品设置  点菜
+     *   点菜
      * @param Request $request
      * @return string
      * @throws \think\db\exception\DataNotFoundException
@@ -113,4 +114,68 @@ class Ordermeals extends Controller
             }
         }
     }
+
+    public function indent_list(Request $request)
+    {
+        $post=$request->post();
+
+    }
+    /**
+     * 去下单
+     * @param Request $request
+     * @return string
+     */
+    public function place_order(Request $request)
+    {
+        $data=$request->post();
+        //判断是否继续点菜
+        if(!$data['order_id']) {
+            //istableware餐具是否收费 1收取餐具费 0不收取   paymentorder 付款顺序1先上菜后付款   2先付款后上菜
+            $number = MerchantShop::where('id', $data[ 'shop_id' ])->field('istableware,tableware_money,paymentorder')->find();
+            if ($number[ 'istableware' ] == 1) {
+                $data[] = ['name' => '餐具', 'money' => $number[ 'tableware_money' ] * $data[ 'meal_number' ], 'deal' => $data[ 'meal_number' ]];
+            }
+        }
+        //订单总金额
+        $count_money=0;
+        foreach ($data as $k=>$v){
+            $count_money+=$v['money'];
+
+        }
+        $data['count_money']=$count_money;
+
+        return_msg(200,'success',$data);
+    }
+
+    /**
+     * 提交订单
+     * @param Request $request
+     */
+    public function confirm_order(Request $request)
+    {
+        $data=$request->post();
+        //判断是否继续点菜
+        if(!$data['order_id']) {
+            //订单号
+            list($usec, $sec) = explode(" ", microtime());
+            $times = str_replace('.', '', $usec + $sec);
+            $timese = date('YmdHis', time());
+            $code = $timese . $times;
+            //订单入库
+            $order = ['order_money' => $data[ 'order_money' ], 'received_money' => $data[ 'received_money' ], 'table_name' => $data[ 'table_name' ], 'order_remark' => $data[ 'order_remark' ], 'shop_id' => $data[ 'shop_id' ], 'merchant_id' => $data[ 'merchant_id' ], 'order_number' => $code];
+            $order_id = Order::insertGetId($order, true);
+            //判断付款顺序   1先上菜后付款   2先付款后上菜
+        }else{
+            //原有的订单号上加菜就可以了
+
+        }
+        if($order){
+            return_msg(200,'success',['order_id'=>$order_id]);
+        }else{
+            return_msg(400,'error','提交订单失败');
+        }
+
+    }
+
+
 }

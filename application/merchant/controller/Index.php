@@ -18,8 +18,13 @@ use think\Request;
 use think\Session;
 
 
-class Index extends Common
+class Index extends Commonality
 {
+    public function ddd()
+    {
+        $a=Order::create(['pay_time' => time(), 'status' =>1, 'logNo' => 23432432,'orderNo'=>2343242342,'received_money'=>32434,'order_money'=>243432,'tradeNo'=>24324324324234]);
+        return_msg($a);
+    }
     /**
      * APP首页展示
      * @param Request $request
@@ -32,23 +37,30 @@ class Index extends Common
         //$role 1服务员 2店长 3收银员 -1商户
 //            $id=Session::get('username_', 'app')['user_id'];
 //            $role=Sessin::get('username_', 'app')['role_id'];
-            $role=$this->role;
-            $name=$this->name;
-            $id=$this->id;
-            if($role==1 || $role==3){
-                $name='person_info_id';
-            }
-            if($role==2){
-                $id=MerchantUser::where('id',$id)->field('shop_id')->find();
-                $id=$id->shop_id;
-                }
+        $role = $this->role;
+        $name = $this->name;
+        $id = $this->id;
+//        var_dump($role);var_dump($name);var_dump($id);die;
+        if ($role == 1 || $role == 3) {
+            $name = 'person_info_id';
+            $k=MerchantUser::where('id',$id)->field('shop_id')->find();
+
+            $data['shop_id']=$k->shop_id;
+
+        }elseif ($role == 2) {
+            $id = MerchantUser::where('id', $id)->field('shop_id')->find();
+            $data['shop_id'] = $id->shop_id;
+            $id=$id->shop_id;
+        }else{
+            $k=MerchantShop::where('merchant_id',$id)->field('id')->find();
+            $data['shop_id']=$k['id'];
+        }
 
 
         //查询今天的收银金额和订单笔数
-        $data = Order::where([$name => $id])
+        $data['list'] = Order::where([$name => $id])
             ->whereTime('pay_time', 'd')
-            ->where($name, $id)
-            ->field('count(id) id,sum(received_money) received_money')
+            ->field('count(id) countid,sum(received_money) received_money')
             ->select();
 
 
@@ -85,20 +97,20 @@ class Index extends Common
 
             check_data($result, '', 0);
             /** 实收金额 */
-            $data["count"]['true_money'] = 0;
+            $data[ "count" ][ 'true_money' ] = 0;
             /** 交易金额 */
-            $data["count"]['trad_money'] = 0;
+            $data[ "count" ][ 'trad_money' ] = 0;
             /** 优惠金额 */
-            $data["count"]['discount'] = 0;
+            $data[ "count" ][ 'discount' ] = 0;
 
             foreach ($result as $k => &$v) {
-                $data["count"]['true_money'] += $v["received_money"];
+                $data[ "count" ][ 'true_money' ] += $v[ "received_money" ];
 
-                $data["count"]['trad_money'] += $v["order_money"];
+                $data[ "count" ][ 'trad_money' ] += $v[ "order_money" ];
 
-                $data["count"]['trad_num'] = $k;
+                $data[ "count" ][ 'trad_num' ] = $k;
 
-                $data["count"]['discount'] += $v["discount"];
+                $data[ "count" ][ 'discount' ] += $v[ "discount" ];
 
             }
             $where = [
@@ -107,17 +119,17 @@ class Index extends Common
             ];
 
             /** 退款金额 */
-            $data["count"]['refund_money'] = $Order->where($where)->where("status = 2")->sum("refund_money");
+            $data[ "count" ][ 'refund_money' ] = $Order->where($where)->where("status = 2")->sum("refund_money");
             /** 银联，微信，支付宝，现金交易笔数和金额 */
 
-            $data["received"]["union_money"] = $Order->where($where)->where(["pay_type" => "etc"])->sum("received_money");
-            $data["received"]["union_num"] = $Order->where($where)->where(["pay_type" => "etc"])->count("id");
-            $data["received"]["wx_money"] = $Order->where($where)->where(["pay_type" => "wxpay"])->sum("received_money");
-            $data["received"]["wx_num"] = $Order->where($where)->where(["pay_type" => "wxpay"])->count("id");
-            $data["received"]["ali_money"] = $Order->where($where)->where(["pay_type" => "alipay"])->sum("received_money");
-            $data["received"]["ali_num"] = $Order->where($where)->where(["pay_type" => "alipay"])->count("id");
-            $data["received"]["cash_money"] = $Order->where($where)->where(["pay_type" => "cash"])->sum("received_money");
-            $data["received"]["cash_num"] = $Order->where($where)->where(["pay_type" => "cash"])->count("id");
+            $data[ "received" ][ "union_money" ] = $Order->where($where)->where(["pay_type" => "etc"])->sum("received_money");
+            $data[ "received" ][ "union_num" ] = $Order->where($where)->where(["pay_type" => "etc"])->count("id");
+            $data[ "received" ][ "wx_money" ] = $Order->where($where)->where(["pay_type" => "wxpay"])->sum("received_money");
+            $data[ "received" ][ "wx_num" ] = $Order->where($where)->where(["pay_type" => "wxpay"])->count("id");
+            $data[ "received" ][ "ali_money" ] = $Order->where($where)->where(["pay_type" => "alipay"])->sum("received_money");
+            $data[ "received" ][ "ali_num" ] = $Order->where($where)->where(["pay_type" => "alipay"])->count("id");
+            $data[ "received" ][ "cash_money" ] = $Order->where($where)->where(["pay_type" => "cash"])->sum("received_money");
+            $data[ "received" ][ "cash_num" ] = $Order->where($where)->where(["pay_type" => "cash"])->count("id");
 
 
             check_data($data);
@@ -154,7 +166,7 @@ class Index extends Common
                 "o.pay_time" => [$time_flag, $time],
             ];
 
-            $this->return_list($where,$where_join);
+            $this->return_list($where, $where_join);
 
         }
 
@@ -216,14 +228,11 @@ class Index extends Common
                 "o.pay_time" => [$time_flag, $time],
             ];
 
-            $this->return_list($where,$where_join);
+            $this->return_list($where, $where_join);
 
         }
 
     }
-
-
-
 
 
     /**
@@ -234,70 +243,32 @@ class Index extends Common
      * @throws \think\db\exception\ModelNotFoundException
      * @throws \think\exception\DbException
      */
-    protected function return_list($where, $where_join) {
+    protected function return_list($where, $where_join)
+    {
         $Order = new Order();
 
         /** 搜索可选项--------- 返回所有门店 */
-        $data["shop_list"] = MerchantShop::where(["merchant_id"=> $this->merchant_id])->field("shop_name,id")->select();
+        $data[ "shop_list" ] = MerchantShop::where(["merchant_id" => $this->merchant_id])->field("shop_name,id")->select();
 
         /** 搜索可选项--------- 返回所有收银员 */
-        $data["cashier_list"] = MerchantUser::where(["merchant_id"=> ["eq",$this->merchant_id], "role" => ["eq", 1]])->field("name,id")->select();
+        $data[ "cashier_list" ] = MerchantUser::where(["merchant_id" => ["eq", $this->merchant_id], "role" => ["eq", 1]])->field("name,id")->select();
 
         /** 默认展示今天的 门店数据 */
         $rows = $Order::where($where)->count("id");
         $pages = page($rows);
         $field = ['o.order_number', 'o.pay_time', "shop.shop_name", "o.cashier", "o.pay_type", "o.received_money", "o.order_money", "o.discount", "o.status"];
 
-        $data["list"] = $Order::where($where_join)
+        $data[ "list" ] = $Order::where($where_join)
             ->alias("o")
             ->field($field)
             ->join("cloud_merchant_shop shop", "o.shop_id")
             ->group("o.id")
-            ->limit($pages["offset"], $pages["limit"])->field($field)->select();
-        $data["pages"] = $pages;
-        $data["pages"]["rows"] = $rows;
+            ->limit($pages[ "offset" ], $pages[ "limit" ])->field($field)->select();
+        $data[ "pages" ] = $pages;
+        $data[ "pages" ][ "rows" ] = $rows;
 
-        check_data($data["list"], $data, 1);
+        check_data($data[ "list" ], $data, 1);
     }
-    public function ddd()
-    {
-        $data="{
-    \"stoe_cnt_nm\": \"蔡双庆\",       1
-    \"stoe_cnt_tel\": \"15823645094\",  1
-    \"mailbox\": \"2537033935@qq.com\", 1
-    \"trm_rec\": \"5\",              1
-    \"stoe_adds\": \"上海市闵行区七宝镇九星村星港街中心区4幢4号\",   1
-    \"stl_sign\": \"1\",                    1
-    \"bnk_acnm\": \"蔡双庆\",                   1
-    \"stl_oac\": \"6217001180021015444\",     1
-    \"icrp_id_no\": \"330329197907132077\",    1
-    \"crp_exp_dt_tmp\": \"2032-02-20\",        1
-    \"wc_lbnk_no\": \"105290078215\",          1
-    \"stoe_area_cod\": 310112,                  1
-    \"serviceId\": 6060602,           1
-    \"version\": \"V1.0.4\",         1
-    \"stoe_nm\": \"上海市诚香坊文化传播有限公司\", 1
-    \"fee_rat2_scan\": \"0.60\",           1
-    \"ysfdebitfee\": \"0.38\",     1
-    \"ysfcreditfee\": \"0.38\",     1
-    \"fee_rat1\": \"0.60\",          1
-    \"max_fee_amt\": \"20.00\",       1
-    \"fee_rat\": \"0.55\",              1
-    \"fee_rat1_scan\": \"0.22\",      1
-    \"fee_rat3_scan\": \"0.38\",     1
-    \"fee_rat_scan\": \"0.38\",     1
-    \"yhkpay_flg\": \"Y\",               1
-    \"alipay_flg\": \"Y\",              1
-    \"tranTyps\": \"C1\",                 1
-    \"log_no\": \"201810190000053676\",     1
-    \"mercId\": \"800290000008424\",       1
-    \"suptDbfreeFlg\": 0,                  1
-    \"cardTyp\": \"01\",                    1
-    \"stl_typ\": 1,                        1
-    \"orgNo\": \"518\",                     1
-    \"mcc_cd\": 7311,                        1
-    \"signValue\": \"36c959ea3f33d12e4d1e66a3d50586ca\"     1
-}";
-    }
+
 
 }

@@ -64,6 +64,11 @@ class Commonality extends Controller
         }
     }
 
+
+    /**
+     * 流水号
+     * @return string
+     */
     public function runningWater()
     {
         list($usec, $sec) = explode(" ", microtime());

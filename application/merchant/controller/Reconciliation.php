@@ -25,7 +25,7 @@ class Reconciliation extends Commonality
      * @throws \think\db\exception\ModelNotFoundException
      * @throws \think\exception\DbException
      */
-    public function index()
+    public function index(Request $request)
     {
         //判断是否是商户还是门店
         $id=$this->id;
@@ -52,12 +52,17 @@ class Reconciliation extends Commonality
             return_msg(200,'success',$success) ;
 
         } else {
+           $shop_id=$request->param('shop_id');
             //取出门店以及员工
             $shop = Db::table('cloud_merchant_shop')->alias('a')
                 ->field(['a.shop_name', 'a.id as shop_id', 'b.id as user_id', 'b.name'])
                 ->join('merchant_user b', 'a.id=b.shop_id')
-                ->where('a.id', $id)
+                ->where('a.id', $shop_id)
                 ->select();
+            if(!$shop){
+                return_msg(400,'error','此门店没有员工');
+            }
+//            var_dump($shop);die;
 
             //取第一家的数据
             $data = Db::query("select pay_type,count(id) as count,sum(received_money) as received_money,sum(discount) as discount,sum(order_money) as order_money,sum(refund_money) as refund_money from cloud_order where shop_id=$shop_id group By pay_type");
@@ -83,13 +88,21 @@ class Reconciliation extends Commonality
 
         $shop_id=$request->param('shop_id') ? $request->param('shop_id') : 0;
         $userid=$request->param('user_id') ? $request->param('user_id') : 0;
-        $create_time=$request->param('create_time') ? $request->param('create_time') : mktime(0,0,0,date('m'),date('d'),date('Y'));
-        $end_time=$request->param('end_time') ? $request->param('end_time') +24*60*60-1 : mktime(23,59,59,date('m'),date('d'),date('Y'));
+        $create_time=$request->param('create_time') ? strtotime($request->param('create_time')) : mktime(0,0,0,date('m'),date('d'),date('Y'));
+        $end_time=$request->param('end_time') ? strtotime($request->param('end_time')) +24*60*60-1 : mktime(23,59,59,date('m'),date('d'),date('Y'));
+//       var_dump($end_time);die;
         $shoparr=$shop_id;
         if($shop_id==0){
-            $merchant_id=session('merchant_id');
-            $merchant_id=1;
-            $shop_id=Db::table('cloud_merchant_shop')->where('merchant_id',$merchant_id)->field(['id'])->select();
+
+            $merchant_id=$this->id;
+
+            $shop_id=Db::table('cloud_merchant_shop')
+                ->where('merchant_id',$merchant_id)
+                ->field(['id'])
+                ->select();
+            if(!$shop_id){
+                return_msg(400,'error','此商户没有门店');
+            }
             $shoparr='';
             foreach ($shop_id as $k=>$v){
                 $shoparr.=$v['id'].',';
@@ -98,7 +111,10 @@ class Reconciliation extends Commonality
         }
         $userarr=$userid;
         if($userid==0){
-            $userss=Db::table('cloud_merchant_user')->whereIn('shop_id',$shoparr)->field(['id'])->select();
+            $userss=Db::table('cloud_merchant_user')
+                ->whereIn('shop_id',$shoparr)->
+                field(['id'])
+                ->select();
 
             $userarr='';
             foreach ($userss as $k=>$v){
@@ -107,6 +123,8 @@ class Reconciliation extends Commonality
         }
         $userarr=rtrim($userarr,',');
         $shoparr=rtrim($shoparr,',');
+
+
 //        dump($shoparr);die;
         $data = Db::query("select pay_type,count(id) as count,sum(received_money) as received_money,sum(discount) as discount,sum(order_money) as order_money,sum(refund_money) as refund_money from cloud_order where shop_id in($shoparr) and person_info_id in($userarr) and pay_time between $create_time and $end_time group By pay_type");
 
@@ -130,7 +148,7 @@ class Reconciliation extends Commonality
         foreach ($data as $k=>$v){
             $pay_type[]=$v['pay_type'];
         }
-        $array=['alipay','etc','wxpay'];
+        $array=['alipay','etc','wxpay','cash'];
         //取出数组的差异集
         $arr=array_keys(array_diff($array,$pay_type));
 //        return json_encode($arr);
@@ -250,10 +268,10 @@ class Reconciliation extends Commonality
 
         if($up==2){
            $create_time=strtotime($create_time)+24*3600;
-            $endtime=$create_time+$days*3600;
+            $endtime=strtotime($create_time)+$days*24*3600;
         }else if($up==1){
 
-            $endtime=$create_time-24*3600;
+            $endtime=strtotime($create_time)-$days*24*3600;
             $create_time=strtotime($create_time)-1;
         }
 

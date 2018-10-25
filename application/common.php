@@ -292,6 +292,7 @@ if (!function_exists('sign_ature')) {
     function sign_ature($flag, Array $arr, $key =null)
     {
         $key = $key ? $key : KEY;
+//        $arr=array_change_key_case($arr);
         ksort($arr);
         if ($flag == 0000) {
             $data = [
@@ -319,7 +320,7 @@ if (!function_exists('sign_ature')) {
 
         }
 
-        return md5($stra . $key);
+        return md5($stra.$key);
     }
 }
 

@@ -590,9 +590,9 @@ class Incom extends Controller
     {
         $del = $request->post();
 
-        $del[ 'serviceId' ] = 6060604;
+        $del[ 'serviceId' ] = "6060604";
         $del[ 'version' ] = 'V1.0.1';
-        $data = Db::name('merchant_incom')->where('merchant_id', $del[ 'merchant_id' ])->field('log_no,mercId,stoe_id,mcc_cd,status')->select();
+        $data = Db::name('merchant_incom')->where('merchant_id', $del[ 'merchant_id' ])->field('log_no,mercId,stoe_id,mcc_cd,status,orgNo')->select();
         //查看商户是否是完成状态
         if ($data[0]['status']!=1) {
             $aa = [];
