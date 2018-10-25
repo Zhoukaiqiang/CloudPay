@@ -20,7 +20,7 @@ class AdminValidate extends Validate{
         ['phone','require|regex:/^1[3-9]\d{9}$/|length:11','请填写联系电话|联系电话格式不正确|电话必须为11位'],
         ["ini_pwd", "require|length:6", "请输入旧密码|密码长度必须为6位数"],
         ["code", "require|number", "请输入验证码|验证码必须为数字"],
-        ['password'      ,'require|length:6','请填写密码|密码必须为6位数'],
+        ['password'      ,'require|max:6','请填写密码|密码不能超过6位数'],
         ["time", "require", "请填写时间"],
         ['open_bank'     ,'require','请填写开户行名称'],
         ['open_bank_branche','require','请填写开户行网点'],
@@ -80,7 +80,10 @@ class AdminValidate extends Validate{
         'user'=>[
             'name','role_id','status','phone','password'
         ],
-
+        //编辑人员
+        'user_edit'=>[
+            'name','role_id','status','phone'
+        ],
         "agent_add_partner" => ["partner_phone", "password", "agent_id", "partner_name", "model","commission"],
         //商户登录验证
         "merchant_login" => ['phone', 'password'],

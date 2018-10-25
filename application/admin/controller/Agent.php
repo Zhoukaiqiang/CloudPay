@@ -4,13 +4,14 @@ namespace app\admin\controller;
 
 use app\admin\model\TotalAdmin;
 use app\admin\model\TotalAgent;
+use app\admin\controller\Admin;
 use think\Controller;
 use think\Loader;
 use think\Request;
 use think\Validate;
 use think\Db;
 
-class Agent extends Controller
+class Agent extends Admin
 {
     /**
      * 代理商首页
@@ -20,19 +21,36 @@ class Agent extends Controller
      */
     public function index()
     {
-        $controller=request()->controller();
-        $act=request()->action();
         //获取总行数
-        $rows = TotalAgent::count();
-        $pages = page($rows);
-        //取出数据表中的数据
-        $data['data'] = TotalAgent::alias('a')
-            ->field('a.id,a.agent_name,a.contact_person,a.agent_mode,a.agent_area,a.create_time,a.contract_time,a.status,b.name')
-            ->join('cloud_total_admin b', 'a.admin_id=b.id', 'left')
-            ->limit($pages['offset'], $pages['limit'])
-            ->select();
-        $data['pages'] = $pages;
-        return_msg('200', 'success', $data);
+        if($this->role_id==1){
+            $rows = TotalAgent::count();
+            $pages = page($rows);
+            //取出数据表中的数据
+            $data['data'] = TotalAgent::alias('a')
+                ->field('a.id,a.agent_name,a.contact_person,a.agent_mode,a.agent_area,a.create_time,a.contract_time,a.status,b.name')
+                ->join('cloud_total_admin b', 'a.admin_id=b.id', 'left')
+                ->limit($pages['offset'], $pages['limit'])
+                ->select();
+            $data['pages'] = $pages;
+            return_msg('200', 'success', $data);
+        }elseif($this->role_id==0){
+            //运营专员
+            $rows=TotalAgent::where('admin_id',$this->admin_id)->count();
+
+            $pages = page($rows);
+
+            $data['data'] = TotalAgent::alias('a')
+                ->field('a.id,a.agent_name,a.contact_person,a.agent_mode,a.agent_area,a.create_time,a.contract_time,a.status,b.name')
+                ->join('cloud_total_admin b', 'a.admin_id=b.id', 'left')
+                ->where('a.admin_id',$this->admin_id)
+                ->limit($pages['offset'], $pages['limit'])
+                ->select();
+
+            $data['pages'] = $pages;
+
+            return_msg('200', 'success', $data);
+        }
+
     }
 
 //    public function entry_agent(Request $request)

@@ -659,7 +659,30 @@ class Member extends Common
             ->join('cloud_merchant_shop b','a.shop_id=b.id','left')
             ->where('a.merchant_id',$this->merchant_id)
             ->select();
+        foreach($data['discount'] as &$v){
+            $v['type']="折扣";
+        }
+        foreach($data['exclusive'] as &$v){
+            $v['type']="会员专享";
+        }
+        foreach($data['recharge'] as &$v){
+            $v['type']="充值送";
+        }
+        foreach($data['share'] as &$v){
+            $v['type']="分享";
+        }
+//        halt($data);
         check_data($data);
+    }
+
+    public function exclusive_stop(Request $request)
+    {
+        $result=ShopActiveExclusive::where('merchant_id',$this->merchant_id)->delete();
+        if($result){
+            return_msg(200,'操作成功');
+        }else{
+            return_msg(400,'操作失败');
+        }
     }
 
     /**
@@ -670,8 +693,9 @@ class Member extends Common
      */
     public function wx_member_card()
     {
+        echo $this->merchant_id;
         //获取用户appid
-        $openid=request()->param('open_id');
+        $openid = request()->param('open_id');
         $openid=1;
         //取出会员信息
         $data['list']=MerchantMember::field('id,merchant_id,shop_id,money,member_phone')->where('openid',$openid)->select();
@@ -722,7 +746,7 @@ class Member extends Common
     {
         //获取充值记录id
         $id = $request->param('id');
-        $data=MemberRecharge::alias('a')
+        $data = MemberRecharge::alias('a')
             ->field('a.amount,a.order_money,a.discount_amount,a.recharge_time,a.order_no,b.shop_name')
             ->join('cloud_merchant_shop b','a.shop_id=b.id','left')
             ->where('a.id',$id)

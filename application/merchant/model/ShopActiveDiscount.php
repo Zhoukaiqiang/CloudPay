@@ -15,4 +15,17 @@ class ShopActiveDiscount extends Model
         return date("Y-m-d H:i:s", $v);
     }
 
+    public function getApplyNameAttr($v) {
+        switch($v){
+            case 0:
+                return "全部";
+                break;
+            case 1:
+                return "会员";
+                break;
+            case 0:
+                return "非会员";
+                break;
+        }
+    }
 }

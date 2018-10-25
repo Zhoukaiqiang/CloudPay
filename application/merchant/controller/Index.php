@@ -173,6 +173,56 @@ class Index extends Commonality
     }
 
     /**
+     * PC端---图表
+     * @param Request $request
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+
+    public function pc_diagram(Request $request)
+    {
+        if ($request->get()) {
+            $shop_id =  $request->param("shop_id");
+
+            if(isset($shop_id)) {
+                $shop_flag = "eq";
+            }else {
+                $shop_flag = "<>";
+                $shop_id = -2;
+            }
+
+            $i = -7;
+            /** 默认展示7天数据 */
+            while($i < 0) {
+                $morning = strtotime(date('Y-m-d 00:00:00', strtotime($i .' days')));
+                $night = strtotime(date('Y-m-d 23:59:59', strtotime($i .' days')));
+                $date = [$morning, $night];
+
+                $data['chartData'][] = Order::where("merchant_id", $this->merchant_id)
+                    ->where(["shop_id" => [$shop_flag, $shop_id]])
+                    ->whereTime('pay_time', "between", $date)
+                    ->field("sum(received_money) received_money, count(id) num")
+                    ->find();
+                $i++;
+            }
+
+            check_data(collection($data["chartData"])->toArray(), '',false);
+            foreach($data["chartData"] as $k => $v) {
+
+                $filted_data[] = [
+                    "amount" => $v["received_money"],
+                    "count"    => $v["num"],
+                    "average" =>  (int)$v["num"] ? (int)$v["received_money"] / (int)$v["num"] : 0,
+                    "pay_time" => date('Y-m-d', strtotime($i + $k . ' days')),
+                ];
+            }
+
+            check_data($filted_data);
+        }
+    }
+
+    /**
      * PC端首页数据-- 今日交易数据
      * @param Request $request
      * @throws \think\db\exception\DataNotFoundException
@@ -267,7 +317,61 @@ class Index extends Commonality
         $data[ "pages" ] = $pages;
         $data[ "pages" ][ "rows" ] = $rows;
 
-        check_data($data[ "list" ], $data, 1);
+
+        check_data($data["list"], $data, 1);
+    }
+
+
+    /**
+     * 微信首页数据
+     * @param $where
+     * @param $where_join
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function wx_merchant_index()
+    {
+        //交易额
+        $data['total_amount'] = Order::where('status',1)->whereTime('pay_time','today')->sum('received_money');
+
+        //交易笔数
+        $data['count'] = Order::where('status',1)->whereTime('pay_time','today')->count();
+
+        //支付宝交易
+        $data['alipay'] = Order::where(['status'=>1,'pay_type'=>'alipay'])->whereTime('pay_time','today')->sum('received_money');
+
+        //支付宝交易笔数
+        $data['alipay_number']=Order::where(['status'=>1,'pay_type'=>'alipay'])->whereTime('pay_time','today')->count();
+
+        //微信交易
+        $data['wxpay']=Order::where(['status'=>1,'pay_type'=>'wxpay'])->whereTime('pay_time','today')->sum('received_money');
+
+        //微信交易笔数
+        $data['wxpay_number']=Order::where(['status'=>1,'pay_type'=>'wxpay'])->whereTime('pay_time','today')->count();
+
+        //银联交易
+        $data['etc']=Order::where(['status'=>1,'pay_type'=>'etc'])->whereTime('pay_time','today')->sum('received_money');
+
+        //银联交易笔数
+        $data['etc_number']=Order::where(['status'=>1,'pay_type'=>'etc'])->whereTime('pay_time','today')->count();
+
+        //昨日活跃商户
+        $data['active_merchant']=Order::where(['merchant_id'=>['>',0],'status'=>1])->whereTime('pay_time','>','yesterday')->count();
+
+        //昨日新增商户
+        $data['new_merchant']=TotalMerchant::where('review_status',2)->whereTime('opening_time','>','yesterday')->count();
+
+        //营业中商户
+        $data['open_merchant']=TotalMerchant::where('review_status',2)->count();
+
+        //总商户
+        $data['total_merchant']=TotalMerchant::count();
+
+        //审核中商户
+        $data['review_merchant']=TotalMerchant::where(['review_status'=>['<',2]])->count();
+
+        check_data($data);
     }
 
 

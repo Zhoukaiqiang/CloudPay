@@ -289,38 +289,42 @@ function is_user_can($id)
 }
 
 if (!function_exists('sign_ature')) {
-    function sign_ature($flag, Array $arr, $key =null)
+    function sign_ature($flag, Array $arr, $key = null)
     {
         $key = $key ? $key : KEY;
+
 //        $arr=array_change_key_case($arr);
+
         ksort($arr);
         if ($flag == 0000) {
             $data = [
                 //客户主扫
                 //查询
-                "qryNo",'payChannel','authCode','total_amount','amount','trmNo','tradeNo','txnTime','signType','opSys','characterSet','serviceId', 'version', 'incom_type', 'stl_typ', 'stl_sign', 'stl_oac', 'bnk_acnm', 'wc_lbnk_no', 'bus_lic_no', 'bse_lice_nm', 'crp_nm', 'mercAdds', 'bus_exp_dt', 'crp_id_no', 'crp_exp_dt', 'stoe_nm', 'stoe_cnt_nm', 'stoe_cnt_tel', 'mcc_cd', 'stoe_area_cod', 'stoe_adds', 'trm_rec', 'mailbox', 'alipay_flg', 'yhkpay_flg' , 'mercId', 'orgNo', 'imgTyp', 'imgNm', 'log_no', 'stoe_id', 'lbnk_nm'];
-            $stra = '';
+                "qryNo",
+                'payChannel','authCode','total_amount','amount','trmNo','tradeNo','txnTime','signType','opSys','characterSet','serviceId', 'version', 'incom_type', 'stl_typ', 'stl_sign', 'stl_oac', 'bnk_acnm', 'wc_lbnk_no', 'bus_lic_no', 'bse_lice_nm', 'crp_nm', 'mercAdds', 'bus_exp_dt', 'crp_id_no', 'crp_exp_dt', 'stoe_nm', 'stoe_cnt_nm', 'stoe_cnt_tel', 'mcc_cd', 'stoe_area_cod', 'stoe_adds', 'trm_rec', 'mailbox', 'alipay_flg', 'yhkpay_flg' , 'mercId', 'orgNo', 'imgTyp', 'imgNm', 'log_no', 'stoe_id', 'lbnk_nm'];
+            $str = '';
 
             foreach ($arr as $k => $v) {
                 if (in_array($k, $data)) {
-//                    echo $k."<br/>";
-                    $stra .= $v;
+
+                    $str .= $v;
                 }
             }
 
         } elseif ($flag == 1111) {
             $data = ['result','logNo','tradeNo','sysTime','message','returnCode','check_flag', 'msg_cd', 'msg_dat', 'mercId', 'log_no', 'stoe_id', 'mobile', 'sign_stats', 'deliv_stats'];
-            $stra = '';
+            $str = '';
             foreach ($arr as $key1 => $val) {
                 if (in_array($key1, $data)) {
-                    $stra .= $val;
+                    $str .= $val;
                 }
             }
 
 
         }
 
-        return md5($stra.$key);
+
+        return md5($str . $key);
     }
 }
 
@@ -348,26 +352,6 @@ if (!function_exists('upload_logo')) {
     }
 }
 
-//                if (!function_exists('upload_logo')) {
-//                    function upload_pics($files)
-//                    {
-//                        $goods_pics = [];
-//                        foreach ($files as $file) {
-//                            $info = $file->validate(['size' => 500 * 1024 * 1024, 'ext' => 'jpg,jpeg,gif,png'])->move(ROOT_PATH . 'public' . DS . 'uploads');
-//                            if ($info) {
-//                                //图片上传成功
-//                                $goods_logo = DS . 'uploads' . DS . $info->getSaveName();
-//                                $goods_logo = str_replace('\\', '/', $goods_logo);
-//                                $goods_pics[] = $goods_logo;
-//                            } else {
-//                                $error = $info->getError();
-//                                return_msg(400, $error);
-//
-//                            }
-//                        }
-//                        return $goods_pics;
-//                    }
-//                }
 if (!function_exists('upload_pics_pay')) {
     function upload_pics_pay($files)
     {
@@ -391,43 +375,43 @@ if (!function_exists('upload_pics_pay')) {
 
 //图片上传
 
-if (!function_exists('upload_picspay')) {
-    function upload_picspay($file)
-    {
-        //移动图片
-        $info = $file->move(ROOT_PATH . 'public' . DS . 'uploads');
-
-        if ($info) {
-            //文件上传成功,生成缩略图
-            //获取文件路径
-            $goods_logo = DS . 'uploads' . DS . $info->getSaveName();
-            $goods_logo = str_replace('\\', '/', $goods_logo);
-            return $goods_logo;
-        } else {
-            $error = $file->getError();
-            $this->error($error);
-        }
-    }
-}
-
-if (!function_exists('upload_pics')) {
-    function upload_pics($file)
-    {
-        //移动图片
-        $info = $file->validate(['size' => 5 * 1024 * 1024, 'ext' => 'jpg,png,gif,jpeg'])->move(ROOT_PATH . 'public' . DS . 'uploads');
-
-        if ($info) {
-            //文件上传成功,生成缩略图
-            //获取文件路径
-            $goods_logo = DS . 'uploads' . DS . $info->getSaveName();
-            $goods_logo = str_replace('\\', '/', $goods_logo);
-            return $goods_logo;
-        } else {
-            $error = $file->getError();
-            $this->error($error);
-        }
-    }
-}
+//if (!function_exists('upload_picspay')) {
+//    function upload_picspay($file)
+//    {
+//        //移动图片
+//        $info = $file->move(ROOT_PATH . 'public' . DS . 'uploads');
+//
+//        if ($info) {
+//            //文件上传成功,生成缩略图
+//            //获取文件路径
+//            $goods_logo = DS . 'uploads' . DS . $info->getSaveName();
+//            $goods_logo = str_replace('\\', '/', $goods_logo);
+//            return $goods_logo;
+//        } else {
+//            $error = $file->getError();
+//            $this->error($error);
+//        }
+//    }
+//}
+//
+//if (!function_exists('upload_pics')) {
+//    function upload_pics($file)
+//    {
+//        //移动图片
+//        $info = $file->validate(['size' => 5 * 1024 * 1024, 'ext' => 'jpg,png,gif,jpeg'])->move(ROOT_PATH . 'public' . DS . 'uploads');
+//
+//        if ($info) {
+//            //文件上传成功,生成缩略图
+//            //获取文件路径
+//            $goods_logo = DS . 'uploads' . DS . $info->getSaveName();
+//            $goods_logo = str_replace('\\', '/', $goods_logo);
+//            return $goods_logo;
+//        } else {
+//            $error = $file->getError();
+//            $this->error($error);
+//        }
+//    }
+//}
 
 
 if (!function_exists("check_time")) {

@@ -230,7 +230,7 @@ class Active extends Common
             return_msg(400,'请先关闭活动');
         }
         $data=$request->post();
-        $data['status']=1;//测试
+        $data['status']=1;
         $data['create_time']=time();
         $data['consump_number']=$request->post('consump_number') ? $request->post('consump_number') : -1;
         $data['last_consump']=$request->post('last_consump') ? $request->post('last_consump') : -1;
@@ -661,7 +661,9 @@ class Active extends Common
             ->join($where)
             ->where('a.merchant_id',$this->merchant_id)
             ->count();
+
         $pages=page($row);
+
         $data['list']=MemberExclusive::alias('a')
             ->field('a.id,a.cancel_time,a.order_number,a.status,b.member_phone,c.name user_name,d.name active_name,d.coupons_money,d.order_money,d.consump_number,d.last_consump,d.recharge_total,d.consump_total,d.register_status')
             ->join($where)
@@ -683,11 +685,14 @@ class Active extends Common
         $row=ShopActiveExclusive::
             where('merchant_id',$this->merchant_id)
             ->count();
+
         $pages=page($row);
+
         $data['list']=ShopActiveExclusive::field('create_time,coupons_title,coupons_money,order_money,consump_number,last_consump,recharge_total,consump_total,register_status')
             ->where('merchant_id',$this->merchant_id)
             ->limit($pages['offset'],$pages['limit'])
             ->select();
+        $data['page']=$pages;
         check_data($data);
     }
 
