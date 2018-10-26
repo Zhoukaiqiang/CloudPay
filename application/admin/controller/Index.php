@@ -681,7 +681,7 @@ class Index extends Admin
     }
 
     /**
-     * 接收星POS给的消息
+     * 接收星POS的推送消息
      * @param null $param
      */
     public function callback($param = null)
