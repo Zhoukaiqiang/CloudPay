@@ -56,24 +56,33 @@ class Receipt extends Common
             //取出商户信息
             $data=MerchantIncom::field('mercId,rec,key')->where('merchant_id',$this->merchant_id)->find();
 //            echo $data['key'];die;
-            $msg=[
-                'orderNo'=>$order['order_no']
-            ];
+            if(isset($param['txnAmt'])){
+
+                $msg=[
+                    'orderNo'=>$order['order_no'],
+                    'txnAmt'=>$param['txnAmt']
+                ];
+            }else{
+                $msg=[
+                    'orderNo'=>$order['order_no']
+                ];
+            }
             $res=request_head($data,$msg);
-//            halt($arr);
+//            halt($res);
             //发给新大陆
             $result = curl_request($this->url, true, $res, true);
-
             $result = urldecode($result);
-
-            if($result['result']=='S'){
-                //修改状态
-                Order::where('id',$param['id'])->update(['status'=>2]);
-                return_msg(200,'退款中');
-            }else{
-                Order::where('id',$param['id'])->update(['status'=>4]);
-                return_msg(400,'退款失败');
-            }
+            $result=json_decode($result,true);
+//            halt($result);
+            //生成签名
+                if($result['result']=='S'){
+                    //修改状态
+                    Order::where('id',$param['id'])->update(['status'=>2]);
+                    return_msg(200,'退款中');
+                }else{
+                    Order::where('id',$param['id'])->update(['status'=>4]);
+                    return_msg(400,'退款失败');
+                }
         }elseif(empty($this->merchant_id) && !empty($this->user_id)){
             //取出用户手机和密码
             $data = MerchantUser::field('phone,password,merchant_id')->where('id',$this->user_id)->find();
@@ -88,22 +97,33 @@ class Receipt extends Common
 
             //取出商户信息
             $data=MerchantIncom::field('mercId,rec,key')->where('merchant_id',$data['merchant_id'])->find();
-            $msg=[
-                'orderNo'=>$order['order_no']
-            ];
+
+            if(isset($param['txnAmt'])){
+                $msg=[
+                    'orderNo'=>$order['order_no'],
+                    'txnAmt'=>$param['txnAmt']
+                ];
+            }else{
+                $msg=[
+                    'orderNo'=>$order['order_no']
+                ];
+            }
             $res=request_head($data,$msg);
 //            halt($arr);
             //发给新大陆
             $result = curl_request($this->url, true, $res, true);
-
             $result = urldecode($result);
-
-            if($result['result']=='S'){
-                //修改状态
-                Order::where('id',$param['id'])->update(['status'=>2]);
-                return_msg(200,'退款中');
+            $result=json_decode($result,true);
+            if(isset($result['result'])){
+                if($result['result']=='S'){
+                    //修改状态
+                    Order::where('id',$param['id'])->update(['status'=>2]);
+                    return_msg(200,'退款中');
+                }else{
+                    Order::where('id',$param['id'])->update(['status'=>4]);
+                    return_msg(400,'退款失败');
+                }
             }else{
-                Order::where('id',$param['id'])->update(['status'=>4]);
                 return_msg(400,'退款失败');
             }
         }
@@ -150,14 +170,13 @@ class Receipt extends Common
      */
     public function filter(Request $request)
     {
-
         $data['today']=$request->param('today') ? $request->param('today') : null;
         $data['week']=$request->param('week') ? $request->param('week') : null;
         $data['shop_id']=$request->param('shop_id') ? $request->param('shop_id') : null;
         $data['status']=$request->param('status');
-        $data['start_time']=$request->param('start_time') ? $request->param('start_time') : null;
+        $data['start_time']=$request->param('start_time') ? strtotime($request->param('start_time')) : null;
         if(!empty($data['start_time'])){
-            $data['end_time']=$request->param('end_time') ? $request->param('end_time') : '';
+            $data['end_time']=$request->param('end_time') ? strtotime($request->param('end_time')) : '';
             if(empty($data['end_time'])){
                 return_msg(400,'请选择结束时间');
             }
@@ -210,21 +229,23 @@ class Receipt extends Common
      */
     public function query($data,$time,$param=">")
     {
-        if(!empty($data['shop_id']) && empty($data['status'])){
+        if(!empty($data['shop_id']) && $data['status']===""){
+
             //显示当前门店下所有账单
             $data=Order::field('id,status,order_money,pay_type,create_time')
                 ->where('shop_id',$data['shop_id'])
                 ->whereTime('create_time',$param,$time)
                 ->select();
             check_data($data);
-        }elseif(!empty($data['shop_id']) && !empty($data['status'])){
+        }elseif(!empty($data['shop_id']) && $data['status']!==""){
             //取出当前门店下所有状态
             $data=Order::field('id,status,order_money,pay_type,create_time')
                 ->where(['shop_id'=>$data['shop_id'],'status'=>$data['status']])
                 ->whereTime('create_time',$param,$time)
                 ->select();
             check_data($data);
-        }elseif(empty($data['shop_id']) && !empty($data['status'])){
+        }elseif(empty($data['shop_id']) && $data['status']!==""){
+
             //当前商户下所有状态
             $data=Order::field('id,status,order_money,pay_type,create_time')
                 ->where(['merchant_id'=>$this->merchant_id,'status'=>$data['status']])
@@ -251,21 +272,21 @@ class Receipt extends Common
     {
         $data['shop_id']=$request->param('shop_id') ? $request->param('shop_id') : null;
         $data['status']=$request->param('status');
-        if(!empty($data['shop_id']) && empty($data['status'])){
+        if(!empty($data['shop_id']) && $data['status']===""){
             //显示当前门店下所有账单
             $data=Order::field('id,status,order_money,pay_type,create_time')
                 ->where('shop_id',$data['shop_id'])
                 ->order('create_time desc')
                 ->select();
             check_data($data);
-        }elseif(!empty($data['shop_id']) && !empty($data['status'])){
+        }elseif(!empty($data['shop_id']) && $data['status']!==""){
             //取出当前门店下所有状态
             $data=Order::field('id,status,order_money,pay_type,create_time')
                 ->where(['shop_id'=>$data['shop_id'],'status'=>$data['status']])
                 ->order('create_time desc')
                 ->select();
             check_data($data);
-        }elseif(empty($data['shop_id']) && !empty($data['status'])){
+        }elseif(empty($data['shop_id']) && $data['status']!==""){
             //当前商户下所有状态
             $data=Order::field('id,status,order_money,pay_type,create_time')
                 ->where(['merchant_id'=>$this->merchant_id,'status'=>$data['status']])

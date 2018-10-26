@@ -423,22 +423,33 @@ class Member extends Common
             //取出商户信息
             $data=MerchantIncom::field('mercId,rec,key')->where('merchant_id',$this->merchant_id)->find();
 //            echo $data['key'];die;
-            $msg=[
-                'orderNo'=>$order['order_no']
-            ];
+            if(isset($param['txnAmt'])){
+
+                $msg=[
+                    'orderNo'=>$order['order_no'],
+                    'txnAmt'=>$param['txnAmt']
+                ];
+            }else{
+                $msg=[
+                    'orderNo'=>$order['order_no']
+                ];
+            }
             $res=request_head($data,$msg);
 //            halt($arr);
             //发给新大陆
             $result = curl_request($this->url, true, $res, true);
-
             $result = urldecode($result);
-
-            if($result['result']=='S'){
-                //修改状态
-                Order::where('id',$param['id'])->update(['status'=>2]);
-                return_msg(200,'退款中');
+            $result=json_decode($result,true);
+            if(isset($result['result'])){
+                if($result['result']=='S'){
+                    //修改状态
+                    Order::where('id',$param['id'])->update(['status'=>2]);
+                    return_msg(200,'退款中');
+                }else{
+                    Order::where('id',$param['id'])->update(['status'=>4]);
+                    return_msg(400,'退款失败');
+                }
             }else{
-                Order::where('id',$param['id'])->update(['status'=>4]);
                 return_msg(400,'退款失败');
             }
         }elseif(empty($this->merchant_id) && !empty($this->user_id)){
@@ -456,22 +467,33 @@ class Member extends Common
 
             //取出商户信息
             $data=MerchantIncom::field('mercId,rec,key')->where('merchant_id',$data['merchant_id'])->find();
-            $msg=[
-                'orderNo'=>$order['order_no']
-            ];
+            if(isset($param['txnAmt'])){
+
+                $msg=[
+                    'orderNo'=>$order['order_no'],
+                    'txnAmt'=>$param['txnAmt']
+                ];
+            }else{
+                $msg=[
+                    'orderNo'=>$order['order_no']
+                ];
+            }
             $res=request_head($data,$msg);
 //            halt($arr);
             //发给新大陆
             $result = curl_request($this->url, true, $res, true);
-
             $result = urldecode($result);
-
-            if($result['result']=='S'){
-                //修改状态
-                Order::where('id',$param['id'])->update(['status'=>2]);
-                return_msg(200,'退款中');
+            $result=json_decode($result,true);
+            if(isset($result['result'])){
+                if($result['result']=='S'){
+                    //修改状态
+                    Order::where('id',$param['id'])->update(['status'=>2]);
+                    return_msg(200,'退款中');
+                }else{
+                    Order::where('id',$param['id'])->update(['status'=>4]);
+                    return_msg(400,'退款失败');
+                }
             }else{
-                Order::where('id',$param['id'])->update(['status'=>4]);
                 return_msg(400,'退款失败');
             }
         }
