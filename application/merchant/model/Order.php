@@ -28,15 +28,15 @@ class Order extends Model
 //        }
 //    }
 
-    public function getPayTypeAttr($value)
-    {
-        //
-        $attr_input_type = [
-            'alipay'=>'支付宝',
-            'wxpay'=>'微信',
-            'etc'=>'银联',
-            'cash'=>'现金'
-        ];
-        return $attr_input_type[$value];
-    }
+//    public function getPayTypeAttr($value)
+//    {
+//        //
+//        $attr_input_type = [
+//            'alipay'=>'支付宝',
+//            'wxpay'=>'微信',
+//            'etc'=>'银联',
+//            'cash'=>'现金'
+//        ];
+//        return $attr_input_type[$value];
+//    }
 }

@@ -6,8 +6,10 @@ use app\admin\model\TotalAgent;
 use app\admin\model\TotalMerchant;
 use app\agent\model\Order;
 use app\admin\controller\Admin;
+use app\merchant\model\MemberRecharge;
 use think\Controller;
 use think\Db;
+use think\Exception;
 use think\Request;
 use think\Validate;
 use app\admin\model\TotalMerchant as Merchant;
@@ -24,16 +26,16 @@ class Index extends Admin
     protected $query = [];
 
 
-    /*
+    /**
      *  获取首页统计数据
      *  @param $start_time [int][string] 开始时间 时间戳
      *  @param $end_time  [int]  结束时间 时间戳
      *  @return $data     [json] 筛选后的数据
-     * */
-
+     *  @throws Exception
+     */
     public function index(Request $request)
     {
-        //return view();
+        //mark 日后需计算上会员充值钱数
         $past = $request->param('start_time') ? $request->param('start_time') : "yesterday";
         $present = $request->param('end_time') ? $request->param('end_time') : null;
         //$channel = $request->param('channel') ? $request->param('end_time') : -1;
@@ -46,25 +48,50 @@ class Index extends Admin
 
         /* 获取昨日全部的交易总额 */
         if ($past == "yesterday") {
-            $total = Db::name('order')->whereTime('pay_time', "yesterday")->sum('received_money');
-            $total_num = Db::name('order')->whereTime('pay_time', "yesterday")->count('id');
-            $wxpay = Db::name('order')->whereTime('pay_time', "yesterday")->where(['pay_type' => 'wxpay'])->sum('received_money');
-            $wxpay_num = Db::name('order')->whereTime('pay_time', "yesterday")->where(['pay_type' => 'wxpay'])->count('id');
-            $alipay = Db::name('order')->whereTime('pay_time', "yesterday")->where(['pay_type' => 'alipay',])->sum('received_money');
-            $alipay_num = Db::name('order')->whereTime('pay_time', "yesterday")->where(['pay_type' => 'alipay'])->count('id');
-            $etc = Db::name('order')->whereTime('pay_time', "yesterday")->where(['pay_type' => 'etc'])->sum('received_money');
-            $etc_num = Db::name('order')->whereTime('pay_time', "yesterday")->where(['pay_type' => 'etc'])->count('id');
+            $member = MemberRecharge::whereTime("recharge_time", "yesterday")->field("sum(amount) amount, count(id) id")->select();
+            $member = collection($member)->toArray();
+            $Mea = (int)$member[0]['amount'];
+            $member_wx = MemberRecharge::whereTime("recharge_time", "yesterday")->where("pay_type", "WXPAY")->field("sum(amount) amount, count(id) id")->select();
+            $member_ali = MemberRecharge::whereTime("recharge_time", "yesterday")->where("pay_type", "ALIPAY")->field("sum(amount) amount, count(id) id")->select();
+            $member_wx = collection($member_wx)->toArray();$member_ali = collection($member_ali)->toArray();
+            $meWx = (int)$member_wx[0]['amount'];$meAli = (int)$member_ali[0]["amount"];
+            $total = Db::name('order')->whereTime('pay_time', "yesterday")->sum('received_money') + $Mea;
+            $total_num = Db::name('order')->whereTime('pay_time', "yesterday")->count('id') + $member[0]['id'];
+            $wxpay = Db::name('order')->whereTime('pay_time', "yesterday")->where(['pay_type' => 'wxpay'])->sum('received_money') + $meWx;
+            $wxpay_num = Db::name('order')->whereTime('pay_time', "yesterday")->where(['pay_type' => 'wxpay'])->count('id')  + $member_wx[0]['id'];
+            $alipay = Db::name('order')->whereTime('pay_time', "yesterday")->where(['pay_type' => 'alipay',])->sum('received_money') + $meAli;
+            $alipay_num = Db::name('order')->whereTime('pay_time', "yesterday")->where(['pay_type' => 'alipay'])->count('id')  + $member_ali[0]['id'];
+
+            /** @var [int] 其他类交易 $etc */
+            $mEtc = $Mea - $meWx - $meAli;
+            $mEtc_num = $member[0]["id"] - $member_wx[0]["id"] - $member_ali[0]["id"];
+
+            $etc = Db::name('order')->whereTime('pay_time', "yesterday")->where(['pay_type' => 'etc'])->sum('received_money') + $mEtc;
+            $etc_num = Db::name('order')->whereTime('pay_time', "yesterday")->where(['pay_type' => 'etc'])->count('id') + $mEtc_num;
 
         } else {
             $time_flag = "between";
-            $total = Db::name('order')->whereTime('pay_time', $time_flag, [$past, $present])->sum('received_money');
-            $total_num = Db::name('order')->whereTime('pay_time', $time_flag, [$past, $present])->count('id');
-            $wxpay = Db::name('order')->whereTime('pay_time', $time_flag, [$past, $present])->where(['pay_type' => 'wxpay'])->sum('received_money');
-            $wxpay_num = Db::name('order')->whereTime('pay_time', $time_flag, [$past, $present])->where(['pay_type' => 'wxpay'])->count('id');
-            $alipay = Db::name('order')->whereTime('pay_time', $time_flag, [$past, $present])->where(['pay_type' => 'alipay',])->sum('received_money');
-            $alipay_num = Db::name('order')->whereTime('pay_time', $time_flag, [$past, $present])->where(['pay_type' => 'alipay'])->count('id');
-            $etc = Db::name('order')->whereTime('pay_time', $time_flag, [$past, $present])->where(['pay_type' => 'etc'])->sum('received_money');
-            $etc_num = Db::name('order')->whereTime('pay_time', $time_flag, [$past, $present])->where(['pay_type' => 'etc'])->count('id');
+            $member = MemberRecharge::whereTime("recharge_time", $time_flag, [$past, $present])->field("sum(amount) amount, count(id) id")->select();
+            $member = collection($member)->toArray();
+            $Mea = (int)$member[0]['amount'];
+            $member_wx = MemberRecharge::whereTime("recharge_time", $time_flag, [$past, $present])->where("pay_type", "WXPAY")->field("sum(amount) amount, count(id) id")->select();
+            $member_ali = MemberRecharge::whereTime("recharge_time", $time_flag, [$past, $present])->where("pay_type", "ALIPAY")->field("sum(amount) amount, count(id) id")->select();
+            $member_wx = collection($member_wx)->toArray();$member_ali = collection($member_ali)->toArray();
+            $meWx = (int)$member_wx[0]['amount'];$meAli = (int)$member_ali[0]["amount"];
+
+            $total = Db::name('order')->whereTime('pay_time', $time_flag, [$past, $present])->sum('received_money') + $Mea;;
+            $total_num = Db::name('order')->whereTime('pay_time', $time_flag, [$past, $present])->count('id') + $member[0]['id'];
+            $wxpay = Db::name('order')->whereTime('pay_time', $time_flag, [$past, $present])->where(['pay_type' => 'wxpay'])->sum('received_money') + $meWx;
+            $wxpay_num = Db::name('order')->whereTime('pay_time', $time_flag, [$past, $present])->where(['pay_type' => 'wxpay'])->count('id') + $member_wx[0]['id'];
+            $alipay = Db::name('order')->whereTime('pay_time', $time_flag, [$past, $present])->where(['pay_type' => 'alipay',])->sum('received_money') + $meAli;
+            $alipay_num = Db::name('order')->whereTime('pay_time', $time_flag, [$past, $present])->where(['pay_type' => 'alipay'])->count('id') + $member_ali[0]['id'];
+
+            /** @var [int] 其他类交易 $etc */
+            $mEtc = $Mea - $meWx - $meAli;
+            $mEtc_num = $member[0]["id"] - $member_wx[0]["id"] - $member_ali[0]["id"];
+
+            $etc = Db::name('order')->whereTime('pay_time', $time_flag, [$past, $present])->where(['pay_type' => 'etc'])->sum('received_money') + $mEtc;
+            $etc_num = Db::name('order')->whereTime('pay_time', $time_flag, [$past, $present])->where(['pay_type' => 'etc'])->count('id') + $mEtc_num;
 
         }
 
@@ -112,13 +139,8 @@ class Index extends Admin
         } else {
             $time = json_decode($time);
         }
+        $id = $request->param('id');
 
-
-//        $id = $request->param('id');
-        /** 从session中获取id */
-        $id = session("id");
-
-//        $channel = $request->param('channel');
         /* 检查用户是否有权限查看 */
         $check = is_user_can($id);
 

@@ -67,6 +67,7 @@ class AdminValidate extends Validate{
         //改密码
         "change_pwd" => ["phone", "password", "ini_pwd"],
         //登录
+        "login"     => ["phone", "password"],
         "agent_login"   => ["phone", "password"],
         //找回密码
         "find_pwd"  => ["phone", "code", 'time', 'password'],

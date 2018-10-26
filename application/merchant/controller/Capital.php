@@ -83,8 +83,9 @@ class Capital extends Common
     public function pc_cash_search(Request $request)
     {
         $time = $request->param("time");
+        $status = $request->param("status");
 
-        if (isset($time)) {
+        if (!empty($time)) {
             $time_flag = "between";
             $time = explode(',', $time);
         } else {
@@ -92,10 +93,19 @@ class Capital extends Common
             $time = 0;
         }
 
+        if (!empty($status)) {
+            $status_flag = "eq";
+        } else {
+            $status_flag = ">";
+            $status = -2;
+        }
+
         $where = [
             "merchant_id" => $this->merchant_id,
             "create_time" => [$time_flag, $time],
+            "status" => [$status_flag, $status],
         ];
+
 
         $rows = Db::name("merchant_withdrawal")->where($where)->count("id");
         $pages = page($rows);
@@ -413,6 +423,7 @@ class Capital extends Common
             $rows = MerchantShop::where(["merchant_id" => $this->merchant_id])->count("id");
             $pages = page($rows, 2);
             $res = MerchantShop::where(["merchant_id" => $this->merchant_id])->limit($pages["offset"], $pages["limit"])->select();
+
             check_data($res, $res, 0);
             $shop_ids = [];
             foreach ($res as $v) {
@@ -429,6 +440,7 @@ class Capital extends Common
             $pay_type = ["wxpay", "alipay", "etc", "cash"];
 
 
+
             foreach ($shop_ids as $i) {
 
                 foreach ($pay_type as $type) {
@@ -439,7 +451,7 @@ class Capital extends Common
                         ->where($where)
                         ->where("ms.id", $i)
                         ->where("o.pay_type", $type)
-                        ->whereTime("pay_time", "d")
+                        ->whereTime("pay_time", "today")
                         ->group("o.id")
                         ->count("ms.id");
 
@@ -447,7 +459,8 @@ class Capital extends Common
                         ->join("cloud_order o", "o.shop_id = ms.id", "RIGHT")
                         ->where("ms.id", $i)
                         ->where($where)
-                        ->whereTime("pay_time", "d")
+                        //mark
+//                        ->whereTime("pay_time", "today")
                         ->where("o.pay_type", $type)
                         ->field($field)
 //                        ->group("o.id")

@@ -76,10 +76,7 @@ class Index extends Common
                 $time = strtotime("today");
                 $time_flag = ">=";
             }
-            $Order = new Order();
-
-
-            $result = $Order::where(["merchant_id" => $this->merchant_id])
+            $result = Order::where("merchant_id" , $this->merchant_id)
                 ->whereTime("pay_time", $time_flag, $time)
                 ->select();
 
@@ -107,17 +104,17 @@ class Index extends Common
             ];
 
             /** 退款金额 */
-            $data["count"]['refund_money'] = $Order->where($where)->where("status = 2")->sum("refund_money");
+            $data["count"]['refund_money'] = Order::where($where)->where("status = 2")->sum("refund_money");
             /** 银联，微信，支付宝，现金交易笔数和金额 */
 
-            $data["received"]["union_money"] = $Order->where($where)->where(["pay_type" => "etc"])->sum("received_money");
-            $data["received"]["union_num"] = $Order->where($where)->where(["pay_type" => "etc"])->count("id");
-            $data["received"]["wx_money"] = $Order->where($where)->where(["pay_type" => "wxpay"])->sum("received_money");
-            $data["received"]["wx_num"] = $Order->where($where)->where(["pay_type" => "wxpay"])->count("id");
-            $data["received"]["ali_money"] = $Order->where($where)->where(["pay_type" => "alipay"])->sum("received_money");
-            $data["received"]["ali_num"] = $Order->where($where)->where(["pay_type" => "alipay"])->count("id");
-            $data["received"]["cash_money"] = $Order->where($where)->where(["pay_type" => "cash"])->sum("received_money");
-            $data["received"]["cash_num"] = $Order->where($where)->where(["pay_type" => "cash"])->count("id");
+            $data["received"]["union_money"] = Order::where($where)->where(["pay_type" => "etc"])->sum("received_money");
+            $data["received"]["union_num"] = Order::where($where)->where(["pay_type" => "etc"])->count("id");
+            $data["received"]["wx_money"] = Order::where($where)->where(["pay_type" => "wxpay"])->sum("received_money");
+            $data["received"]["wx_num"] = Order::where($where)->where(["pay_type" => "wxpay"])->count("id");
+            $data["received"]["ali_money"] = Order::where($where)->where(["pay_type" => "alipay"])->sum("received_money");
+            $data["received"]["ali_num"] = Order::where($where)->where(["pay_type" => "alipay"])->count("id");
+            $data["received"]["cash_money"] = Order::where($where)->where(["pay_type" => "cash"])->sum("received_money");
+            $data["received"]["cash_num"] = Order::where($where)->where(["pay_type" => "cash"])->count("id");
 
 
             check_data($data);
@@ -173,7 +170,7 @@ class Index extends Common
         if ($request->get()) {
             $shop_id =  $request->param("shop_id");
 
-            if(isset($shop_id)) {
+            if(!empty($shop_id)) {
                 $shop_flag = "eq";
             }else {
                 $shop_flag = "<>";
