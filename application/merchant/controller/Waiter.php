@@ -61,6 +61,7 @@ class Waiter extends Commonality
 //            return_msg(200,'success',$shop);
             //order_receiving接单状况 1已接单  status 0未支付
             //下单消息 服务消息
+
             $result=Order::alias('a')
                 ->field(['b.name','a.status','a.order_receiving','a.table_name','a.create_time','a.receivi_time'])
                 ->join('cloud_merchant_user b','b.id=a.user_id','left')
@@ -560,7 +561,7 @@ class Waiter extends Commonality
             //非支付状态
             $data=Order::alias('a')
 //                ->field(['sum(b.money*b.deal) money','a.discount','c.istableware','c.tableware_money','a.order_number','a.table_name','a.id','b.create_time','a.order_person','a.meal_number','a.create_time','b.name', 'b.deal','a.status'])
-                ->field(['c.istableware','a.discount','c.tableware_money','a.order_number','a.table_name','a.id','a.meal_number','a.order_money','a.discount','a.received_money','a.create_time','b.name','a.order_person','sum(b.money*b.deal) money','b.deal','a.status'])
+                ->field(['c.id as shop_id,c.istableware','a.discount','c.tableware_money','a.order_number','a.table_name','a.id','a.meal_number','a.order_money','a.discount','a.received_money','a.create_time','b.name','a.order_person','sum(b.money*b.deal) money','b.deal','a.status'])
                 ->join('shop_comestible b','a.id=b.order_id','left')
                 ->join('merchant_shop c','a.shop_id=c.id')
                 ->where(['a.id'=>['=',$order_id]])
@@ -769,46 +770,8 @@ class Waiter extends Commonality
 
     }
 
-    /**
-     * 去下单
-     * @param Request $request
-     * @return string
-     */
-    public function place_order(Request $request)
-    {
-        $data=$request->post();
-        //istableware餐具是否收费 1收取餐具费 0不收取
-        $number=MerchantShop::where('id',$data['shop_id'])->field('istableware,tableware_money')->find();
-
-        //订单总金额
-        $count_money=0;
-        foreach ($data as $k=>$v){
-            $count_money+=$v['money'];
-
-        }
-        $data['count_money']=$count_money;
-
-        return json_encode($data);
-    }
-
-    /**
-     * 确定订单
-     * @param Request $request
-     */
-    public function confirm_order(Request $request)
-    {
-        $data=$request->post();
-        //订单号
-//        $code = $this->unique_rand(100000000000000000, 999999999999999999, 1);
-        list($usec, $sec) = explode(" ", microtime());
-        $times=str_replace('.','',$usec + $sec);
-        $timese=date('YmdHis',time());
-        $code=$timese.$times;
-        $order=['order_money'=>$data['order_money'],'received_money'=>$data['received_money'],'table_name'=>$data['table_name'],'order_remark'=>$data['order_remark'],'shop_id'=>$data['shop_id'],'merchant_id'=>$data['merchant_id'],'order_number'=>$code];
-        $order_id=Order::insertGetId($order,true);
 
 
-    }
 
     /**
      * 服务员端首页

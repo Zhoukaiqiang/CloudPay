@@ -20,6 +20,8 @@ use think\Request;
 
 class Proceeds extends Scancode
 {
+
+
     /**
      * 现金支付
      * @param Request $request
@@ -36,7 +38,7 @@ class Proceeds extends Scancode
 
 
         $resu=Db::name('total_merchant')->where('id',$id)
-            ->setInc('cash_money',$money);
+        ->update(['pay_type'=>'cssh','cssh_money'=>['Inc',$money]]);
 
 
 
@@ -109,19 +111,37 @@ class Proceeds extends Scancode
      * payChannel  1  支付渠道  支付宝 ALIPAY  微信 WXPAY   银联 YLPAY
      * tradeNo   商户单号  在商户端不重复    ??????
      */
-    public function shop_Lordesau(Request $request)
+    public function shop_lordesau(Request $request)
     {
         $data=$request->post();
-        //oprId  操作员号暂时没有
-//        $data['payChannel']="WXPAY";
-//        $data['payChannel']=
+        //如果是商户收款
+        if($this->role==-1){
+            $shop=MerchantShop::where('merchant_id',$this->id)->field('id')->find();
+            $data['shop_id']=$shop->id;
+        }
+        //支付渠道
+        $data['payChannel']=$this->isplay($data['authCode']);
         //公共参数
-//
        $data= $this->publics($data);
-       //调用接口
-//        return json_encode($data);
+       //调用星_pos接口
        return $this->lord_esau($data);
 
+    }
+
+    /**
+     * 支付渠道
+     * @param $data
+     */
+    public  function isplay($authCode)
+    {
+        $wxpay=[10,11,12,13,14,15];
+        $zfbpay=[25,26,27,28,29,30];
+        //判断微信支付 支付宝
+        if(in_array(substr($authCode,0,2),$wxpay)){
+            return "WXPAY";
+        }elseif(in_array(substr($authCode,0,2),$zfbpay)){
+            return "ALIPAY";
+        }
     }
 
     /**

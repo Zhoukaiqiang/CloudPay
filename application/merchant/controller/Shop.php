@@ -397,9 +397,9 @@ class Shop extends Commonality
         if ($request->isPost()) {
             $param = $request->param();
             /** 身份为商户 */
-            $param['merchant_id'] = Session::get("merchant_id", "merchant");
+            $param['merchant_id'] = $this->id;
             /** 身份为员工 */
-            $param['user_id'] = Session::get("user_id", "merchant");
+//            $param['user_id'] = Session::get("user_id", "merchant");
             $rows = MerchantShop::where([
                 "merchant_id" => ["eq", $param['merchant_id']],
                 "shop_name" => ["LIKE", $param["keywords"] . "%"]
@@ -410,7 +410,7 @@ class Shop extends Commonality
                 "shop_name" => ["LIKE", $param["keywords"] . "%"]
             ])
                 ->limit($pages['offset'], $pages['limit'])
-                ->field("shop_name,stoe_adds")
+                ->field("id,shop_name,stoe_adds")
                 ->select();
 
             $res['pages']['rows'] = $rows;
@@ -419,6 +419,7 @@ class Shop extends Commonality
                 return_msg(400, "没有数据");
             }
             return (json_encode($res));
+
 
         }
     }
@@ -439,7 +440,8 @@ class Shop extends Commonality
                 'id', "shop_name", "stoe_adds", "stoe_cnt_tel", "imgFile"
             ])->find();
             if (count($res->toArray()) > 0) {
-                return_msg(200, "success", $res->toArray());
+                $res['imgFile']=json_decode($res['imgFile']);
+                return_msg(200, "success", $res);
             }
             //mark  没有门店评价表
         }
@@ -523,13 +525,20 @@ class Shop extends Commonality
     public function pc_myShop()
     {
         $merchant_id=$this->id;
+        $rows=MerchantShop::where('merchant_id',$merchant_id)->field('id')->count('id');
+        $pages = page($rows);
+        $res['list']=MerchantShop::where('merchant_id',$merchant_id)
+        ->limit($pages['offset'], $pages['limit'])
+        ->field('shop_name,stoe_cnt_nm,id,stoe_adds,stoe_cnt_tel')
+        ->select();
 
-        $data=MerchantShop::where('merchant_id',2)->field('shop_name,id,stoe_adds,stoe_cnt_tel')->select();
-        if($data){
-            return_msg(200,'success',$data);
+        $res['pages']['rows'] = $rows;
+        $res['pages'] = $pages;
+        if(count($res['list']) < 1){
 
-        }else{
             return_msg(400,'error','此商户没有添加门店');
+        }else{
+            return_msg(200,'success',$res);
         }
     }
 
@@ -548,15 +557,26 @@ class Shop extends Commonality
         //门店名称
         $shop_name=$request->param('shop_name') ? $request->param('shop_name') : '0';
         $shopsymbol=$shop_name ? 'like' : '<>';
+
         //付款顺序   1先上菜后付款   2先付款后上菜
         $paymentorder=$request->param('paymentorder') ? $request->param('paymentorder') : 0;
         $paysymbol=$paymentorder ? '=' : '<>';
+        $rows=MerchantShop::where(['merchant_id'=>$merchant_id,'shop_name'=>[$shopsymbol,"$shop_name%"],'paymentorder'=>[$paysymbol,$paymentorder]])
+            ->field('id')->count('id');
+        $pages = page($rows);
+        $res['list']=MerchantShop::where(['merchant_id'=>$merchant_id,'shop_name'=>[$shopsymbol,"$shop_name%"],'paymentorder'=>[$paysymbol,$paymentorder]])
+            ->limit($pages['offset'], $pages['limit'])
+            ->field('shop_name,stoe_cnt_nm,id,stoe_adds,stoe_cnt_tel')
+            ->select();
 
-        $data=MerchantShop::where(['merchant_id'=>$merchant_id,'shop_name'=>[$shopsymbol,$shop_name],'paymentorder'=>[$paysymbol,$paymentorder]])
-        ->field('shop_name,id,stoe_adds,stoe_cnt_tel')->select();
-//        var_dump($data);die;
+        $res['pages']['rows'] = $rows;
+        $res['pages'] = $pages;
+        if(count($res['list']) < 1){
+            return_msg(400,'error','没有满足条件的门店');
+        }else{
+            return_msg(200,'success',$res) ;
+        }
 
-        return $data ? return_msg(200,'success',$data) : return_msg(400,'error','没有满足条件的门店');
 
     }
 

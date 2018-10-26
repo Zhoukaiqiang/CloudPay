@@ -27,7 +27,7 @@ class Agent extends Admin
             $pages = page($rows);
             //取出数据表中的数据
             $data['data'] = TotalAgent::alias('a')
-                ->field('a.id,a.agent_name,a.contact_person,a.agent_mode,a.agent_area,a.create_time,a.contract_time,a.status,b.name')
+                ->field('a.id,a.agent_name,a.agent_phone,a.contact_person,a.agent_mode,a.agent_area,a.create_time,a.contract_time,a.status,b.name')
                 ->join('cloud_total_admin b', 'a.admin_id=b.id', 'left')
                 ->limit($pages['offset'], $pages['limit'])
                 ->select();
@@ -40,7 +40,7 @@ class Agent extends Admin
             $pages = page($rows);
 
             $data['data'] = TotalAgent::alias('a')
-                ->field('a.id,a.agent_name,a.contact_person,a.agent_mode,a.agent_area,a.create_time,a.contract_time,a.status,b.name')
+                ->field('a.id,a.agent_name,a.agent_phone,a.contact_person,a.agent_mode,a.agent_area,a.create_time,a.contract_time,a.status,b.name')
                 ->join('cloud_total_admin b', 'a.admin_id=b.id', 'left')
                 ->where('a.admin_id',$this->admin_id)
                 ->limit($pages['offset'], $pages['limit'])

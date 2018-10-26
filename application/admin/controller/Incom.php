@@ -382,7 +382,16 @@ class Incom extends Controller
         if($result['msg_cd']=='000000') {
 
             if ($signValue == $result[ 'signValue' ]) {
-                if (isset($result[ 'check_flag' ])) {
+                if ($result[ 'check_flag' ]==3) {
+                    //修改数据表状态
+                    $res = MerchantIncom::where('merchant_id', $merchant_id)->update(['check_flag' => $result[ 'check_flag' ]]);
+
+                    if ($res) {
+                        return_msg(200, 'success');
+                    } else {
+                        return_msg(400, 'error');
+                    }
+                }elseif($result['check_flag']==1){
                     //修改数据表状态
                     $res = MerchantIncom::where('merchant_id', $merchant_id)->update(['check_flag' => $result[ 'check_flag' ],
                         'key' => $result[ "key" ],
@@ -553,9 +562,9 @@ class Incom extends Controller
     {
         $del = $request->post();
 
-        $del[ 'serviceId' ] = 6060604;
+        $del[ 'serviceId' ] = "6060604";
         $del[ 'version' ] = 'V1.0.1';
-        $data = Db::name('merchant_incom')->where('merchant_id', $del[ 'merchant_id' ])->field('log_no,mercId,stoe_id,mcc_cd,status')->select();
+        $data = Db::name('merchant_incom')->where('merchant_id', $del[ 'merchant_id' ])->field('log_no,mercId,stoe_id,mcc_cd,status,orgNo')->select();
         //查看商户是否是完成状态
         if ($data[0]['status']!=1) {
             $aa = [];
