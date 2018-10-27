@@ -34,11 +34,13 @@ class Wechat extends Controller
      * @throws \think\db\exception\ModelNotFoundException
      * @throws \think\exception\DbException
      */
-    public function getCode()
+    public function getOpenId()
     {
-        $url = "https://open.weixin.qq.com/connect/oauth2/authorize?appid=" . $this->appid . "&redirect_uri=" . urlencode($this->redirect_uri) . "&response_type=code&scope=snsapi_userinfo&state=202&#wechat_redirect";
+        $code = "https://open.weixin.qq.com/connect/oauth2/authorize?appid=" . $this->appid . "&redirect_uri=" . urlencode($this->redirect_uri) . "&response_type=code&scope=snsapi_base&state=202&#wechat_redirect";
 
-        return $url;
+        $openid = "https://api.weixin.qq.com/sns/oauth2/access_token?appid=APPID&secret=SECRET&code=CODE&grant_type=authorization_code";
+        $res = curl_request($code, true, '',true);
+
     }
 
     /**
@@ -140,26 +142,34 @@ class Wechat extends Controller
 
     }
 
-    public function go_wxpay($param = null)
+    /**
+     * 调用星pos微信支付接口
+     * @param null $param
+     */
+    protected function go_wxpay($param = null)
     {
         $request = \request();
-        unset($param["signType"]);unset($param["signValue"]);
+        unset($param["signType"]);
+        unset($param["signValue"]);
         $param["amount"] = (string)$request->param("amount");  //金额
         $param["total_amount"] = (string)$request->param("total_amount");  //总金额
         $param["signValue"] = sign_ature(0000, $param);
 
-        $param["appid"] = 'wx5b32bce922c2ac7c';
-        $param["code"] = "071y1xQS0MqSbY1jmBNS02PuQS0y1xQe";  //授权码 未使用的话，5分钟后过期
+        $param["appid"] = 'wx1aeeaac161a210df';
+        $param["code"] = " 0214uhOn0cBFSr1blsOn09XzOn04uhOt";  //授权码 未使用的话，5分钟后过期
 
         $url = "http://gateway.starpos.com.cn/adpweb/ehpspos3/pubSigPay.json";
 
+//        halt($param);
         $res = curl_request($url, true, $param, true);
 
         $res = json_decode(urldecode($res), true);
 
+
             /** 如果查询成功请求公众号支付否则返回错误信息 */
         if ($res["returnCode"] == "000000") {
 
+            /** [array] 成功存入数据库 $data */
             $data = [
                 "order_no" => $res["orderNo"],
                 "order_number" => $res["LogNo"],

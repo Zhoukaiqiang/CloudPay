@@ -69,10 +69,13 @@ class Login extends Controller
             check_params("merchant_login", $data);
 
             $this->check_exist($data['phone'], 'phone', 1);
-            $db_res = MerchantUser::where("phone", $data['phone'])->field("id,name,phone,role,password")->find();
+            $db_res = MerchantUser::where("phone", $data['phone'])->field("shop_id,id,name,phone,role,password")->find();
 
             if (!$db_res) {
-                $db_res = TotalMerchant::where("phone", $data['phone'])->field("id,name,phone,password,status")->find();
+                $db_res = TotalMerchant::alias("merc")->where("merc.phone", $data['phone'])
+                    ->join("cloud_merchant_shop ms" ,"ms.merchant_id = merc.id")
+                    ->field("merc.id, merc.name, merc.phone, merc.password, merc.status, ms.id as shop_id")
+                    ->find();
             }
 
             $res = $db_res->toArray();

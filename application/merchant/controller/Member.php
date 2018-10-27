@@ -2,6 +2,7 @@
 
 namespace app\merchant\controller;
 
+use app\admin\model\MerchantIncom;
 use app\merchant\model\MemberRecharge;
 use app\merchant\model\MerchantMember;
 use app\merchant\model\MerchantMemberCard;
@@ -13,6 +14,7 @@ use app\merchant\model\ShopActiveDiscount;
 use app\merchant\model\ShopActiveExclusive;
 use app\merchant\model\ShopActiveRecharge;
 use app\merchant\model\ShopActiveShare;
+use app\merchant\model\TotalMerchant;
 use think\Controller;
 use think\Request;
 
@@ -208,7 +210,7 @@ class Member extends Common
                     'amount'=>$data['amount'],
                     'recharge_time'=>time(),
                     'pay_type'=>'PAY',
-                    'order_no'=>generate_order_no($data['id']),
+                    'order_number'=>generate_order_no($data['id']),
                     'merchant_id'=>$merchant['merchant_id'],
                     'discount_amount'=>$data['discount_amount'],
                     'shop_id'=>$shop['shop_id'],
@@ -397,13 +399,106 @@ class Member extends Common
         }
     }
 
+
     /**
-     * 退款
+     * 会员退款
      *
-     * @param  int  $id
      * @return \think\Response
      */
+    public function refund(Request $request)
+    {
+        //获取订单id和密码
+        $param=$request->param();
+        if(!empty($this->merchant_id)){
+            //取出商户手机和密码
+            $data=TotalMerchant::field('phone,password')->where('id',$this->merchant_id)->find();
+            //判断输入密码是否正确
+            $param['password']=encrypt_password($param['password'],$data['phone']);
+            if($param['password']!=$data['password']){
+                return_msg(400,'密码不正确');
+            }
+            //取出支付渠道订单号
+            $order = MemberRecharge::field('order_no')->where('id',$param['id'])->find();
 
+            //取出商户信息
+            $data=MerchantIncom::field('mercId,rec,key')->where('merchant_id',$this->merchant_id)->find();
+//            echo $data['key'];die;
+            if(isset($param['txnAmt'])){
+
+                $msg=[
+                    'orderNo'=>$order['order_no'],
+                    'txnAmt'=>$param['txnAmt']
+                ];
+            }else{
+                $msg=[
+                    'orderNo'=>$order['order_no']
+                ];
+            }
+            $res=request_head($data,$msg);
+//            halt($arr);
+            //发给新大陆
+            $result = curl_request($this->url, true, $res, true);
+            $result = urldecode($result);
+            $result=json_decode($result,true);
+            if(isset($result['result'])){
+                if($result['result']=='S'){
+                    //修改状态
+                    Order::where('id',$param['id'])->update(['status'=>2]);
+                    return_msg(200,'退款中');
+                }else{
+                    Order::where('id',$param['id'])->update(['status'=>4]);
+                    return_msg(400,'退款失败');
+                }
+            }else{
+                return_msg(400,'退款失败');
+            }
+        }elseif(empty($this->merchant_id) && !empty($this->user_id)){
+            //取出用户手机和密码
+            $data = MerchantUser::field('phone,password,merchant_id')->where('id',$this->user_id)->find();
+
+            $param['password']=encrypt_password($param['password'],$data['phone']);
+
+            //判断
+            if($param['password']!=$data['password']){
+                return_msg(400,'密码不正确');
+            }
+            //取出订单号
+            $order=MemberRecharge::field('order_no')->where('id',$param['id'])->find();
+
+            //取出商户信息
+            $data=MerchantIncom::field('mercId,rec,key')->where('merchant_id',$data['merchant_id'])->find();
+            if(isset($param['txnAmt'])){
+
+                $msg=[
+                    'orderNo'=>$order['order_no'],
+                    'txnAmt'=>$param['txnAmt']
+                ];
+            }else{
+                $msg=[
+                    'orderNo'=>$order['order_no']
+                ];
+            }
+            $res=request_head($data,$msg);
+//            halt($arr);
+            //发给新大陆
+            $result = curl_request($this->url, true, $res, true);
+            $result = urldecode($result);
+            $result=json_decode($result,true);
+            if(isset($result['result'])){
+                if($result['result']=='S'){
+                    //修改状态
+                    Order::where('id',$param['id'])->update(['status'=>2]);
+                    return_msg(200,'退款中');
+                }else{
+                    Order::where('id',$param['id'])->update(['status'=>4]);
+                    return_msg(400,'退款失败');
+                }
+            }else{
+                return_msg(400,'退款失败');
+            }
+        }
+
+    }
     /**
      * 设置会员卡
      *

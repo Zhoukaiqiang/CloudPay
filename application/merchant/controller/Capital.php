@@ -83,8 +83,9 @@ class Capital extends Common
     public function pc_cash_search(Request $request)
     {
         $time = $request->param("time");
+        $status = $request->param("status");
 
-        if (isset($time)) {
+        if (!empty($time)) {
             $time_flag = "between";
             $time = explode(',', $time);
         } else {
@@ -92,10 +93,19 @@ class Capital extends Common
             $time = 0;
         }
 
+        if (!empty($status)) {
+            $status_flag = "eq";
+        } else {
+            $status_flag = ">";
+            $status = -2;
+        }
+
         $where = [
             "merchant_id" => $this->merchant_id,
             "create_time" => [$time_flag, $time],
+            "status" => [$status_flag, $status],
         ];
+
 
         $rows = Db::name("merchant_withdrawal")->where($where)->count("id");
         $pages = page($rows);
@@ -290,9 +300,9 @@ class Capital extends Common
      * @return [bool / string] msg
      */
 
-    public function commercial_edit()
+    public function commercial_edit($arg)
     {
-        $arg=request()->post();
+//        $arg=request()->post();
         $del['serviceId'] = '6060604';
         $del['version'] = 'V1.0.4';
         $data = Db::name('merchant_incom')->where('merchant_id', $arg['id'])->field('log_no,mercId,stoe_id,status,fee_rat1_scan,fee_rat3_scan,fee_rat_scan, incom_type,stl_typ,stl_sign,bus_lic_no,bse_lice_nm,crp_nm,mercAdds,bus_exp_dt,crp_id_no,crp_exp_dt,stoe_nm,stoe_area_cod,stoe_adds,trm_rec,mailbox,yhkpay_flg,alipay_flg,orgNo,cardTyp,suptDbfreeFlg,tranTyps,crp_exp_dt_tmp,fee_rat,max_fee_amt,fee_rat1,ysfcreditfee,ysfdebitfee')->find();
@@ -354,11 +364,11 @@ class Capital extends Common
      * @throws \think\db\exception\ModelNotFoundException
      * @throws \think\exception\DbException
      */
-    public function merchant_create()
+    public function merchant_create($id)
     {
 //        $merchant_id=$request->param('merchant_id');
         //取出数据表中数据
-        $id=102;
+//        $id=102;
         $data=MerchantIncom::where('merchant_id',$id)->field('mercId,orgNo,log_no')->find();
         $data = $data->toArray();
         $data['serviceId']='6060603';
@@ -377,7 +387,16 @@ class Capital extends Common
         if($result['msg_cd']=='000000') {
 
             if ($signValue == $result[ 'signValue' ]) {
-                if (isset($result[ 'check_flag' ])) {
+                if ($result[ 'check_flag' ]==3) {
+                    //修改数据表状态
+                    $res = MerchantIncom::where('merchant_id', $id)->update(['check_flag' => $result[ 'check_flag' ]]);
+
+                    if ($res) {
+                        return_msg(200, 'success');
+                    } else {
+                        return_msg(400, 'error');
+                    }
+                }elseif($result['check_flag']==1){
                     //修改数据表状态
                     $res = MerchantIncom::where('merchant_id', $id)->update(['check_flag' => $result[ 'check_flag' ],
                         'key' => $result[ "key" ],
@@ -413,6 +432,7 @@ class Capital extends Common
             $rows = MerchantShop::where(["merchant_id" => $this->merchant_id])->count("id");
             $pages = page($rows, 2);
             $res = MerchantShop::where(["merchant_id" => $this->merchant_id])->limit($pages["offset"], $pages["limit"])->select();
+
             check_data($res, $res, 0);
             $shop_ids = [];
             foreach ($res as $v) {
@@ -429,6 +449,7 @@ class Capital extends Common
             $pay_type = ["wxpay", "alipay", "etc", "cash"];
 
 
+
             foreach ($shop_ids as $i) {
 
                 foreach ($pay_type as $type) {
@@ -439,7 +460,7 @@ class Capital extends Common
                         ->where($where)
                         ->where("ms.id", $i)
                         ->where("o.pay_type", $type)
-                        ->whereTime("pay_time", "d")
+                        ->whereTime("pay_time", "today")
                         ->group("o.id")
                         ->count("ms.id");
 
@@ -447,7 +468,8 @@ class Capital extends Common
                         ->join("cloud_order o", "o.shop_id = ms.id", "RIGHT")
                         ->where("ms.id", $i)
                         ->where($where)
-                        ->whereTime("pay_time", "d")
+                        //mark
+//                        ->whereTime("pay_time", "today")
                         ->where("o.pay_type", $type)
                         ->field($field)
 //                        ->group("o.id")

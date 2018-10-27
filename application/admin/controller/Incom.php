@@ -16,10 +16,8 @@ use think\Request;
 class Incom extends Controller
 {
 
-
-   public $url = 'http://sandbox.starpos.com.cn/emercapp';//测试
-//    public $url = 'https://gateway.starpos.com.cn/emercapp';
-
+//    public $url = "https://gateway.starpos.com.cn/emercapp";//正式
+    public $url="http://sandbox.starpos.com.cn/emercapp";
 
     /**
      * 验证成功更新数据库
@@ -39,48 +37,7 @@ class Incom extends Controller
         }
     }
 
-    /**
-     * 商户查询 2.1
-     *
-     * @param array    [    *参数名            *类型     *描述
-     *                     'merchant_id'  =>  int      商户ID
-     *                     'mercId'   =>   string      商户识别号（15位数字）
-     *                     'orgNo'   =>   string       机构号
-     *                 ]
-     * @throws Exception
-     * @return NULL
-     */
-    public function merchant_query(Request $request)
-    {
-        $merchant_id = $request->param('merchant_id');
 
-        if (empty($merchant_id)) {
-            return_msg(400, "请输入商户ID");
-        }
-        $arr = MerchantIncom::where("merchant_id = $merchant_id")->field(["mercId", "orgNo", "key"])->find();
-        check_data($arr, '', 0);
-        $arr = $arr->toArray();
-        $key = $arr["key"] ? $arr["key"] : KEY;
-            /**  查询参数 */
-        $query = [
-            'serviceId' => "6060300", //交易码
-            'version' => "V1.0.1",
-            'mercId' => $arr['mercId'], //商户识别号（15 位数字）
-            'orgNo' => $arr['orgNo'], //机构号
-        ];
-        halt($query);
-        /** 得到当前请求的签名，用于和返回参数验证 */
-        $query['signValue'] = sign_ature(0000, $query, $key);
-
-        /** 获取返回结果 */
-        $res = curl_request($this->url, true, $query, true);
-        /** json转成数组 */
-        $res = json_decode($res, true);
-
-
-        return_msg(200, "msg", $res);
-
-    }
 
 
     /**
@@ -382,24 +339,37 @@ class Incom extends Controller
         if($result['msg_cd']=='000000') {
 
             if ($signValue == $result[ 'signValue' ]) {
-                if (isset($result[ 'check_flag' ])) {
+                if ($result[ 'check_flag' ]==3) {
+                    //修改数据表状态
+                    $res = MerchantIncom::where('merchant_id', $merchant_id)->update(['check_flag' => $result[ 'check_flag' ]]);
+
+                    TotalMerchant::where('merchant_id',$merchant_id)->update(['review_status'=>0]);
+                    if ($res) {
+                        return_msg(200, 'success');
+                    } else {
+                        return_msg(400, 'error');
+                    }
+                }elseif($result['check_flag']==1){
                     //修改数据表状态
                     $res = MerchantIncom::where('merchant_id', $merchant_id)->update(['check_flag' => $result[ 'check_flag' ],
                         'key' => $result[ "key" ],
                         'rec' => $result[ 'REC' ]
                     ]);
 
+                    TotalMerchant::where('merchant_id',$merchant_id)->update(['review_status'=>2]);
                     if ($res) {
                         return_msg(200, 'success');
                     } else {
                         return_msg(400, 'error');
                     }
                 } else {
+                    //驳回
+                    TotalMerchant::where('merchant_id',$merchant_id)->update(['review_status'=>3,'rejected'=>$result[ 'msg_dat' ]]);
                     return_msg(400, 'error', $result[ 'msg_dat' ]);
                 }
             }
         }else{
-            return_msg(400, 'error', $result[ 'msg_dat' ]);
+
         }
     }
 
@@ -513,31 +483,31 @@ class Incom extends Controller
 
         //商户是否通过审核
 //        if($data[0]['check_flag']==1) {
-            $resul = ['serviceId' => $serviceId, 'version' => $version, 'mercId' => $data[ 0 ][ 'mercId' ], 'orgNo' => $data[ 0 ][ 'orgNo' ]];
-            //获取签名域
-            $resul_age = sign_ature(0000, $resul);
-            $resul[ 'signValue' ] = $resul_age;
+        $resul = ['serviceId' => $serviceId, 'version' => $version, 'mercId' => $data[ 0 ][ 'mercId' ], 'orgNo' => $data[ 0 ][ 'orgNo' ]];
+        //获取签名域
+        $resul_age = sign_ature(0000, $resul);
+        $resul[ 'signValue' ] = $resul_age;
 //            return json_encode($resul);
-            //向新大陆接口发送信息验证
-            $par = curl_request($this->url, true, $resul, true);
+        //向新大陆接口发送信息验证
+        $par = curl_request($this->url, true, $resul, true);
 //return $par;
-            $bbntu = json_decode($par, true);
-            $return_sign = sign_ature(1111, $resul);
+        $bbntu = json_decode($par, true);
+        $return_sign = sign_ature(1111, $resul);
 
 //              dump($bbntu);die;
 
-            if ($bbntu[ 'msg_cd' ] === 000000) {
-                if ($return_sign == $bbntu[ 'signValue' ]) {
-                    //商户状态修改为修改未完成
-                   Db::table('merchant_incom')->where('merchant_id', $id)->update([ 'log_no' => $bbntu[ 'log_no' ], 'status' => 2]);
+        if ($bbntu[ 'msg_cd' ] === 000000) {
+            if ($return_sign == $bbntu[ 'signValue' ]) {
+                //商户状态修改为修改未完成
+                Db::table('merchant_incom')->where('merchant_id', $id)->update([ 'log_no' => $bbntu[ 'log_no' ], 'status' => 2]);
 
-                    return_msg(200, 'success',$bbntu['msg_dat']);
-                } else {
-                    return_msg(400, 'error',$bbntu['msg_dat']);
-                }
+                return_msg(200, 'success',$bbntu['msg_dat']);
             } else {
-                return_msg(500, 'error',$bbntu['msg_dat']);
+                return_msg(400, 'error',$bbntu['msg_dat']);
             }
+        } else {
+            return_msg(500, 'error',$bbntu['msg_dat']);
+        }
 //        }else{
 //            return_msg(100,'error','商户审核未通过');
 //        }
@@ -553,9 +523,9 @@ class Incom extends Controller
     {
         $del = $request->post();
 
-        $del[ 'serviceId' ] = "6060604";
+        $del[ 'serviceId' ] = 6060604;
         $del[ 'version' ] = 'V1.0.1';
-        $data = Db::name('merchant_incom')->where('merchant_id', $del[ 'merchant_id' ])->field('log_no,mercId,stoe_id,mcc_cd,status,orgNo')->select();
+        $data = Db::name('merchant_incom')->where('merchant_id', $del[ 'merchant_id' ])->field('log_no,mercId,stoe_id,mcc_cd,status')->select();
         //查看商户是否是完成状态
         if ($data[0]['status']!=1) {
             $aa = [];
@@ -578,7 +548,7 @@ class Incom extends Controller
             if ($par[ 'msg_cd' ] === 000000) {
                 if ($par[ 'signValue' ] == $return_sign) {
                     $del['status']=0;
-                   Db::table('merchant_incom')->where('merchant_id',$del['merchant_id'])->update($del);
+                    Db::table('merchant_incom')->where('merchant_id',$del['merchant_id'])->update($del);
 
                     return_msg(200, 'error',$par['msg_dat']);
                 } else {
@@ -609,26 +579,29 @@ class Incom extends Controller
         //签名域
 
         $data['signValue']=sign_ature(0000,$data);
-//        halt($data);
 //return json_encode($data);die;
         //向新大陆接口发送请求信息
         $par= curl_request($this->url,true,$data,true);
-        halt($par);
+//        halt($par);
         $par=json_decode($par,true);
 //        return $par;
-
-
+//        halt($par);
         //获取签名域
 
         $return_sign = sign_ature(1111,$par);
 
         if ($par['msg_cd']=='000000'){
+            if($par['signValue'] == $return_sign && $par['check_flag']==2){
+                MerchantIncom::where('merchant_id',$id)->update(['status'=>0]);
 
-            if($par['signValue'] == $return_sign){
-               MerchantIncom::where('merchant_id',$id)->update(['status'=>0]);
+                MerchantIncom::where('merchant_id', $id)->update(['check_flag' => $par[ 'check_flag' ],
+                    'key' => $par[ "key" ],
+                    'rec' => $par[ 'REC' ]['trmNo'],
+                    'stoe_id'=>$par['REC']['stoe_id']
+                ]);
                 return_msg(200,'success',$par);
             }else{
-                return_msg(400,'error',$par['msg_dat']);
+                return_msg(400,'error');
             }
 
         }else{
