@@ -293,6 +293,7 @@ if (!function_exists('sign_ature')) {
     {
         $key = $key ? $key : KEY;
 
+
 //        $arr=array_change_key_case($arr);
 
         ksort($arr);
@@ -311,8 +312,8 @@ if (!function_exists('sign_ature')) {
                 }
             }
 
-        } elseif ($flag == 1111) {
-            $data = ['result','logNo','tradeNo','sysTime','message','returnCode','check_flag', 'msg_cd', 'msg_dat', 'mercId', 'log_no', 'stoe_id', 'mobile', 'sign_stats', 'deliv_stats'];
+        }elseif($flag == 1111) {
+            $data = ['total_amount','amount','orderNo','result','logNo','tradeNo','sysTime','message','returnCode','check_flag', 'msg_cd', 'msg_dat', 'mercId', 'log_no', 'stoe_id', 'mobile', 'sign_stats', 'deliv_stats'];
             $str = '';
             foreach ($arr as $key1 => $val) {
                 if (in_array($key1, $data)) {
@@ -327,6 +328,8 @@ if (!function_exists('sign_ature')) {
         return md5($str . $key);
     }
 }
+
+
 
 //批量上传图片
 
@@ -505,40 +508,7 @@ if (!function_exists('image_thumbnail')) {
 }
 
 
-/**
- * 裁剪图片为正方形 200*200
- */
-if (!function_exists('tailor_img')) {
-    function tailor_img($file, $width = 200, $height = 200)
-    {
 
-        $image = \think\Image::open($file);
-//                var_dump($image);die;
-
-        $type = $image->type();
-
-
-        //判断是否是图片格式
-        if (in_array($type, ['jpg', 'jpeg', 'png'])) {
-            $date_path = 'uploads/thumb/' . date('Ymd');
-
-            if (!file_exists($date_path)) {
-                mkdir($date_path, 0777, true);
-            }
-            list($usec, $sec) = explode(" ", microtime());
-            $times = str_replace('.', '', $usec + $sec);
-
-            $thumb_path = $date_path . '/' . $times . '.' . $type;
-
-            $image->thumb($width, $height, \think\Image::THUMB_CENTER)->save($thumb_path);
-            return $thumb_path;
-        } else {
-            return 0;
-        }
-
-    }
-
-}
 /**
  * 检测用户是否存在于数据库
  * @param string $db [数据库全称]
@@ -602,3 +572,4 @@ function check_data($data, $return_data = null, $return = 1)
     }
 
 }
+

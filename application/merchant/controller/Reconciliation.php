@@ -19,60 +19,59 @@ use think\Request;
 class Reconciliation extends Commonality
 {
 
-    /**对账首页
-     * @return string
-     * @throws \think\db\exception\DataNotFoundException
-     * @throws \think\db\exception\ModelNotFoundException
-     * @throws \think\exception\DbException
+    /**
+     * Notes:对账首页
+     * User: guoyang
+     * DATE: 2018/10/26
+     * @param Request $request
      */
     public function index(Request $request)
     {
-        //判断是否是商户还是门店
+        /** role 1服务员 2店长 3收银员 -1商户 */
         $id=$this->id;
-        if ($this->role==-1) {
-
-            //取出商户所有门店以及员工
+        $role=$this->role;
+        $name=$this->name;
+        /**如果是店长和商户就取门店以及员工数据*/
+        if($role!=1 && $role!=3){
+            /**如果是店长取出门店ID*/
+            if($role==2){
+                $id=$request->param('shop_id');
+                $name='id';
+            }
+            /**取出商户所有门店以及员工*/
             $shop = Db::table('cloud_merchant_shop')->alias('a')
                 ->field(['a.shop_name', 'a.id as shopid', 'b.id as userid', 'b.name'])
                 ->join('cloud_merchant_user b', 'a.id=b.shop_id')
-                ->where('a.merchant_id', $id)
+                ->where('a.'.$name,$id)
+                ->order('a.id')
                 ->select();
             if(!$shop){
                 return_msg(400,'error',$shop);
+            }else{
+                $id=$shop[0]['shopid'];
             }
-            //取出第一家店的id
-            $shop_id = $shop[0]['shopid'];
-            //取第一家的数据
-            $data = Db::query("select pay_type,sum(order_money),count(id) as count,sum(received_money) as received_money,sum(discount) as discount,sum(order_money) as order_money,sum(refund_money) as refund_money from cloud_order where shop_id=$shop_id group By pay_type");
-            if (!$data){
-                return_msg(400,'error','没有记录');
-            }
-            $success = $this->tuensfis($shop, $data);
 
-            return_msg(200,'success',$success) ;
 
-        } else {
-           $shop_id=$request->param('shop_id');
-            //取出门店以及员工
-            $shop = Db::table('cloud_merchant_shop')->alias('a')
-                ->field(['a.shop_name', 'a.id as shop_id', 'b.id as user_id', 'b.name'])
-                ->join('merchant_user b', 'a.id=b.shop_id')
-                ->where('a.id', $shop_id)
-                ->select();
-            if(!$shop){
-                return_msg(400,'error','此门店没有员工');
-            }
-//            var_dump($shop);die;
-
-            //取第一家的数据
-            $data = Db::query("select pay_type,count(id) as count,sum(received_money) as received_money,sum(discount) as discount,sum(order_money) as order_money,sum(refund_money) as refund_money from cloud_order where shop_id=$shop_id group By pay_type");
-//            var_dump($data);die;
-            if (!$data){
-                return_msg(400,'error','没有记录');
-            }
-            $success = $this->tuensfis($shop, $data);
-            return_msg(200,'success',$success) ;
+            /** 门店ID */
+            $name='shop_id';
         }
+//        return_msg($id,$name);
+            /** 取出门店对账数据 */
+            $data=Order::where([$name=>$id])->whereTime('pay_time','d')
+                ->field('pay_type,sum(order_money),count(id) as count,sum(received_money) as received_money,sum(discount) as discount,sum(order_money) as order_money,sum(refund_money) as refund_money')
+                ->group('pay_type')
+                ->select();
+
+//            $data = Db::query("select  from cloud_order where $name=$id and FROM_UNIXTIME('pay_time','%Y-%m-%d') = curdate() group By pay_type");
+            if (!$data){
+                return_msg(400,'error','没有记录');
+            }
+            if($role==1 || $role==3){
+                $shop=[];
+            }
+            $success = $this->tuensfis($shop, $data);
+
+            return_msg(200,'success',$success) ;
     }
 
     /**
@@ -85,48 +84,28 @@ class Reconciliation extends Commonality
      */
         public function index_query(Request $request)
     {
-
+        /** shop_id 不传值默认0 全部门店传值-1*/
         $shop_id=$request->param('shop_id') ? $request->param('shop_id') : 0;
+        /** 全部员工不传值默认0 */
         $userid=$request->param('user_id') ? $request->param('user_id') : 0;
         $create_time=$request->param('create_time') ? strtotime($request->param('create_time')) : mktime(0,0,0,date('m'),date('d'),date('Y'));
         $end_time=$request->param('end_time') ? strtotime($request->param('end_time')) +24*60*60-1 : mktime(23,59,59,date('m'),date('d'),date('Y'));
-//       var_dump($end_time);die;
-        $shoparr=$shop_id;
-        if($shop_id==0){
+            /** 筛选字段   门店商户筛选*/
+            $name= $shop_id==-1 ? 'merchant_id' : 'shop_id';
+            $shopsymo= $shop_id ? '=' : '<>';
+            $id= $shop_id==-1 ? $this->id :$shop_id ;
 
-            $merchant_id=$this->id;
-
-            $shop_id=Db::table('cloud_merchant_shop')
-                ->where('merchant_id',$merchant_id)
-                ->field(['id'])
-                ->select();
-            if(!$shop_id){
-                return_msg(400,'error','此商户没有门店');
+            /** 员工筛选   /role 1服务员 2店长 3收银员 -1商户 */
+            $username='user_id';
+            if($userid!=0){
+                $role=MerchantUser::where('id',$userid)->field('role')->find();
+                $arr=[1=>'user',2=>'shop_id',3=>'person_info_id'];
+                $username= $arr[$role->role];
             }
-            $shoparr='';
-            foreach ($shop_id as $k=>$v){
-                $shoparr.=$v['id'].',';
-            }
-//            var_dump($shoparr);die;
-        }
-        $userarr=$userid;
-        if($userid==0){
-            $userss=Db::table('cloud_merchant_user')
-                ->whereIn('shop_id',$shoparr)->
-                field(['id'])
-                ->select();
+            /** 员工筛选符号 */
+            $usersymo= $userid ? '=' :"<>";
 
-            $userarr='';
-            foreach ($userss as $k=>$v){
-                $userarr.=$v['id'].',';
-            }
-        }
-        $userarr=rtrim($userarr,',');
-        $shoparr=rtrim($shoparr,',');
-
-
-//        dump($shoparr);die;
-        $data = Db::query("select pay_type,count(id) as count,sum(received_money) as received_money,sum(discount) as discount,sum(order_money) as order_money,sum(refund_money) as refund_money from cloud_order where shop_id in($shoparr) and person_info_id in($userarr) and pay_time between $create_time and $end_time group By pay_type");
+        $data = Db::query("select pay_type,count(id) as count,sum(received_money) as received_money,sum(discount) as discount,sum(order_money) as order_money,sum(refund_money) as refund_money from cloud_order where $name{$shopsymo}$id and $username{$usersymo}$userid and pay_time between $create_time and $end_time group By pay_type");
 
         $success= $this->tuensfis($shop=[],$data);
         return_msg(200,'success',$success);
@@ -141,8 +120,6 @@ class Reconciliation extends Commonality
      */
     public function tuensfis($shop,$data)
     {
-
-
         $pay_type=[];
         //取出支付类型
         foreach ($data as $k=>$v){
@@ -157,33 +134,16 @@ class Reconciliation extends Commonality
                 $data[]=['pay_type'=>$array[$arr[$i]],'count'=>0,'received_money'=>0,'discount'=>0,'order_money'=>0,'refund_money'=>0];
             }
         }
-        //实收总金额
-        $proceeds=0;
-        //优惠总金额
-        $discounts=0;
-        //退款总金额
-        $refund=0;
-        //订单笔数
-        $ordercount=0;
-        //订单金额
-        $order_money=0;
+
+        /** proceeds 实收总金额  discounts 优惠总金额  refund 退款总金额  ordercount 订单笔数  order_money 订单金额*/
+        $money=['proceeds'=>0,'discounts'=>0,'refund'=>0,'ordercount'=>0,'order_money'=>0];
         foreach ($data as $k=>$v){
-            $proceeds+=$v['received_money'];
-            $discounts+=$v['discount'];
-            $refund+=$v['refund_money'];
-            $ordercount+=$v['count'];
-            $order_money+=$v['order_money'];
+            $money['proceeds']+=$v['received_money'];
+            $money['discounts']+=$v['discount'];
+            $money['refund']+=$v['refund_money'];
+            $money['ordercount']+=$v['count'];
+            $money['order_money']+=$v['order_money'];
         }
-        ////实收总金额
-        $money['proceeds']=$proceeds;
-        //优惠总金额
-        $money['discounts']=$discounts;
-        //退款总金额
-        $money['refund']=$refund;
-        //订单笔数
-        $money['ordercount']=$ordercount;
-        //订单金额
-        $money['order_money']=$order_money;
        return ['shop'=>$shop,'data'=>$data,'money'=>$money];
     }
 
@@ -194,27 +154,41 @@ class Reconciliation extends Commonality
      */
     public function oneday(Request $request)
     {
-        //门店id
-        $shop_id=$request->param('shop_id');
+        /** 获取员工ID 或者 门店ID 或 商户*/
+        $id=$request->param('shop_id') ? $request->param('shop_id') : $request->param('user_id') ;
+
+        if($request->param('shop_id')){
+            $id=$request->param('shop_id');
+            $name= $id==-1 ? 'merchant_id' : 'shop_id';
+            $id= $id==-1 ? $this->id : $id;
+        }elseif($request->param('user_id')) {
+            /** 员工筛选   /role 1服务员 2店长 3收银员 -1商户 */
+            $role = MerchantUser::where('id', $id)->field('role')->find();
+            $arr = [1 => 'user_id', 2 => 'shop_id', 3 => 'person_info_id'];
+            $name = $arr[$role->role];
+        }
+        /** 时间天数 */
+        $pid=$request->param('pid') ? $request->param('pid') : 0;
 
         //获取今天结束时间
         $time=mktime(23, 59, 59, date('m'), date('d'), date('Y'));
-
-        if($request->param('pid')==1){
-            //获取今天开始时间
-            $endtime=mktime(0,0,0,date('m'),date('d'),date('Y'));
-
-        }else if($request->param('pid')==2) {
-            //获取一周前的时间戳
-            $endtime=mktime(23, 59, 59, date('m'), date('d')-7, date('Y'));
-
-        }else if($request->param('pid')==3){
-            //获取一月前的时间戳
-            $endtime=mktime(23, 59, 59, date('m')-1, date('d'), date('Y'));
-
-
-        }
-        return  $this->oneday_bill($endtime,$time,$shop_id);
+        $endtime=mktime(0, 0, 0, date('m'), date('d')-$pid, date('Y'));
+//
+//        if($request->param('pid')==1){
+//            //获取今天开始时间
+//            $endtime=mktime(0,0,0,date('m'),date('d'),date('Y'));
+//
+//        }else if($request->param('pid')==2) {
+//            //获取一周前的时间戳
+//            $endtime=mktime(23, 59, 59, date('m'), date('d')-7, date('Y'));
+//
+//        }else if($request->param('pid')==3){
+//            //获取一月前的时间戳
+//            $endtime=mktime(23, 59, 59, date('m')-1, date('d'), date('Y'));
+//
+//
+//        }
+        return  $this->oneday_bill($endtime,$time,$id,$name);
 
     }
 
@@ -225,10 +199,10 @@ class Reconciliation extends Commonality
      * @param $shop_id
      * @return string
      */
-    public function oneday_bill($createtime,$endtime,$shop_id)
+    public function oneday_bill($createtime,$endtime,$id,$name)
     {
 
-        $data=Db::query("select FROM_UNIXTIME(pay_time,'%Y%m%d') days,FROM_UNIXTIME(pay_time,'%H%i%s') minutes,pay_time,received_money,status,id from cloud_order where shop_id=$shop_id and status=1 and pay_time between $createtime and $endtime order by pay_time desc");
+        $data=Db::query("select FROM_UNIXTIME(pay_time,'%Y%m%d') days,FROM_UNIXTIME(pay_time,'%H%i%s') minutes,pay_time,received_money,status,id from cloud_order where $name=$id and status=1 and pay_time between $createtime and $endtime order by pay_time desc");
         $arr=[];
 //        var_dump($shop_id);die;
         foreach ($data as $k=>&$v){
@@ -245,7 +219,7 @@ class Reconciliation extends Commonality
             }
 
             //计算实收金额和订单笔数
-        $money=Db::query("select count(id) as count,sum(received_money) as countmoney from cloud_order where shop_id=$shop_id and status=1 and pay_time between $createtime and $endtime order by pay_time desc");
+        $money=Db::query("select count(id) as count,sum(received_money) as countmoney from cloud_order where $name=$id and status=1 and pay_time between $createtime and $endtime order by pay_time desc");
         $array=['arr'=>$arr,'money'=>$money];
         return json_encode($array);
     }
@@ -257,8 +231,19 @@ class Reconciliation extends Commonality
      */
     public function turuend_query(Request $request)
     {
-        //门店id
-        $shop_id=$request->param('shop_id');
+        /** 获取员工ID 或者 门店ID 或 商户*/
+        $id=$request->param('shop_id') ? $request->param('shop_id') : $request->param('user_id') ;
+
+        if($request->param('shop_id')){
+            $id=$request->param('shop_id');
+            $name= $id==-1 ? 'merchant_id' : 'shop_id';
+            $id= $id==-1 ? $this->id : $id;
+        }elseif($request->param('user_id')) {
+            /** 员工筛选   /role 1服务员 2店长 3收银员 -1商户 */
+            $role = MerchantUser::where('id', $id)->field('role')->find();
+            $arr = [1 => 'user_id', 2 => 'shop_id', 3 => 'person_info_id'];
+            $name = $arr[$role->role];
+        }
         //起始时间
         $create_time=$request->param('create_time');
         //days 天数
@@ -276,7 +261,7 @@ class Reconciliation extends Commonality
         }
 
 
-        return  $this->oneday_bill($endtime,$create_time,$shop_id);
+        return  $this->oneday_bill($endtime,$create_time,$id,$name);
 
     }
 
@@ -310,6 +295,7 @@ class Reconciliation extends Commonality
         $und='=';
         if($shops['user_id']==0){
             $und='<>';
+
         }
         //取出所有商户所有门店以及员工
         $shop=Db::table('cloud_merchant_shop')->alias('a')

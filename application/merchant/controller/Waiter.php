@@ -51,7 +51,7 @@ class Waiter extends Commonality
         if($nerid!=0){
             $id=$nerid;
         }
-//        $data=[];
+
             $data['count']=Order::where('shop_id',$id)
                 ->whereTime('create_time', 'today')
                 ->count('id');
@@ -68,12 +68,23 @@ class Waiter extends Commonality
                 ->where(['a.shop_id'=>$id,'a.status'=>0])
                 ->whereTime('a.create_time', 'today')
                 ->select();
+            if($role==-1){
+                $data=['shop'=>$shop,'count'=>$data,'result'=>$result];
+            }else{
+                $data=['count'=>$data,'result'=>$result];
+            }
 
-        $data=['shop'=>$shop,'count'=>$data,'result'=>$result];
             return_msg(200,'success',$data);
 
     }
-    //店小二首页面 门店查询
+
+    /**
+     * Notes:
+     * User: guoyang
+     * DATE: 2018/10/25
+     * @param Request $request
+     * @return string
+     */
     public function index_query(Request $request)
     {
         $shop_id=$request->param('shop_id');
@@ -126,7 +137,7 @@ class Waiter extends Commonality
 //            dump($data['dish_attr']);die;
             $file=$request->file('dish_img');
             //裁剪200*200图
-            $tailor=tailor_img($file);
+            $tailor=$this->tailor_img($file);
             if(!$tailor){
                 return_msg(400,'success','图片格式不正确');
             }
@@ -162,7 +173,7 @@ class Waiter extends Commonality
         if($request->file('dish_img')){
             $file=$request->file('dish_img');
             //裁剪200*200图
-            $tailor=tailor_img($file);
+            $tailor=$this->tailor_img($file);
             if(!$tailor){
                 return_msg(400,'success','图片格式不正确');
             }
@@ -179,45 +190,8 @@ class Waiter extends Commonality
         }
 
     }
-
-   public function qrcode()
-    {
-        Vendor('phpqrcode.phpqrcode');
-        import('phpqrcode.phpqrcode', EXTEND_PATH,'.php');
-        $value = 'http://www.cnblogs.com/txw1958/'; //二维码内容
-        $errorCorrectionLevel = 'L';//容错级别
-        $matrixPointSize = 6;//生成图片大小
-//生成二维码图片
-//        Loader::import('qrcode', EXTEND_PATH);
-        \QRcode::png($value, 'qrcode.png', $errorCorrectionLevel, $matrixPointSize, 2);
-//生成二维码图片
-        $logo = 'https://timgsa.baidu.com/timg?image&quality=80&size=b9999_10000&sec=1538050591782&di=045c3edb26144c5207c7d61c23a02817&imgtype=0&src=http%3A%2F%2Fpic.58pic.com%2F58pic%2F15%2F23%2F09%2F74T58PICZjg_1024.jpg';//准备好的logo图片
-        $QR = 'qrcode.png';//已经生成的原始二维码图
-
-        if ($logo !== FALSE) {
-            $QR = imagecreatefromstring(file_get_contents($QR));
-            $logo = imagecreatefromstring(file_get_contents($logo));
-            $QR_width = imagesx($QR);//二维码图片宽度
-            $QR_height = imagesy($QR);//二维码图片高度
-            $logo_width = imagesx($logo);//logo图片宽度
-            $logo_height = imagesy($logo);//logo图片高度
-            $logo_qr_width = $QR_width / 5;
-            $scale = $logo_width/$logo_qr_width;
-            $logo_qr_height = $logo_height/$scale;
-            $from_width = ($QR_width - $logo_qr_width) / 2;
-            //重新组合图片并调整大小
-            imagecopyresampled($QR, $logo, $from_width, $from_width, 0, 0, $logo_qr_width,
-                $logo_qr_height, $logo_width, $logo_height);
-        }
-//输出图片
-        imagepng($QR, 'helloweixin.png');
-        echo '<img src="helloweixin.png">';
-    }
-
-
-
     /**
-     * //生成二维码
+     * 生成二维码
      */
     public function qrcode2(){
         $shop_id=\request()->param('shop_id');
@@ -225,63 +199,7 @@ class Waiter extends Commonality
         if(empty($shop_id) || empty($name)){
             return_msg(400,'error','请输入桌位名称或传入门店');
         }
-        header("content-type:text/html;charset=utf-8");
-        Vendor('phpqrcode.phpqrcode');
-        import('phpqrcode.phpqrcode', EXTEND_PATH,'.php');
-        $path = "/uploads/QRcode/".date("Ymd").DS;//创建路径
-
-//
-        $time = time().'.png'; //创建文件名
-
-
-        $file_name = iconv("utf-8","gb2312",$time);
-
-        $file_path = $_SERVER['DOCUMENT_ROOT'].$path;
-
-        if(!file_exists($file_path)){
-            mkdir($file_path, 0700,true);//创建目录
-        }
-        $file_path = $file_path.$this->runningWater().'.png';//1.命名生成的二维码文件
-//        $data = "http://47.92.212.66/index.php/merchant/Ordermeals/returntime?shop_id=$shop_id&name=$name";//2.生成二维码的数据(扫码显示该数据)
-        $data = "http://api.hzyspay.com/login";//2.生成二维码的数据(扫码显示该数据)
-//        $data="http://www.saomenu.com/saomenu/error/nonecode.html";
-        $level = 'L';  //3.纠错级别：L、M、Q、H
-        $size = 4;//4.点的大小：1到10,用于手机端4就可以了
-        ob_end_clean();//清空缓冲区
-        //生成二维码-不保存：在当前浏览器显示
-        \QRcode::png($data, $file_path, $level, $size);
-        //文件名转码
-        //生成桌位編號
-//        return $file_path;
-        return_msg(200,'success',$file_path);
-//        $code=$this->unique_rand(10000000,99999999,1);
-//
-//
-//        //當前時間
-//        $date=time();
-//
-//        $resu=ShopTable::insert(['create_time'=>$date,'code'=>$code[0],'image'=>$file_path]);
-//        var_dump($resu);die;
-        //获取下载文件的大小
-        $file_size = filesize($file_path);
-
-
-        $file_temp = fopen ( $file_path, "r" );
-//        var_dump($file_temp);die;
-        //返回的文件
-        header("Content-type:application/octet-stream");
-        //按照字节大小返回
-        header("Accept-Ranges:bytes");
-
-
-        //返回文件大小
-        header("Accept-Length:".$file_size);
-        //这里客户端的弹出对话框
-        header("Content-Disposition:attachment;filename=".$time);
-
-        echo fread ( $file_temp, filesize ( $file_path ) );
-        fclose ( $file_temp );
-        exit ();
+      return $this->qrcode(0,$shop_id,$name);
     }
 
     /**
