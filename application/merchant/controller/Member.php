@@ -102,7 +102,7 @@ class Member extends Common
     {
         //获取会员id
         $id=$request->param('id');
-        $data=MerchantMember::field('id,member_head,recharge_money,consumption_money,member_name,member_phone,money,consump_number,register_time,member_birthday')
+        $data=MerchantMember::field('id,member_head,recharge_money,consumption_money,member_name,member_phone,money,consump_number,register_time,member_birthday,shop_id')
             ->where('id',$id)
             ->find();
         check_data($data);
@@ -203,6 +203,7 @@ class Member extends Common
                 //查询门店id
                 $shop=MerchantMember::field('shop_id')->where('id',$data['id'])->find();
                 //加入充值表
+
                 $arr=[
                     'status'=>1,
                     'member_id'=>$data['id'],
@@ -216,6 +217,11 @@ class Member extends Common
                     'shop_id'=>$shop['shop_id'],
                     'create_time'=>time()
                 ];
+                if(!empty($this->merchant_id)){
+                    $arr['user_id']="";
+                }else{
+                    $arr['user_id']=$this->user_id;
+                }
                 MemberRecharge::create($arr,true);
                 return_msg(200,'充值成功');
             }else{

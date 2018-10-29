@@ -3,6 +3,8 @@
 namespace app\merchant\controller;
 
 use app\admin\model\MerchantIncom;
+use app\merchant\model\MemberExclusive;
+use app\merchant\model\MerchantMember;
 use app\merchant\model\Order;
 use app\merchant\model\TotalMerchant;
 use think\Controller;
@@ -22,8 +24,10 @@ class Wechat extends Controller
         $WxPay = "pubSigPay";
         $this->appid = 'wx1aeeaac161a210df';//appid
         $this->secret = '0b1ddf2e988b7d05e4e775cc8bdfc831'; //secrect
+        $this->redirect_uri = 'http://pay.hzyspay.com/index.php/merchant/wechat/back_url';//返回的域名网址
+//        $this->appid="wx193727ba2313b0d8";
+//        $this->secret="fe7c3669faec17d3e681c4c938af12a6";
 //        $this->redirect_uri = 'http://47.92.212.66/index.php/merchant/wechat/back_url';//返回的域名网址
-        $this->redirect_uri = 'http://api.hzyspay.com';//返回的域名网址
 
         $url = "http://gateway.starpos.com.cn/adpweb/ehpspos3/{$WxQuery}.json";
     }
@@ -35,13 +39,11 @@ class Wechat extends Controller
      * @throws \think\db\exception\ModelNotFoundException
      * @throws \think\exception\DbException
      */
-    public function getOpenId()
+    public function get_code()
     {
-        $code = "https://open.weixin.qq.com/connect/oauth2/authorize?appid=" . $this->appid . "&redirect_uri=" . urlencode($this->redirect_uri) . "&response_type=code&scope=snsapi_base&state=202&#wechat_redirect";
+        $code = "https://open.weixin.qq.com/connect/oauth2/authorize?appid=".$this->appid."&redirect_uri=".urlencode($this->redirect_uri)."&response_type=code&scope=snsapi_userinfo&state=202#wechat_redirect";
 
-        $openid = "https://api.weixin.qq.com/sns/oauth2/access_token?appid=APPID&secret=SECRET&code=CODE&grant_type=authorization_code";
-        $res = curl_request($code, true, '',true);
-
+        header("Location:".$code);
     }
 
     /**
@@ -53,14 +55,18 @@ class Wechat extends Controller
      */
     public function back_url(Request $request)
     {
+//        echo 1;
         $code = $request->param("code");
+//        halt($code);
         $state = $request->param("state");
         if (isset($code) || (int)$state == 202) {
+//            halt(1);
             Session::set("code", $code);
 
-//            $userinfo = $this->get_user_info($code);
-
-            return_msg(200, "success");
+            $userinfo = $this->get_user_info($code);
+            Session::set('openid',$userinfo['openid']);
+            Session::set('headimgurl',$userinfo['headimgurl']);
+            return $userinfo;
 
         } else {
             return_msg(400, "fail");
@@ -79,6 +85,7 @@ class Wechat extends Controller
         $access_token_url = "https://api.weixin.qq.com/sns/oauth2/access_token?appid=" . $this->appid . "&secret=" . $this->secret . "&code=" . $code . "&grant_type=authorization_code";
         $access_token_json = $this->https_request($access_token_url);//自定义函数
         $access_token_array = json_decode($access_token_json, true);
+//        halt($access_token_array);
         $access_token = $access_token_array['access_token'];
         $openid = $access_token_array['openid'];
         $userinfo_url = "https://api.weixin.qq.com/sns/userinfo?access_token=$access_token&openid=$openid&lang=zh_CN";
@@ -191,42 +198,59 @@ class Wechat extends Controller
         }
     }
 
-    public function get_access()
+    /**
+     *获取优惠券信息
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function get_exclusive()
     {
-        $url="https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=wx193727ba2313b0d8&secret=fe7c3669faec17d3e681c4c938af12a6";
-        $res=$this->https_request($url);
-        $res=json_decode($res,true);
-        return $res['access_token'];
+        if(Session::has("openid")){
+            $openid=Session::get("openid");
+        }else{
+            $openid=$this->get_code();
+            $openid=$openid['openid'];
+        }
+        $join=[
+            ['cloud_shop_active_exclusive b','a.exclusive_id=b.id','left'],
+            ['cloud_merchant_member c','a.member_id=c.id','left']
+        ];
+        $data=MemberExclusive::alias('a')
+            ->join($join)
+            ->field('a.SN,b.coupons_money,b.order_money,b.start_time,b.end_time')
+            ->where(['b.end_time'=>['>',time()],'c.openid'=>$openid])
+            ->select();
+        check_data($data);
     }
 
-    public function check()
-    {
-        $access=$this->get_access();
-        $url="https://api.weixin.qq.com/cgi-bin/template/api_add_template?access_token=".$access;
-        $res=curl_request($url,true,"",true);
-        halt($res);
-    }
     /**
-     *发送模板消息
+     *验证token
+     * @return bool
      */
-    public function send_msg()
+    public function checkSignature()
     {
-        $access_token=$this->get_access();
-        $url="https://api.weixin.qq.com/cgi-bin/message/template/send?access_token=".$access_token;
-//
-        $arr=array(
-            "touser"=>"obyu51Xfd1RnLfop4lZcVYWGnNm0",
-            "template_id"=>"k41FDjmHugKZgPaTaz4mg4RHlS_NZ7QIbYR9qYvLSt8",
-            "url"=>"www.baidu.com",
-            "data"=>array(
-                'name'=>array('value'=>'100万到手','color'=>'#173177'),
-                'money'=>array('value'=>100,'color'=>'#173177'),
-                'date'=>array('value'=>date("Y-m-d H:i:s"),"color"=>"#173177")
-            ),
-        );
-//        $postjson=json_encode($arr);
-        $res=curl_request($url,true,$arr,true);
-        halt($res);
+        // you must define TOKEN by yourself
+        //判断TOKEN常量是否定义
+
+        $signature = $_GET["signature"];
+        $timestamp = $_GET["timestamp"];
+        $nonce = $_GET["nonce"];
+
+        $token = "weixin";
+        $tmpArr = array($token, $timestamp, $nonce);
+        // use SORT_STRING rule
+        sort($tmpArr);
+        $tmpStr = implode( '',$tmpArr );
+        $tmpStr = sha1( $tmpStr );
+
+        if( $tmpStr == $signature ){
+            echo $_GET['echostr'];
+        }else{
+            return false;
+        }
     }
+
+
 
 }
