@@ -2,6 +2,7 @@
 
 namespace app\merchant\controller;
 
+use app\admin\model\MerchantIncom;
 use app\merchant\model\Order;
 use app\merchant\model\TotalMerchant;
 use think\Controller;
@@ -112,6 +113,7 @@ class Wechat extends Controller
     public function member_recharge($param = null)
     {
         /** 查询 -> 支付 */
+//        $data=MerchantIncom::field('mercId,rec,key')->where('merchant_id',"87")->find();
         $param = [
             "orgNo" => "27573",
             "mercId" => "800332000002146",
@@ -129,7 +131,7 @@ class Wechat extends Controller
         $res = curl_request($url, true, $param, true);
 
         $res = json_decode(urldecode($res), true);
-
+//        halt($res);
         /** 如果查询成功请求公众号支付否则返回错误信息 */
         if ($res["returnCode"] == "000000") {
 
@@ -155,16 +157,16 @@ class Wechat extends Controller
         $param["total_amount"] = (string)$request->param("total_amount");  //总金额
         $param["signValue"] = sign_ature(0000, $param);
 
-        $param["appid"] = 'wx1aeeaac161a210df';
-        $param["code"] = " 0214uhOn0cBFSr1blsOn09XzOn04uhOt";  //授权码 未使用的话，5分钟后过期
-
+//        $param["appid"] = 'wx1aeeaac161a210df';
+        $param["code"] = "021guDVz0d4yJf1nl2Yz0BcGVz0guDvq,";  //授权码 未使用的话，5分钟后过期
+//        halt($param);
         $url = "http://gateway.starpos.com.cn/adpweb/ehpspos3/pubSigPay.json";
 
 //        halt($param);
         $res = curl_request($url, true, $param, true);
 
         $res = json_decode(urldecode($res), true);
-
+        halt($res);
 
             /** 如果查询成功请求公众号支付否则返回错误信息 */
         if ($res["returnCode"] == "000000") {
@@ -187,6 +189,44 @@ class Wechat extends Controller
         } else {
             return_msg(400, $res["message"]);
         }
+    }
+
+    public function get_access()
+    {
+        $url="https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=wx193727ba2313b0d8&secret=fe7c3669faec17d3e681c4c938af12a6";
+        $res=$this->https_request($url);
+        $res=json_decode($res,true);
+        return $res['access_token'];
+    }
+
+    public function check()
+    {
+        $access=$this->get_access();
+        $url="https://api.weixin.qq.com/cgi-bin/template/api_add_template?access_token=".$access;
+        $res=curl_request($url,true,"",true);
+        halt($res);
+    }
+    /**
+     *发送模板消息
+     */
+    public function send_msg()
+    {
+        $access_token=$this->get_access();
+        $url="https://api.weixin.qq.com/cgi-bin/message/template/send?access_token=".$access_token;
+//
+        $arr=array(
+            "touser"=>"obyu51Xfd1RnLfop4lZcVYWGnNm0",
+            "template_id"=>"k41FDjmHugKZgPaTaz4mg4RHlS_NZ7QIbYR9qYvLSt8",
+            "url"=>"www.baidu.com",
+            "data"=>array(
+                'name'=>array('value'=>'100万到手','color'=>'#173177'),
+                'money'=>array('value'=>100,'color'=>'#173177'),
+                'date'=>array('value'=>date("Y-m-d H:i:s"),"color"=>"#173177")
+            ),
+        );
+//        $postjson=json_encode($arr);
+        $res=curl_request($url,true,$arr,true);
+        halt($res);
     }
 
 }

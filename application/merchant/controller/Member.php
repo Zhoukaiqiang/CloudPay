@@ -237,6 +237,7 @@ class Member extends Common
 //                halt($data);
             return $data;
         }elseif(empty($this->merchant_id) && !empty($this->user_id)){
+//            halt($this->user_id);
             $info=MerchantUser::field('merchant_id')->where('id',$this->user_id)->find();
             //取出未过期充值送活动
             $data=ShopActiveRecharge::field('recharge_money,give_money')->where(['merchant_id'=>$info['merchant_id']])->whereTime('end_time','>',time())->select();
@@ -447,7 +448,7 @@ class Member extends Common
                     return_msg(200,'退款中');
                 }else{
                     Order::where('id',$param['id'])->update(['status'=>4]);
-                    return_msg(400,'退款失败');
+                    return_msg(400,$result['message']);
                 }
             }else{
                 return_msg(400,'退款失败');
@@ -491,7 +492,7 @@ class Member extends Common
                     return_msg(200,'退款中');
                 }else{
                     Order::where('id',$param['id'])->update(['status'=>4]);
-                    return_msg(400,'退款失败');
+                    return_msg(400,$result['message']);
                 }
             }else{
                 return_msg(400,'退款失败');

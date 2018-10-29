@@ -81,7 +81,7 @@ class Receipt extends Common
                     return_msg(200,'退款中');
                 }else{
                     Order::where('id',$param['id'])->update(['status'=>4]);
-                    return_msg(400,'退款失败');
+                    return_msg(400,$result['message']);
                 }
         }elseif(empty($this->merchant_id) && !empty($this->user_id)){
             //取出用户手机和密码
@@ -121,7 +121,7 @@ class Receipt extends Common
                     return_msg(200,'退款中');
                 }else{
                     Order::where('id',$param['id'])->update(['status'=>4]);
-                    return_msg(400,'退款失败');
+                    return_msg(400,$result['message']);
                 }
             }else{
                 return_msg(400,'退款失败');
