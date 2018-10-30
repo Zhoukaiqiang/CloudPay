@@ -293,15 +293,19 @@ class Wechat extends Controller
                             'status'=>1,
                             'order_number'=>generate_order_no(),
                         ];
+
                         $result=MemberExclusive::insert($arr,true);
-                        if($result){
-                            return_msg(200,'派卷成功');
-                        }else{
-                            return_msg(400,'派卷失败');
-                        }
+
                     }else{
                         return_msg(400,'请填写正确的手机号');
                     }
+                }
+                //新会员注册
+                $insert_id=MerchantMember::insertGetId($data,true);
+                if($insert_id){
+                    return_msg(200,'注册成功');
+                }else{
+                    return_msg(400,'注册失败');
                 }
             }elseif($res['register_status']==2){
                 //老会员推荐新会员注册和新会员注册都会派送优惠券
@@ -319,11 +323,7 @@ class Wechat extends Controller
                             'order_number'=>generate_order_no(),
                         ];
                         $result=MemberExclusive::insert($arr,true);
-                        if($result){
-                            return_msg(200,'派卷成功');
-                        }else{
-                            return_msg(400,'派卷失败');
-                        }
+
                     }else{
                         return_msg(400,'请填写正确的手机号');
                     }
