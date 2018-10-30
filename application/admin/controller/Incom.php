@@ -20,6 +20,24 @@ class Incom extends Controller
     public $url="http://sandbox.starpos.com.cn/emercapp";
 
     /**
+     * 验证签名域是否正确
+     * @param $old_sign
+     * @param $res
+     * @return bool
+     * @return string
+     */
+    protected function check_sign_value($query_sign, Array $res)
+    {
+        if ($query_sign !== sign_ature(1111, $res)) {
+            return_msg(400, "签名域不正确");
+
+        } elseif ($res['msg_cd'] !== "000000") {
+            return_msg(400, "操作失败!");
+        } else {
+            return true;
+        }
+    }
+    /**
      * 验证成功更新数据库
      * @param $where
      * @param $data
