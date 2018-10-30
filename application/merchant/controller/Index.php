@@ -18,13 +18,9 @@ use think\Request;
 use think\Session;
 
 
-class Index extends Commonality
+class Index extends Common
 {
-    public function ddd()
-    {
-        $a=Order::create(['pay_time' => time(), 'status' =>1, 'logNo' => 23432432,'orderNo'=>2343242342,'received_money'=>32434,'order_money'=>243432,'tradeNo'=>24324324324234]);
-        return_msg($a);
-    }
+
     /**
      * APP首页展示
      * @param Request $request
@@ -34,26 +30,24 @@ class Index extends Commonality
      */
     public function index(Request $request)
     {
-        //$role 1服务员 2店长 3收银员 -1商户
-//            $id=Session::get('username_', 'app')['user_id'];
-//            $role=Sessin::get('username_', 'app')['role_id'];
-        $role = $this->role;
-        $name = $this->name;
-        $id = $this->id;
-//        var_dump($role);var_dump($name);var_dump($id);die;
-        if ($role == 1 || $role == 3) {
+        //role 1服务员 2店长 3收银员 -1商户
+        $role = Session::get("username_","app")["role"];
+        //用户ID
+        $id = Session::get("username_","app")["id"];
+        //获取门店ID
+        $k = MerchantUser::where('id', $id)->field('shop_id')->find();
+        $data[ 'shop_id' ] = $k->shop_id;
+        if ($role == 1) {
+            $name = 'user_id';
+        }elseif($role == 3){
             $name = 'person_info_id';
-            $k=MerchantUser::where('id',$id)->field('shop_id')->find();
-
-            $data['shop_id']=$k->shop_id;
-
-        }elseif ($role == 2) {
-            $id = MerchantUser::where('id', $id)->field('shop_id')->find();
-            $data['shop_id'] = $id->shop_id;
-            $id=$id->shop_id;
+        }elseif($role == 2) {
+            $id=$k->shop_id;
+            $name='shop_id';
         }else{
             $k=MerchantShop::where('merchant_id',$id)->field('id')->find();
             $data['shop_id']=$k['id'];
+            $name='merchant_id';
         }
 
 

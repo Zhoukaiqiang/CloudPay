@@ -137,7 +137,7 @@ class Shop extends Commonality
 //        var_dump($data);die;
 
         $shop_api = curl_request($this->url, true, $data, true);
-            return $shop_api;
+//            return $shop_api;
         $shop_api = json_decode($shop_api, true);
         //获取签名域
 //        var_dump($shop_api);die;

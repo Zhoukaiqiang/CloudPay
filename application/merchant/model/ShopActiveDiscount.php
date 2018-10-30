@@ -12,7 +12,7 @@ class ShopActiveDiscount extends Model
     protected $updateTime = false;
 
     public function getEndTimeAttr($v) {
-        return date("Y-m-d H:i:s", $v);
+        return date("Y-m-d", $v);
     }
 
     public function getApplyNameAttr($v) {

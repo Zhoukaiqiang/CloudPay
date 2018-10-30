@@ -65,14 +65,14 @@ class Index extends Controller
         if($status['status']==0){
             return_msg(400,'该代理商不能进入代理商系统');
         }
-        $info=TotalAgent::field('id,agent_name,agent_phone,status')
+        $info=TotalAgent::field('id,username,agent_phone,status, parent_id')
             ->where('agent_phone',$data['phone'])
             ->find();
         if($info){
             Session::set("username_", $info);
-            $this->return_msg(200,'登录成功',$info);
+            return_msg(200,'登录成功',$info);
         }else{
-            $this->return_msg(400,'登录失败');
+            return_msg(400,'登录失败');
         }
     }
 

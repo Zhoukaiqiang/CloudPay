@@ -695,7 +695,7 @@
 {
 "code": 200,
 "msg" : "success",
-"data" : []
+"data" : 
 name:优惠券活动名称 
 money:优惠价格
 create_time

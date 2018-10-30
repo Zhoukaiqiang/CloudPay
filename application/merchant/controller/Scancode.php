@@ -11,7 +11,7 @@ namespace app\merchant\controller;
 
 use app\merchant\model\MemberRecharge;
 use app\merchant\model\MerchantMember;
-
+use Endroid\QrCode\QrCode;
 
 use app\agent\model\MerchantIncom;
 use app\merchant\model\MerchantShop;
@@ -129,28 +129,8 @@ class Scancode extends Commonality
                 //判断状态码
                 if ($par[ 'returnCode' ] == '000000') {
 //                    if ($par['signValue'] == $return_sign) {
-                        //判断是否是会员充值
-                        $time = time();
-                        if (array_key_exists('member_id',$data)) {
-                            if (!$this->member_recharge($data, $par)) {
+                    return $this->storage($data,$par);
 
-                                return_msg(200, 'success', '会员充值失败');
-                            }
-
-                        } else {
-                            //收银员id   如果是商户存-1
-                            $person_info_id=$this->id;
-                            if($this->role==-1){
-                                $person_info_id=-1;
-                            }
-                            if($data['order_id']){
-                                Order::where('id', $data[ 'order_id' ])->update(['person_info_id'=>$person_info_id,'pay_time' => $time, 'status' =>1, 'logNo' => $par[ 'logNo' ],'orderNo'=>$par['orderNo'],'received_money'=>$par['amount'],'order_money'=>$par['total_amount'],'tradeNo'=>$par['tradeNo']]);
-                            }else{
-                                Order::create(['person_info_id'=>$person_info_id,'order_number'=>generate_order_no(),'create_time'=>time(),'pay_type'=>$data['payChannel'],'shop_id'=>$data['shop_id'],'pay_time' => $time, 'status' =>1, 'logNo' => $par[ 'logNo' ],'orderNo'=>$par['orderNo'],'received_money'=>$par['amount'],'order_money'=>$par['total_amount'],'tradeNo'=>$par['tradeNo']]);
-                            }
-
-                        }
-                        return_msg(200, 'success', urldecode($par[ 'message' ]));
 
 
 //                    } else {
@@ -163,18 +143,56 @@ class Scancode extends Commonality
 
             } else {
 //                if($par[ 'result' ] == "A" || $par[ 'result' ] == "Z"){
-                    $sultr=['shop_id'=>$data['shop_id'],'qryNo'=>$par['logNo']];
-                    $sultr=$this->publics($sultr);
-                   $sultr=$this->orderInquiry($sultr);
-                    return_msg(600, 'error', urldecode($sultr['message']));
+                $sultr = ['shop_id' => $data[ 'shop_id' ], 'qryNo' => $par[ 'logNo' ]];
+                $sultr = $this->publics($sultr);
+                $sultr = $this->orderInquiry($sultr);
+                return_msg(600, 'error', urldecode($sultr[ 'message' ]));
 //                }
 
 
             }
 
-
     }
 
+    /**
+     * 返回的信息入库
+     * @param $data
+     * @param $par
+     */
+    public function storage($data,$par)
+    {
+        //判断是否是会员充值
+        if (array_key_exists('member_id',$data)) {
+            if (!$this->member_recharge($data, $par)) {
+
+                return_msg(200, 'success', '会员充值出现错误，充值已成功');
+            }
+
+        } else {
+            //收银员id   如果是商户存-1
+            $person_info_id=$this->id;
+            if($this->role==-1){
+                $person_info_id=-1;
+            }
+            if(array_key_exists('order_id',$data)){
+                $arr=Order::where('id', $data[ 'order_id' ])->update(['person_info_id'=>$person_info_id,'pay_time' => time(), 'status' =>1, 'logNo' => $par[ 'logNo' ],'order_no'=>$par['orderNo'],'received_money'=>$par['amount'],'order_money'=>$par['total_amount'],'tradeNo'=>$par['tradeNo']]);
+                //订单是否更新成功
+                if(!$arr){
+                    return_msg(400,'error','订单付款出现错误，付款已成功');
+                }
+            }else{
+                $arr=Order::create(['person_info_id'=>$person_info_id,'order_number'=>generate_order_no(),'create_time'=>time(),'pay_type'=>$data['payChannel'],'shop_id'=>$data['shop_id'],'pay_time' => time(), 'status' =>1, 'logNo' => $par[ 'logNo' ],'order_no'=>$par['orderNo'],'received_money'=>$par['amount'],'order_money'=>$par['total_amount'],'tradeNo'=>$par['tradeNo']]);
+                //订单是否创建成功
+                if(!$arr){
+                    return_msg(400,'error','付款出现错误，付款已成功');
+                }
+
+            }
+
+        }
+        return_msg(200, 'success', urldecode($par[ 'message' ]));
+
+    }
     /**
      *扫码支付- 客户主扫（sdkBarcodePosPay ）
      *    * Amount   1 实付金额
@@ -187,46 +205,55 @@ class Scancode extends Commonality
      */
     public  function client_lordesau($data)
     {
-        $url = $this->url . "sdkBarcodePosPay.json";
+        $url = $this->url."sdkBarcodePosPay.json";
 
         //获取返回结果 */
-        $res = curl_request($url, true, $data, true);
-return $res;
+        $par = curl_request($url, true, $data, true);
+//return $par;
         // json转成数组
-        $par = json_decode($res, true);
-        $return_sign = sign_ature(1111, $par);
+
+        $par = json_decode($par, true);
+
+
+
+        $par['message']=urldecode($par['message']);
+
+        $return_sign = sign_ature(1111, $par,$data['key']);
+
 
         //result 交易接查  为空交易失败  S - 交易成功 F - 交易失败 A - 等待授权  Z - 交易未知
-        if ($par[ 'Result' ] != 'Z' || $par[ 'Result' ] != 'A') {
-            if ($par[ 'Result' ] == 'S') {
+//        if ($par[ 'Result' ] != 'Z' || $par[ 'Result' ] != 'A') {
+            if ($par[ 'result' ] == 'S') {
 
                 //判断状态码
                 if ($par[ 'returnCode' ] == '000000') {
-                    if ($par[ 'signValue' ] == $return_sign) {
 
+//                    if ($par['signValue']==$return_sign) {
 
-                        Order::where('id', $data[ 'order_id' ])->update(['payCode' => $par[ 'payCode' ], 'LogNo' => $par[ 'LogNo' ], 'orderNo ' => $par[ 'orderNo' ], 'selOrderNo' => $par[ 'selOrderNo' ], 'tradeNo' => $par[ 'tradeNo' ]]);
+                        Order::where('id', $data[ 'order_id' ])->update(['payCode' => $par[ 'payCode' ], 'logNo' => $par[ 'logNo' ], 'order_no' => $par['orderNo'],'tradeNo' => $par[ 'tradeNo' ]]);
                         //返回二维码地址
-                        return_msg(200, 'success', $par);
+                         return $this->qrcode($par['payCode']);
 
-                    } else {
-                        return_msg(200, 'success', $par[ 'repMsg' ]);
-
-                    }
+//                    } else {
+////                        return 5;
+//                        return_msg(400, 'errors', urldecode($par[ 'message' ]));
+//
+//                    }
 
                 } else {
-                    return_msg(400, 'error', $par[ 'repMsg' ]);
+                    return_msg(300, 'error', urldecode($par[ 'message' ]));
                 }
             } else {
+//                if ($par[ 'Result' ] == 'Z' || $par[ 'Result' ] == 'A') {
+                $sultr = ['shop_id' => $data[ 'shop_id' ], 'qryNo' => $par[ 'logNo' ]];
+                $sultr = $this->publics($sultr);
+                $sultr = $this->orderInquiry($sultr);
+                return_msg(600, 'error', urldecode($sultr[ 'message' ]));
+//                }
 
-                return_msg(500, 'error', $par[ 'repMsg' ]);
+                return_msg(500, 'error', urldecode($par[ 'message' ]));
             }
 
-        } else {
-            //result 返回A，Z，需发起查询判断具体交易状态
-            return_msg(600, 'error', $par[ 'repMsg' ]);
-
-        }
 
 
 
@@ -307,7 +334,7 @@ return $res;
                 if ($par[ 'returnCode' ] == '000000') {
 //                    if ($par[ 'signValue' ] == $return_sign) {
 
-                        Order::where('tradeNo', $data[ 'TxnLogId' ])->update(['pay_time' => time(), 'status' => 1, 'LogNo' => $par[ 'LogNo' ],'orderNo'=>$par['orderNo'],'selOrderNo'=>$par['selOrderNo'],'payChannel'=>$par['payChannel']]);
+                        Order::where('tradeNo', $data[ 'TxnLogId' ])->update(['pay_time' => time(), 'status' => 1, 'LogNo' => $par[ 'LogNo' ],'order_no'=>$par['orderNo'],'selOrderNo'=>$par['selOrderNo'],'payChannel'=>$par['payChannel']]);
 
                         return $par;
 //                    } else {
@@ -350,7 +377,7 @@ return $res;
         //订单号
         $order_no=generate_order_no();
         //创建会员充值订单
-        $resuoo=MemberRecharge::insert(['recharge_time' => time(),'member_id'=>$data['member_id'],'order_money'=>$data['total_amount'],'shop_id'=>$data['shop_id'],'order_no'=>$order_no,'pay_type'=>$data['payChannel'],'merchant_id'=>$data['merchant_id'],'amount'=>$par['amount'], 'status' => 1, 'logNo' => $par[ 'logNo' ]]);
+        $resuoo=MemberRecharge::insert(['recharge_time' => time(),'member_id'=>$data['member_id'],'order_money'=>$data['total_amount'],'shop_id'=>$data['shop_id'],'order_no'=>$par['orderNo'],'pay_type'=>$data['payChannel'],'merchant_id'=>$data['merchant_id'],'amount'=>$par['amount'], 'status' => 1, 'logNo' => $par[ 'logNo' ]]);
         if (!$resuoo){
             return false;
         }

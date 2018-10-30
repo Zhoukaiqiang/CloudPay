@@ -27,7 +27,7 @@ class Coupon extends Commonality
         $id=$request->param('id');
 
 
-        //判断是否核销
+        //查询优惠券
         if($sncode){
             //优惠券查询     状态 0已核销 1进行中
             $data=MemberExclusive::alias('a')
@@ -36,7 +36,7 @@ class Coupon extends Commonality
                 ->where(['a.SN'=>['=',$request->param('sncode')],'a.status'=>1])->select();
 
             return_msg(200,'success',$data);
-        }else if($id){
+        }elseif($id){
             //核销优惠券
 
             $user_id=$this->id;
