@@ -132,9 +132,7 @@ class Common extends Controller
             case 4:
                 return 'phone';
                 break;
-
         }
-
     }
 
     public function check_exist($value, $type = 'phone', $exist)
