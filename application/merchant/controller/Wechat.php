@@ -43,7 +43,7 @@ class Wechat extends Controller
      */
     public function get_code()
     {
-        $code = "https://open.weixin.qq.com/connect/oauth2/authorize?appid=".$this->appid."&redirect_uri=".urlencode($this->redirect_uri)."&response_type=code&scope=snsapi_userinfo&state=202#wechat_redirect";
+        $code = "https://open.weixin.qq.com/connect/oauth2/authorize?appid=".$this->appid."&redirect_uri=".urlencode($this->redirect_uri)."&response_type=code&scope=snsapi_base&state=202#wechat_redirect";
 
         header("Location:".$code);
     }
@@ -67,7 +67,6 @@ class Wechat extends Controller
 
             $userinfo = $this->get_user_info($code);
             Session::set('openid',$userinfo['openid']);
-            Session::set('headimgurl',$userinfo['headimgurl']);
             return $userinfo;
 
         } else {
@@ -253,20 +252,24 @@ class Wechat extends Controller
         }
     }
 
+    /**
+     *会员注册
+     * @param Request $request
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
     public function member_register(Request $request)
     {
         if(Session::has("openid")){
             $openid=Session::get("openid");
-            $member_head=Session::get('headimgurl');
         }else{
             $openid=$this->get_code();
             $openid=$openid['openid'];
-            $member_head=$openid['headimgurl'];
         }
         $data=$request->post();
         $data['openid'] = $openid;
 
-        $data['member_head'] = $member_head;
         //查询门店id
         $info = MerchantShop::field('id,merchant_id')->where('shop_name',$data['shop_name'])->find();
 
@@ -377,5 +380,7 @@ class Wechat extends Controller
             }
         }
     }
+
+
 
 }

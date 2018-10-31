@@ -60,7 +60,6 @@ class Scancode extends Commonality
             ->where('a.id', $data[ 'shop_id' ])
             ->find();
 
-
         $resu = $shop->toArray();
         $rec=json_decode($resu['rec']);
         /**设备号*/
@@ -83,6 +82,7 @@ class Scancode extends Commonality
 
 
         $data['signValue'] = sign_ature(0000, $data,$data['key']);
+
         return $data;
     }
 
@@ -113,16 +113,17 @@ class Scancode extends Commonality
      */
     public function lord_esau($data)
     {
+
         $url = $this->url . "sdkBarcodePay.json";
 //        return json_encode($url);
         //获取返回结果 */
         $res = curl_request($url, true, $data, true);
 //        return $res;
-
+//        $res=urldecode($res);
         // json转成数组
         $par = json_decode($res, true);
-
-        $return_sign = sign_ature(1111, $par,$data['key']);
+//        halt($par);
+//        $return_sign = sign_ature(1111, $par,$data['key']);
         //result 交易接查  为空交易失败  S - 交易成功 F - 交易失败 A - 等待授权  Z - 交易未知
             if ($par[ 'result' ] == "S") {
 
@@ -175,13 +176,13 @@ class Scancode extends Commonality
                 $person_info_id=-1;
             }
             if(array_key_exists('order_id',$data)){
-                $arr=Order::where('id', $data[ 'order_id' ])->update(['person_info_id'=>$person_info_id,'pay_time' => time(), 'status' =>1, 'logNo' => $par[ 'logNo' ],'order_no'=>$par['orderNo'],'received_money'=>$par['amount'],'order_money'=>$par['total_amount'],'tradeNo'=>$par['tradeNo']]);
+                $arr=Order::where('id', $data[ 'order_id' ])->update(['person_info_id'=>$person_info_id,'pay_time' => time(), 'status' =>1, 'logNo' => $par[ 'logNo' ],'order_no'=>$par['orderNo'],'received_money'=>$par['amount'],'order_money'=>$par['total_amount'],'tradeNo'=>$par['tradeNo'],'merchant_id'=>$data['merchant_id']]);
                 //订单是否更新成功
                 if(!$arr){
                     return_msg(400,'error','订单付款出现错误，付款已成功');
                 }
             }else{
-                $arr=Order::create(['person_info_id'=>$person_info_id,'order_number'=>generate_order_no(),'create_time'=>time(),'pay_type'=>$data['payChannel'],'shop_id'=>$data['shop_id'],'pay_time' => time(), 'status' =>1, 'logNo' => $par[ 'logNo' ],'order_no'=>$par['orderNo'],'received_money'=>$par['amount'],'order_money'=>$par['total_amount'],'tradeNo'=>$par['tradeNo']]);
+                $arr=Order::create(['person_info_id'=>$person_info_id,'order_number'=>generate_order_no(),'create_time'=>time(),'pay_type'=>$data['payChannel'],'shop_id'=>$data['shop_id'],'pay_time' => time(), 'status' =>1, 'logNo' => $par[ 'logNo' ],'order_no'=>$par['orderNo'],'received_money'=>$par['amount'],'order_money'=>$par['total_amount'],'tradeNo'=>$par['tradeNo'],'merchant_id'=>$data['merchant_id']]);
                 //订单是否创建成功
                 if(!$arr){
                     return_msg(400,'error','付款出现错误，付款已成功');
@@ -244,12 +245,12 @@ class Scancode extends Commonality
                     return_msg(300, 'error', urldecode($par[ 'message' ]));
                 }
             } else {
-//                if ($par[ 'Result' ] == 'Z' || $par[ 'Result' ] == 'A') {
+                if ($par[ 'Result' ] == 'Z' || $par[ 'Result' ] == 'A') {
                 $sultr = ['shop_id' => $data[ 'shop_id' ], 'qryNo' => $par[ 'logNo' ]];
                 $sultr = $this->publics($sultr);
                 $sultr = $this->orderInquiry($sultr);
                 return_msg(600, 'error', urldecode($sultr[ 'message' ]));
-//                }
+                }
 
                 return_msg(500, 'error', urldecode($par[ 'message' ]));
             }
@@ -365,7 +366,7 @@ class Scancode extends Commonality
     public function  member_recharge($data,$par)
     {
         //获取当前商户的当前有效时间的优惠活动   	recharge_money	充值金额   give_money 赠送金额
-        $aumen=ShopActiveRecharge::where(['merchant_id'=>$data['merchant_id'],'start_time'=>['<',time()],'end_time'=>['>',time()]])->field('recharge_money,give_money')->order('recharge_money asc')->select();
+        $aumen=ShopActiveRecharge::where(['merchant_id'=>$this->id,'start_time'=>['<',time()],'end_time'=>['>',time()]])->field('recharge_money,give_money')->order('recharge_money asc')->select();
         $money=0;
 //        return_msg($aumen);
         foreach ($aumen as $k=>$v){

@@ -122,9 +122,20 @@ class Proceeds extends Scancode
         //支付渠道
         $data['payChannel']=$this->isplay($data['authCode']);
         //公共参数
-       $data= $this->publics($data);
+        $shop = MerchantShop::alias('a')
+            ->field('b.key,b.orgNo,b.mercId,b.rec,a.merchant_id')
+            ->join('merchant_incom b','b.merchant_id=a.merchant_id')
+            ->where('a.id', $data[ 'shop_id' ])
+            ->find();
+//       $data= $this->publics($data);
+//       halt($shop);
+//       unset($data['shop_id']);
+//       unset($data['key']);
+        $info=request_head($shop,$data);
+//        unset($info['shop_id']);
+        $info['merchant_id']=$shop['merchant_id'];
        //调用星_pos接口
-       return $this->lord_esau($data);
+       return $this->lord_esau($info);
 
     }
 

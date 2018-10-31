@@ -11,6 +11,7 @@ use app\merchant\model\ShopActiveExclusive;
 use app\merchant\model\ShopActiveRecharge;
 use app\merchant\model\ShopActiveShare;
 use think\Controller;
+use think\Db;
 use think\Request;
 use think\Session;
 
@@ -130,7 +131,7 @@ class Active extends Common
             }*/
         }else{
             //查询商户是否有活动
-            $info = ShopActiveRecharge::where(['merchant_id'=>$this->merchant_id,'status'=>1])->find();
+            $info = ShopActiveRecharge::where(['merchant_id'=>$this->merchant_id,'status'=>1,'end_time'=>['>',time()]])->find();
             if($info){
                 return_msg(400,'请先关闭活动');
             }
@@ -208,7 +209,7 @@ class Active extends Common
                 $data=MerchantShop::field('id,shop_name')->where('merchant_id',$this->merchant_id)->select();
                 //查询门店是否有活动
                 foreach($data as $k=>$v){
-                    $res=ShopActiveDiscount::where(['shop_id'=>$v['id'],'status'=>1])->find();
+                    $res=ShopActiveDiscount::where(['shop_id'=>$v['id'],'status'=>1,'end_time'=>['>',time()]])->find();
                     if(!empty($res)){
                         unset($data[$k]);
                     }
@@ -220,7 +221,7 @@ class Active extends Common
             }elseif(empty($this->merchant_id) && !empty($this->user_id)){
                 $info=MerchantUser::field('shop_id')->where('id',$this->user_id)->find();
                 $data=MerchantShop::field('id,shop_name')->where('id',$info['shop_id'])->find();
-                $res=ShopActiveDiscount::where(['shop_id'=>$data['id'],'status'=>1])->find();
+                $res=ShopActiveDiscount::where(['shop_id'=>$data['id'],'status'=>1,'end_time'=>['>',time()]])->find();
                 if($res){
                     return_msg(400,'请先关闭活动');
                 }else{
@@ -240,7 +241,7 @@ class Active extends Common
     public function exclusive(Request $request)
     {
 
-        $info=ShopActiveExclusive::field('status')->where(['merchant_id'=>$this->merchant_id,'status'=>1])->find();
+        $info=ShopActiveExclusive::field('status')->where(['merchant_id'=>$this->merchant_id,'status'=>1,'end_time'=>['>',time()]])->find();
         if(!empty($info)){
             return_msg(400,'请先关闭活动');
         }
@@ -373,9 +374,10 @@ class Active extends Common
             if(!empty($this->merchant_id)){
                 //取出所有门店
                 $data=MerchantShop::field('id,shop_name')->where('merchant_id',$this->merchant_id)->select();
+
                 //查询门店是否有活动
                 foreach($data as $k=>$v){
-                    $res=ShopActiveShare::where(['shop_id'=>$v['id'],'status'=>1])->find();
+                    $res=ShopActiveShare::where(['shop_id'=>$v['id'],'status'=>1,'end_time'=>['>',time()]])->find();
                     if(!empty($res)){
                         unset($data[$k]);
                     }
@@ -387,7 +389,7 @@ class Active extends Common
             }elseif(empty($this->merchant_id) && !empty($this->user_id)){
                 $info=MerchantUser::field('shop_id')->where('id',$this->user_id)->find();
                 $data=MerchantShop::field('id,shop_name')->where('id',$info['shop_id'])->find();
-                $res=ShopActiveShare::where(['shop_id'=>$data['id'],'status'=>1])->find();
+                $res=ShopActiveShare::where(['shop_id'=>$data['id'],'status'=>1,'end_time'=>['>',time()]])->find();
                 if($res){
                     return_msg(400,'请先关闭活动');
                 }else{
@@ -504,6 +506,7 @@ class Active extends Common
                 ->whereTime('a.end_time','>',time())
                 ->order('a.create_time desc')
                 ->select();
+
             check_data($data);
         }elseif(empty($this->merchant_id) && !empty($this->user_id)){
             //取出门店下所有活动
@@ -545,6 +548,7 @@ class Active extends Common
         }
 
     }
+    
 
     /**
      * 关闭活动

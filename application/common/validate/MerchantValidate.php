@@ -85,7 +85,7 @@ class MerchantValidate extends Validate
 
         //会员专享
         'exclusive'=>[
-            'name','consump_number', 'last_consump', 'recharge_total','consump_total','coupons_title','coupons_money','order_money','start_time','end_time'
+            'consump_number', 'last_consump', 'recharge_total','consump_total','coupons_title','coupons_money','order_money','start_time','end_time'
         ],
         //分享红包
         'share'=>[

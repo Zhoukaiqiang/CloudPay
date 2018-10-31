@@ -111,8 +111,8 @@ class Login extends Controller
      */
     public function merchant_login()
     {
-        if (request()->isPost()) {
-            $data = request()->post();
+        if (request()->isGet()) {
+            $data = request()->param();
             /** 检验参数 */
             if(!isset($data['token'])){
                 return_msg(400,'非法登录');

@@ -53,7 +53,7 @@ class Index extends Controller
      */
     public function agent_login(Request $request)
     {
-        $data=$request->post();
+        $data=$request->param();
         if(!isset($data['token'])){
             return_msg(400,'非法登录');
         }
