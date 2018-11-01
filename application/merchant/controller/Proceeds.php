@@ -114,6 +114,8 @@ class Proceeds extends Scancode
     public function shop_lordesau(Request $request)
     {
         $data=$request->post();
+        $data['amount']=$data['amount']*100;
+        $data['total_amount']=$data['total_amount']*100;
         //如果是商户收款
         if($this->role==-1){
             $shop=MerchantShop::where('merchant_id',$this->id)->field('id')->find();
@@ -134,6 +136,7 @@ class Proceeds extends Scancode
         $info=request_head($shop,$data);
 //        unset($info['shop_id']);
         $info['merchant_id']=$shop['merchant_id'];
+//        halt($info);
        //调用星_pos接口
        return $this->lord_esau($info);
 

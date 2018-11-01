@@ -120,6 +120,7 @@ class Scancode extends Commonality
         $res = curl_request($url, true, $data, true);
 //        return $res;
 //        $res=urldecode($res);
+
         // json转成数组
         $par = json_decode($res, true);
 //        halt($par);
@@ -162,6 +163,8 @@ class Scancode extends Commonality
      */
     public function storage($data,$par)
     {
+        $par['amount']=$par['amount']/100;
+        $par['total_amount']=$par['total_amount']/100;
         //判断是否是会员充值
         if (array_key_exists('member_id',$data)) {
             if (!$this->member_recharge($data, $par)) {

@@ -8,6 +8,7 @@ use app\agent\model\MerchantIncom;
 use app\admin\model\TotalMerchant;
 use app\admin\model\IncomImg;
 use app\agent\model\AgentCategory;
+use Endroid\QrCode\QrCode;
 use think\Controller;
 use think\Db;
 use think\Exception;
@@ -362,6 +363,7 @@ class Incom extends Controller
                     $res = MerchantIncom::where('merchant_id', $merchant_id)->update(['check_flag' => $result[ 'check_flag' ]]);
 
                     TotalMerchant::where('merchant_id',$merchant_id)->update(['review_status'=>0]);
+
                     if ($res) {
                         return_msg(200, 'success');
                     } else {
@@ -375,6 +377,8 @@ class Incom extends Controller
                     ]);
 
                     TotalMerchant::where('merchant_id',$merchant_id)->update(['review_status'=>2]);
+                    //生成二维码
+                    $this->qrcode($merchant_id);
                     if ($res) {
                         return_msg(200, 'success');
                     } else {
@@ -389,6 +393,56 @@ class Incom extends Controller
         }else{
 
         }
+    }
+
+    /**
+     * Notes:生成二维码地址
+     * User: guoyang
+     * DATE: 2018/10/25
+     * @param null $url 二维码地址
+     * @param null $shop_id
+     * @param null $name
+     */
+    public function qrcode($merchant_id=null)
+    {
+        $url="http://47.92.212.66/index.php/merchant/sweep/index?merchant_id=$merchant_id";
+        header("content-type:text/html;charset=utf-8");
+//        Vendor('phpqrcode.phpqrcode');  //引入的phpqrcode类
+        import('phpqrcode.phpqrcode', EXTEND_PATH,'.php');
+        $path = "/uploads/QRcode/".date("Ymd").DS;//创建路径
+
+//
+        $time = time().'.png'; //创建文件名
+
+
+        //$file_name = iconv("utf-8","gb2312",$time);
+
+        $file_path = $_SERVER['DOCUMENT_ROOT'].$path;
+
+        if(!file_exists($file_path)){
+            mkdir($file_path, 0777,true);//创建目录
+        }
+        $file_path = $file_path.$this->runningWater().'.png';//1.命名生成的二维码文件
+        $level = 'L';  //3.纠错级别：L、M、Q、H
+        $size = 4;//4.点的大小：1到10,用于手机端4就可以了
+        ob_end_clean();//清空缓冲区
+        //生成二维码-保存：
+        \QRcode::png($url, $file_path, $level, $size);
+        //保存二维码地址
+        TotalMerchant::where('merchant_id',$merchant_id)->update(['qrcode'=>$file_path]);
+
+    }
+
+    /**
+     * 流水号
+     * @return string
+     */
+    public function runningWater()
+    {
+        list($usec, $sec) = explode(" ", microtime());
+        $times=str_replace('.','',$usec + $sec);
+        //當前時間
+        return time().$times;
     }
 
     /**
@@ -609,7 +663,7 @@ class Incom extends Controller
         $return_sign = sign_ature(1111,$par);
 
         if ($par['msg_cd']=='000000'){
-            if($par['signValue'] == $return_sign && $par['check_flag']==2){
+            if($par['signValue'] == $return_sign && $par['check_flag']==1){
                 MerchantIncom::where('merchant_id',$id)->update(['status'=>0]);
 
                 MerchantIncom::where('merchant_id', $id)->update(['check_flag' => $par[ 'check_flag' ],
@@ -617,6 +671,7 @@ class Incom extends Controller
                     'rec' => $par[ 'REC' ]['trmNo'],
                     'stoe_id'=>$par['REC']['stoe_id']
                 ]);
+                $this->qrcode($id);
                 return_msg(200,'success',$par);
             }else{
                 return_msg(400,'error');

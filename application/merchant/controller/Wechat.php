@@ -66,6 +66,7 @@ class Wechat extends Controller
             Session::set("code", $code);
 
             $userinfo = $this->get_user_info($code);
+
             Session::set('openid',$userinfo['openid']);
             return $userinfo;
 

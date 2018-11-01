@@ -10,6 +10,7 @@ use app\merchant\model\ShopActiveDiscount;
 use app\merchant\model\ShopActiveExclusive;
 use app\merchant\model\ShopActiveRecharge;
 use app\merchant\model\ShopActiveShare;
+use Endroid\QrCode\QrCode;
 use think\Controller;
 use think\Db;
 use think\Request;
@@ -23,8 +24,8 @@ class Active extends Common
     public function __construct(Request $request = null)
     {
         parent::__construct($request);
-        $this->appid="wxa86067c2fcad9c29";
-        $this->appsecret="175fef1031207c84f1eb6b5ec4d5004a";
+        $this->appid="wx1aeeaac161a210df";
+        $this->appsecret="0b1ddf2e988b7d05e4e775cc8bdfc831";
     }
 
     /**
@@ -49,7 +50,6 @@ class Active extends Common
                                 'active_time'=>0,
                                 'recharge_money'=>$v,
                                 'give_money'=>$s,
-                                'name'=>$data['name'],
                                 'merchant_id'=>$this->merchant_id,
                                 'status'=>1,
                                 'create_time'=>time(),
@@ -62,7 +62,6 @@ class Active extends Common
                                 'active_time'=>1,
                                 'recharge_money'=>$v,
                                 'give_money'=>$s,
-                                'name'=>$data['name'],
                                 'merchant_id'=>$this->merchant_id,
                                 'status'=>1,
                                 'create_time'=>time(),
@@ -205,6 +204,7 @@ class Active extends Common
             }
         }else{
             if(!empty($this->merchant_id )){
+
                 //取出所有门店
                 $data=MerchantShop::field('id,shop_name')->where('merchant_id',$this->merchant_id)->select();
                 //查询门店是否有活动
@@ -220,8 +220,8 @@ class Active extends Common
                 return_msg(200,'success',$data);
             }elseif(empty($this->merchant_id) && !empty($this->user_id)){
                 $info=MerchantUser::field('shop_id')->where('id',$this->user_id)->find();
-                $data=MerchantShop::field('id,shop_name')->where('id',$info['shop_id'])->find();
-                $res=ShopActiveDiscount::where(['shop_id'=>$data['id'],'status'=>1,'end_time'=>['>',time()]])->find();
+                $data=MerchantShop::field('id,shop_name')->where('id',$info['shop_id'])->select();
+                $res=ShopActiveDiscount::where(['shop_id'=>$data[0]['id'],'status'=>1,'end_time'=>['>',time()]])->find();
                 if($res){
                     return_msg(400,'请先关闭活动');
                 }else{
@@ -240,95 +240,99 @@ class Active extends Common
      */
     public function exclusive(Request $request)
     {
+        if($request->isGet()){
 
-        $info=ShopActiveExclusive::field('status')->where(['merchant_id'=>$this->merchant_id,'status'=>1,'end_time'=>['>',time()]])->find();
-        if(!empty($info)){
-            return_msg(400,'请先关闭活动');
-        }
-        $data=$request->post();
-        $data['status']=1;
-        $data['create_time']=time();
-        $data['consump_number']=$request->post('consump_number') ? $request->post('consump_number') : -1;
-        $data['last_consump']=$request->post('last_consump') ? $request->post('last_consump') : -1;
-        $data['recharge_total']=$request->post('recharge_total') ? $request->post('recharge_total') : -1;
-        $data['consump_total']=$request->post('consump_total') ? $request->post('consump_total') : -1;
-        $data['merchant_id']=$this->merchant_id;
-        //验证
-        check_params('exclusive',$data,'MerchantValidate');
-        $insertid=ShopActiveExclusive::insertGetId($data,true);
-        if($insertid){
-            //判断会员是否符合条件
-            if($data['consump_number'] != -1){
-                $info=MerchantMember::field('id,consump_number')->select();
-                foreach($info as $v){
-                    if($v['consump_number'] >= $data['consump_number']){
-                        //派卷
-                        $arr=[
-                            'SN'=>getSN(),
-                            'member_id'=>$v['id'],
-                            'exclusive_id'=>$insertid,
-                            'status'=>1,
-                            'order_number'=>generate_order_no(),
-                            'merchant_id'=>$this->merchant_id
-                        ];
-                    MemberExclusive::insert($arr);
-                    }
-                }
-            }elseif($data['last_consump'] !=-1){
-                $info=MerchantMember::field('id,consumption_time')->select();
-                foreach($info as $v){
-                    //比较时间戳大小
-                    if($v['consumption_time'] >= time()-$data['last_consump']){
-                        //派卷
-                        $arr=[
-                            'SN'=>getSN(),
-                            'member_id'=>$v['id'],
-                            'exclusive_id'=>$insertid,
-                            'status'=>1,
-                            'order_number'=>generate_order_no(),
-                            'merchant_id'=>$this->merchant_id
-                        ];
-                        MemberExclusive::insert($arr);
-                    }
-                }
-            }elseif($data['recharge_total'] !=-1){
-                $info=MerchantMember::field('id,recharge_money')->select();
-                foreach($info as $v){
-                    if($v['recharge_money'] >= $data['recharge_total']){
-                        //派卷
-                        $arr=[
-                            'SN'=>getSN(),
-                            'member_id'=>$v['id'],
-                            'exclusive_id'=>$insertid,
-                            'status'=>1,
-                            'order_number'=>generate_order_no(),
-                            'merchant_id'=>$this->merchant_id
-                        ];
-                        MemberExclusive::insert($arr);
-                    }
-                }
-            }elseif($data['consump_total'] !=-1){
-                $info=MerchantMember::field('id,consumption_money')->select();
-                foreach($info as $v){
-                    if($v['consumption_money'] >= $data['consump_total']){
-                        //派卷
-                        $arr=[
-                            'SN'=>getSN(),
-                            'member_id'=>$v['id'],
-                            'exclusive_id'=>$insertid,
-                            'status'=>1,
-                            'order_number'=>generate_order_no(),
-                            'merchant_id'=>$this->merchant_id
-                        ];
-                        MemberExclusive::insert($arr);
-                    }
-                }
+            $info=ShopActiveExclusive::field('status')->where(['merchant_id'=>$this->merchant_id,'status'=>1,'end_time'=>['>',time()]])->find();
+            if(!empty($info)){
+                return_msg(400,'请先关闭活动');
             }
-            return_msg(200,'派券成功');
         }else{
-            return_msg(400,'派券失败');
+            $data=$request->post();
+            $data['status']=1;
+            $data['create_time']=time();
+            $data['consump_number']=$request->post('consump_number') ? $request->post('consump_number') : -1;
+            $data['last_consump']=$request->post('last_consump') ? $request->post('last_consump') : -1;
+            $data['recharge_total']=$request->post('recharge_total') ? $request->post('recharge_total') : -1;
+            $data['consump_total']=$request->post('consump_total') ? $request->post('consump_total') : -1;
+            $data['merchant_id']=$this->merchant_id;
+            //验证
+            check_params('exclusive',$data,'MerchantValidate');
+            $insertid=ShopActiveExclusive::insertGetId($data,true);
+            if($insertid){
+                //判断会员是否符合条件
+                if($data['consump_number'] != -1){
+                    $info=MerchantMember::field('id,consump_number')->select();
+                    foreach($info as $v){
+                        if($v['consump_number'] >= $data['consump_number']){
+                            //派卷
+                            $arr=[
+                                'SN'=>getSN(),
+                                'member_id'=>$v['id'],
+                                'exclusive_id'=>$insertid,
+                                'status'=>1,
+                                'order_number'=>generate_order_no(),
+                                'merchant_id'=>$this->merchant_id
+                            ];
+                            MemberExclusive::insert($arr);
+                        }
+                    }
+                }elseif($data['last_consump'] !=-1){
+                    $info=MerchantMember::field('id,consumption_time')->select();
+                    foreach($info as $v){
+                        //比较时间戳大小
+                        if($v['consumption_time'] >= time()-$data['last_consump']){
+                            //派卷
+                            $arr=[
+                                'SN'=>getSN(),
+                                'member_id'=>$v['id'],
+                                'exclusive_id'=>$insertid,
+                                'status'=>1,
+                                'order_number'=>generate_order_no(),
+                                'merchant_id'=>$this->merchant_id
+                            ];
+                            MemberExclusive::insert($arr);
+                        }
+                    }
+                }elseif($data['recharge_total'] !=-1){
+                    $info=MerchantMember::field('id,recharge_money')->select();
+                    foreach($info as $v){
+                        if($v['recharge_money'] >= $data['recharge_total']){
+                            //派卷
+                            $arr=[
+                                'SN'=>getSN(),
+                                'member_id'=>$v['id'],
+                                'exclusive_id'=>$insertid,
+                                'status'=>1,
+                                'order_number'=>generate_order_no(),
+                                'merchant_id'=>$this->merchant_id
+                            ];
+                            MemberExclusive::insert($arr);
+                        }
+                    }
+                }elseif($data['consump_total'] !=-1){
+                    $info=MerchantMember::field('id,consumption_money')->select();
+                    foreach($info as $v){
+                        if($v['consumption_money'] >= $data['consump_total']){
+                            //派卷
+                            $arr=[
+                                'SN'=>getSN(),
+                                'member_id'=>$v['id'],
+                                'exclusive_id'=>$insertid,
+                                'status'=>1,
+                                'order_number'=>generate_order_no(),
+                                'merchant_id'=>$this->merchant_id
+                            ];
+                            MemberExclusive::insert($arr);
+                        }
+                    }
+                }
+                return_msg(200,'派券成功');
+            }else{
+                return_msg(400,'派券失败');
 
+            }
         }
+
     }
 
     /**
@@ -387,9 +391,11 @@ class Active extends Common
                 }
                 return_msg(200,'success',$data);
             }elseif(empty($this->merchant_id) && !empty($this->user_id)){
+
                 $info=MerchantUser::field('shop_id')->where('id',$this->user_id)->find();
-                $data=MerchantShop::field('id,shop_name')->where('id',$info['shop_id'])->find();
-                $res=ShopActiveShare::where(['shop_id'=>$data['id'],'status'=>1,'end_time'=>['>',time()]])->find();
+                $data=MerchantShop::field('id,shop_name')->where('id',$info['shop_id'])->select();
+
+                $res=ShopActiveShare::where(['shop_id'=>$data[0]['id'],'status'=>1,'end_time'=>['>',time()]])->find();
                 if($res){
                     return_msg(400,'请先关闭活动');
                 }else{
@@ -441,19 +447,18 @@ class Active extends Common
 
         $url="https://api.weixin.qq.com/cgi-bin/message/template/send?access_token=".$access_token;
       foreach($openid as $v){
-
           $arr=array(
               "touser"=>$v['openid'],
-              "template_id"=>"k41FDjmHugKZgPaTaz4mg4RHlS_NZ7QIbYR9qYvLSt8",
+              "template_id"=>"Jo5aZi-6uWfA7Vl_gTGqsaABqeIfuJIzrXBRe3cDOIg",
               "url"=>"www.baidu.com",
               "data"=>array(
-                  'name'=>array('value'=>'100万到手','color'=>'#173177'),
-                  'money'=>array('value'=>100,'color'=>'#173177'),
-                  'date'=>array('value'=>date("Y-m-d H:i:s"),"color"=>"#173177")
+                  'first'=>array('value'=>'点击获取更多优惠'),
+                  'keyword1'=>array('value'=>date("Y-m-d H:i:s"),'color'=>'#173177'),
               ),
           );
 //        $postjson=json_encode($arr);
           $res=curl_request($url,true,$arr,true);
+          halt($res);
       }
     }
 
@@ -548,7 +553,7 @@ class Active extends Common
         }
 
     }
-    
+
 
     /**
      * 关闭活动
@@ -843,4 +848,6 @@ class Active extends Common
             check_data($data);
         }
     }
+
+
 }

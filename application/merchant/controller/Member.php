@@ -434,7 +434,7 @@ class Member extends Common
 
                 $msg=[
                     'orderNo'=>$order['order_no'],
-                    'txnAmt'=>$param['txnAmt']
+                    'txnAmt'=>$param['txnAmt']*100
                 ];
             }else{
                 $msg=[
@@ -478,7 +478,7 @@ class Member extends Common
 
                 $msg=[
                     'orderNo'=>$order['order_no'],
-                    'txnAmt'=>$param['txnAmt']
+                    'txnAmt'=>$param['txnAmt']*100
                 ];
             }else{
                 $msg=[

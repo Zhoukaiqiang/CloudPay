@@ -148,8 +148,9 @@ class Shop extends Commonality
                 Db::name('merchant_incom')->where('merchant_id', $data['merchant_id'])->update(['status' => 0]);
                 //返回成功
                 Db::name('merchant_shop')->update($datle);
+                //生成门店二维码
+                $this->qrcode();
                 return_msg(200, 'success', $shop_api['msg_dat']);
-
             } else {
                 return_msg(400, 'error', $shop_api['msg_dat']);
             }
@@ -598,4 +599,6 @@ class Shop extends Commonality
 
         return_msg(200,'success',$data);
     }
+
+
 }
