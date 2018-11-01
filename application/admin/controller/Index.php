@@ -45,7 +45,6 @@ class Index extends Admin
         $agent = Db::name('total_agent')->count('id');
         $merchant = Db::name('total_merchant')->count('id');
 
-
         /* 获取昨日全部的交易总额 */
         if ($past == "yesterday") {
             $member = MemberRecharge::whereTime("recharge_time", "yesterday")->field("sum(amount) amount, count(id) id")->select();

@@ -56,6 +56,7 @@ class Advertise extends Admin
                     'url' => $url,
                     "admin_id" => $param['admin_id'],
                     "agent_id" => $param['agent_id'],
+                    "http" => $param['http'],
                 );
                 $result = TotalAd::create($insertData);
                 if ($result) {

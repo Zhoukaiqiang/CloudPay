@@ -161,7 +161,7 @@ class Agent extends Admin
                 $data['contract_picture'] = $this->upload_img();
                 $data['contract_picture'] = json_encode($data['contract_picture']);
             }
-//            $data['contract_time']=strtotime($data['contract_time']);
+
             //保存到数据表
 
             $info =TotalAgent::where('id', 'eq', $data['id'])->update($data, true);
