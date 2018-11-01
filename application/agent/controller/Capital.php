@@ -910,7 +910,6 @@ class Capital extends Controller
     public function agent_count(Request $request)
     {
         $agent_id = Session::get('username_')["id"];
-
         /** @var [object] 检查是否具有权限 $res */
         $res = TotalAgent::get($agent_id);
         if ($res->getData()["parent_id"]) {

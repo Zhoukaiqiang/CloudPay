@@ -5,7 +5,9 @@ namespace app\merchant\controller;
 use app\admin\model\MerchantIncom;
 use app\merchant\model\MemberExclusive;
 use app\merchant\model\MerchantMember;
+use app\merchant\model\MerchantShop;
 use app\merchant\model\Order;
+use app\merchant\model\ShopActiveExclusive;
 use app\merchant\model\TotalMerchant;
 use think\Controller;
 use think\Request;
@@ -41,7 +43,7 @@ class Wechat extends Controller
      */
     public function get_code()
     {
-        $code = "https://open.weixin.qq.com/connect/oauth2/authorize?appid=".$this->appid."&redirect_uri=".urlencode($this->redirect_uri)."&response_type=code&scope=snsapi_userinfo&state=202#wechat_redirect";
+        $code = "https://open.weixin.qq.com/connect/oauth2/authorize?appid=".$this->appid."&redirect_uri=".urlencode($this->redirect_uri)."&response_type=code&scope=snsapi_base&state=202#wechat_redirect";
 
         header("Location:".$code);
     }
@@ -64,8 +66,8 @@ class Wechat extends Controller
             Session::set("code", $code);
 
             $userinfo = $this->get_user_info($code);
+
             Session::set('openid',$userinfo['openid']);
-            Session::set('headimgurl',$userinfo['headimgurl']);
             return $userinfo;
 
         } else {
@@ -97,19 +99,19 @@ class Wechat extends Controller
     /**
      * 发起请求
      */
-    public function https_request($url)//访问url返回结果
-    {
+    public function https_request($url,$data = null){
         $curl = curl_init();
         curl_setopt($curl, CURLOPT_URL, $url);
         curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, FALSE);
         curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, FALSE);
-        curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
-        $data = curl_exec($curl);
-        if (curl_errno($curl)) {
-            return 'ERROR' . curl_error($curl);
+        if (!empty($data)){
+            curl_setopt($curl, CURLOPT_POST, 1);
+            curl_setopt($curl, CURLOPT_POSTFIELDS, $data);
         }
+        curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
+        $output = curl_exec($curl);
         curl_close($curl);
-        return $data;
+        return $output;
     }
 
 
@@ -248,6 +250,135 @@ class Wechat extends Controller
             echo $_GET['echostr'];
         }else{
             return false;
+        }
+    }
+
+    /**
+     *会员注册
+     * @param Request $request
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function member_register(Request $request)
+    {
+        if(Session::has("openid")){
+            $openid=Session::get("openid");
+        }else{
+            $openid=$this->get_code();
+            $openid=$openid['openid'];
+        }
+        $data=$request->post();
+        $data['openid'] = $openid;
+
+        //查询门店id
+        $info = MerchantShop::field('id,merchant_id')->where('shop_name',$data['shop_name'])->find();
+
+        $data['shop_id']=$info['id'];
+
+        $data['merchant_id']=$info['merchant_id'];
+        //验证
+        check_params('member_register',$data,'MerchantValidate');
+        if(isset($data['partner_phone'])){
+            //查看是否有活动
+            $res=ShopActiveExclusive::field('id,register_status')->where('merchant_id',$info['merchant_id'])->find();
+            if($res['register_status'] == 1){
+                //老会员推荐新会员注册
+                //查询是否有该手机号
+                $msg=MerchantMember::field('id,member_phone')->select();
+                foreach($msg as $v){
+                    if($v['member_phone'] == $data['partner_phone']){
+                        //给当前手机号的会员排卷
+                        $arr=[
+                            'member_id'=>$v['id'],
+                            'exclusive_id'=>$res['id'],
+                            'merchant_id'=>$info['merchant_id'],
+                            'SN'=>getSN(),
+                            'status'=>1,
+                            'order_number'=>generate_order_no(),
+                        ];
+
+                        $result=MemberExclusive::insert($arr,true);
+
+                    }else{
+                        return_msg(400,'请填写正确的手机号');
+                    }
+                }
+                //新会员注册
+                $insert_id=MerchantMember::insertGetId($data,true);
+                if($insert_id){
+                    return_msg(200,'注册成功');
+                }else{
+                    return_msg(400,'注册失败');
+                }
+            }elseif($res['register_status']==2){
+                //老会员推荐新会员注册和新会员注册都会派送优惠券
+                //查询是否有该手机号
+                $msg=MerchantMember::field('id,member_phone')->select();
+                foreach($msg as $v){
+                    if($v['member_phone'] == $data['partner_phone']){
+                        //给当前手机号的会员排卷
+                        $arr=[
+                            'member_id'=>$v['id'],
+                            'exclusive_id'=>$res['id'],
+                            'merchant_id'=>$info['merchant_id'],
+                            'SN'=>getSN(),
+                            'status'=>1,
+                            'order_number'=>generate_order_no(),
+                        ];
+                        $result=MemberExclusive::insert($arr,true);
+
+                    }else{
+                        return_msg(400,'请填写正确的手机号');
+                    }
+                }
+
+                //新会员注册
+                $insert_id=MerchantMember::insertGetId($data,true);
+                if($insert_id){
+                    $arr1=[
+                        'member_id'=>$insert_id,
+                        'exclusive_id'=>$res['id'],
+                        'merchant_id'=>$info['merchant_id'],
+                        'SN'=>getSN(),
+                        'status'=>1,
+                        'order_number'=>generate_order_no(),
+                    ];
+                    MemberExclusive::insert($arr1,true);
+                    return_msg(200,'注册成功');
+                }else{
+                    return_msg(400,'注册失败');
+                }
+            }
+        }else{
+            //查看是否有新会员注册活动
+            $res=ShopActiveExclusive::field('id,register_status')->where('merchant_id',$info['merchant_id'])->find();
+
+            if($res['register_status'] == 0){
+                //新会员注册派卷
+                $insert_id=MerchantMember::insertGetId($data,true);
+                if($insert_id){
+                    $arr1=[
+                        'member_id'=>$insert_id,
+                        'exclusive_id'=>$res['id'],
+                        'merchant_id'=>$info['merchant_id'],
+                        'SN'=>getSN(),
+                        'status'=>1,
+                        'order_number'=>generate_order_no(),
+                    ];
+                    $re = MemberExclusive::insert($arr1,true);
+                    return_msg(200,'注册成功');
+                }else{
+                    return_msg(400,'注册失败');
+                }
+            }elseif($res['register_status'] == -1){
+                $insert_id=MerchantMember::insertGetId($data,true);
+                if($insert_id){
+                    return_msg(200,'注册成功');
+                }else{
+                    return_msg(400,'注册失败');
+                }
+            }
         }
     }
 

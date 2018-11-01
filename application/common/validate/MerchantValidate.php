@@ -54,6 +54,11 @@ class MerchantValidate extends Validate
         ["id_card", "require", "身份证号必填"],
         ["open_bank", "require", "银行支行必填"],
         ["open_branch", "require", "联行行号必填"],
+
+        //会员注册
+        ["member_name", "require", "请输入昵称"],
+        ['member_phone', 'require|regex:/^1[3-9]\d{9}$/', '请填写手机号|手机号格式不正确'],
+        ["member_birthday", "require", "请输入生日"],
     ];
 
     //命名规则 控制器_函数名称
@@ -80,7 +85,7 @@ class MerchantValidate extends Validate
 
         //会员专享
         'exclusive'=>[
-            'name','consump_number', 'last_consump', 'recharge_total','consump_total','coupons_title','coupons_money','order_money','start_time','end_time'
+            'consump_number', 'last_consump', 'recharge_total','consump_total','coupons_title','coupons_money','order_money','start_time','end_time'
         ],
         //分享红包
         'share'=>[
@@ -94,6 +99,11 @@ class MerchantValidate extends Validate
         //会员充值
         'member_recharge'=>[
             'amount'
+        ],
+
+        //会员注册
+        'member_register'=>[
+            'member_name','member_phone','member_birthday'
         ],
     ];
 
