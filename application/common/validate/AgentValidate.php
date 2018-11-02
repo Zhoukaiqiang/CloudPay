@@ -21,14 +21,14 @@ class AgentValidate extends Validate
         ['account_no', 'require', '请填写账户号'],
         ['open_bank', 'require', '请填写开户银行'],
         ['open_branch', 'require|min:10', '请填写开户支行|输入字数不低于10个字'],
-        ['id_card', 'require|regex:/(^\d(15)$)|((^\d{18}$))|(^\d{17}(\d|X|x)$)/', '请填写法人身份证号|身份证格式不正确'],
+        ['id_card', 'require|number', '请填写法人身份证号|身份证号为数字'],
         ['law_name', 'require', '请填写法人姓名'],
         ['id_card_time', 'require', '请填写法人身份证到期日'],
         ['contact', 'require', '请填写商户联系人'],
         ['business_license', 'require', '请填写营业执照号'],
         ['license_time', 'require', '请填写营业执照有效期'],
         ['law_name', 'require', '请填写法人姓名'],
-        ['phone', 'require|regex:/^1[34578]\d{9}$/|unique:phone', '请填写手机号|手机号格式不正确|手机号已存在'],
+        ["phone", "require|length:11|regex:/^1[3-9]\d{9}$/", "请填写手机号|长度必须11位|手机号格式不正确"],
 
         //新增子代
         ['agent_name', 'require', '请输入代理商名称'],
@@ -60,7 +60,7 @@ class AgentValidate extends Validate
     //命名规则 控制器_函数名称
     protected $scene = [
         //新增商户
-        'add_middle' => ['merchants_type', 'name', 'address', 'detail_address', 'email', 'partner_id', 'category_id', 'merchant_rate', 'account_type', 'account_name', 'account_no', 'open_bank', 'id_card', 'law_name', 'id_card_time', 'contact', 'business_license', 'license_time', 'law_name', 'phone'],
+        'add_middle' => ['merchants_type', 'name', 'address', 'detail_address', 'email', 'partner_id', 'category', 'merchant_rate', 'account_type', 'account_name', 'account_no', 'open_bank', 'id_card', 'law_name', 'id_card_time', 'contact', 'business_license', 'license_time', 'law_name','phone'],
         //子代详情
         'agent_detail'=>[
             'agent_name', 'contact_person', 'detailed_address', 'username', 'password', 'open_bank', 'open_bank_branche', 'home', 'account', 'account_name', 'account_no', 'agent_level', 'agent_area', 'agent_money', 'contract_time', 'agent_rate', 'contract_picture'

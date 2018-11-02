@@ -33,19 +33,28 @@ class Proceeds extends Scancode
         $id=$this->id;
         if($this->role==1 ||$this->role==2 || $this->role==3){
             $rulew=MerchantUser::where('id',$id)->field('merchant_id')->find();
-            $id=$rulew->merchant_id;
+            $merchant_id=$rulew->merchant_id;
+        }else{
+            $merchant_id=$this->id;
         }
 
-
-        $resu=Db::name('total_merchant')->where('id',$id)
-        ->update(['pay_type'=>'cssh','cssh_money'=>['Inc',$money]]);
-
-
-
+        $arr=[
+            'status'=>1,
+            'order_money'=>$money,
+            'received_money'=>$money,
+            'create_time'=>time(),
+            'pay_time'=>time(),
+            'pay_type'=>'cash',
+            'order_number'=>generate_order_no(),
+            'merchant_id'=>$merchant_id,
+            'person_info_id'=>$this->id,
+            'user_id'=>$this->id,
+        ];
+        $resu=Db::name('order')->insert($arr);
         if($resu){
-            return_msg(200,'success','现金收款成功');
+            return_msg(200,'现金收款成功');
         }else{
-            return_msg(400,'error','现金收款失败');
+            return_msg(400,'现金收款失败');
         }
     }
 
@@ -60,12 +69,33 @@ class Proceeds extends Scancode
        $money= $request->param('money');
        //会员id
        $member_id= $request->param('member_id');
+       $result=Db::name('merchant_member')->where('id',$member_id)->field('money')->find();
+       if($result['money']-$money <= 0){
+           return_msg('400','余额不足');
+       }
        $resu=Db::name('merchant_member')->where('id',$member_id)
-           ->update(['money'=>['dec',$money],'consumption_time'=>time()]);
+           ->update(['money'=>['dec',$money],'consumption_time'=>time(),'consump_number'=>['inc',1]]);
         if($resu){
-            return_msg(200,'success','会员支付成功');
+            //获取商户id
+            $merchant=Db::name('merchant_member')->where('id',$member_id)->field('merchant_id')->find();
+            //生成订单
+            $arr=[
+                'status'=>1,
+                'order_money'=>$money,
+                'received_money'=>$money,
+                'create_time'=>time(),
+                'pay_time'=>time(),
+                'pay_type'=>'cash',
+                'order_number'=>generate_order_no(),
+                'merchant_id'=>$merchant['merchant_id'],
+                'person_info_id'=>$this->id,
+                'user_id'=>$this->id,
+                'member_id'=>$member_id,
+            ];
+            Db::name('order')->insert($arr);
+            return_msg(200,'会员支付成功');
         }else{
-            return_msg(400,'error','会员支付失败');
+            return_msg(400,'会员支付失败');
         }
     }
 

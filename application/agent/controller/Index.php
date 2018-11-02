@@ -69,12 +69,15 @@ class Index extends Controller
             ->where('agent_phone',$data['phone'])
             ->find();
         if($info){
+
             Session::set("username_", $info);
-            $this->redirect('/agent/index/login',[
+
+            /*$this->redirect('/agent/index/login',[
                 "phone" => $info["phone"],
                 "password" => $info['password'],
                 "token" => "access_token",
-            ]);
+            ]);*/
+
             return_msg(200,'登录成功',$info);
         }else{
             return_msg(400,'登录失败');
@@ -87,6 +90,11 @@ class Index extends Controller
     public function logout()
     {
         Session::clear();
+        if(Session::has("username_")) {
+            return_msg(400, "失败");
+        }else {
+            return_msg(200, "成功");
+        }
     }
 
 

@@ -11,7 +11,7 @@ use think\Exception;
 use think\Request;
 use think\Session;
 
-class Partner extends Controller
+class Partner extends Agent
 {
     /**
      * 显示员工列表
