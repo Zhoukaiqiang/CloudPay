@@ -75,6 +75,7 @@ class Shop extends Commonality
      */
     public function shop_incom(Request $request)
     {
+
         //stl_typ 结算类型
         //tranTyps 交易类型 suptDbfreeFlg免密免签 cardTyp卡种（银行
         //卡必选） stl_sign结算标志 orgNo机构号 stl_oac结算账户 bnk_acnm户名 icrp_id_no结算人身份
@@ -149,7 +150,7 @@ class Shop extends Commonality
                 //返回成功
                 Db::name('merchant_shop')->update($datle);
                 //生成门店二维码
-                $this->qrcode();
+
                 return_msg(200, 'success', $shop_api['msg_dat']);
             } else {
                 return_msg(400, 'error', $shop_api['msg_dat']);

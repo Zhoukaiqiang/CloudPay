@@ -4,6 +4,7 @@ namespace app\admin\controller;
 
 use app\admin\model\TotalAd;
 use app\admin\controller\Admin;
+use think\Controller;
 use think\Request;
 use think\Db;
 
@@ -21,9 +22,9 @@ class Advertise extends Admin
         $res = Db('total_ad')->order('id', 'DESC')->find();
 
         if ($res) {
-            $this->return_msg(200, 'success！', $res);
+           return_msg(200, 'success！', $res);
         }else {
-            $this->return_msg(400, 'fail');
+           return_msg(400, 'fail');
         }
     }
 
@@ -84,9 +85,9 @@ class Advertise extends Admin
         /* 删除指定id图片 */
         $result = Db('total_ad')->delete($request->param('id'));
         if ($result) {
-            return $this->return_msg(200,'删除成功', $result);
+            return_msg(200,'删除成功', $result);
         } else {
-            return $this->return_msg(400,'删除失败');
+           return_msg(400,'删除失败');
 
         }
     }

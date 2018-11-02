@@ -12,7 +12,7 @@ namespace app\merchant\controller;
 use think\Controller;
 use think\Session;
 
-class Commonality extends Controller
+class Commonality extends Common
 {
 
     protected $id;

@@ -552,7 +552,7 @@ function check_data($data, $return_data = null, $return = 1)
 {
     if ($return == 1) {
         if (!$data) {
-            return_msg(400, "no data");
+            return_msg(400, "没有数据");
         } elseif (gettype($data) !== 'array') {
             $data = $data->toArray();
         }
@@ -560,13 +560,13 @@ function check_data($data, $return_data = null, $return = 1)
             $return_data = $data;
         }
         if (count($data)) {
-            return_msg(200, "success", $return_data);
+            return_msg(200, "成功", $return_data);
         } else {
-            return_msg(400, "no data");
+            return_msg(400, "没有数据");
         }
     } else {
         if (!$data) {
-            return_msg(400, "no data");
+            return_msg(400, "没有数据");
         } else {
             return true;
         }

@@ -163,8 +163,19 @@ class Scancode extends Commonality
      */
     public function storage($data,$par)
     {
+        if(!empty($this->merchant_id)){
+            $data['user_id']="";
+        }else{
+            $data['user_id']=$this->user_id;
+        }
         $par['amount']=$par['amount']/100;
         $par['total_amount']=$par['total_amount']/100;
+        if($data['payChannel']=="WXPAY"){
+            $data['payChannel']="wxpay";
+        }
+        if($data['payChannel']=="ALIPAY"){
+            $data['payChannel']="alipay";
+        }
         //判断是否是会员充值
         if (array_key_exists('member_id',$data)) {
             if (!$this->member_recharge($data, $par)) {
@@ -179,13 +190,13 @@ class Scancode extends Commonality
                 $person_info_id=-1;
             }
             if(array_key_exists('order_id',$data)){
-                $arr=Order::where('id', $data[ 'order_id' ])->update(['person_info_id'=>$person_info_id,'pay_time' => time(), 'status' =>1, 'logNo' => $par[ 'logNo' ],'order_no'=>$par['orderNo'],'received_money'=>$par['amount'],'order_money'=>$par['total_amount'],'tradeNo'=>$par['tradeNo'],'merchant_id'=>$data['merchant_id']]);
+                $arr=Order::where('id', $data[ 'order_id' ])->update(['person_info_id'=>$person_info_id,'pay_time' => time(), 'status' =>1, 'logNo' => $par[ 'logNo' ],'order_no'=>$par['orderNo'],'received_money'=>$par['amount'],'order_money'=>$par['total_amount'],'tradeNo'=>$par['tradeNo'],'merchant_id'=>$data['merchant_id'],'user_id'=>$data['user_id'],'order_number'=>generate_order_no()]);
                 //订单是否更新成功
                 if(!$arr){
                     return_msg(400,'error','订单付款出现错误，付款已成功');
                 }
             }else{
-                $arr=Order::create(['person_info_id'=>$person_info_id,'order_number'=>generate_order_no(),'create_time'=>time(),'pay_type'=>$data['payChannel'],'shop_id'=>$data['shop_id'],'pay_time' => time(), 'status' =>1, 'logNo' => $par[ 'logNo' ],'order_no'=>$par['orderNo'],'received_money'=>$par['amount'],'order_money'=>$par['total_amount'],'tradeNo'=>$par['tradeNo'],'merchant_id'=>$data['merchant_id']]);
+                $arr=Order::create(['person_info_id'=>$person_info_id,'order_number'=>generate_order_no(),'create_time'=>time(),'pay_type'=>$data['payChannel'],'shop_id'=>$data['shop_id'],'pay_time' => time(), 'status' =>1, 'logNo' => $par[ 'logNo' ],'order_no'=>$par['orderNo'],'received_money'=>$par['amount'],'order_money'=>$par['total_amount'],'tradeNo'=>$par['tradeNo'],'merchant_id'=>$data['merchant_id'],'user_id'=>$data['user_id']]);
                 //订单是否创建成功
                 if(!$arr){
                     return_msg(400,'error','付款出现错误，付款已成功');
@@ -381,7 +392,7 @@ class Scancode extends Commonality
         //订单号
         $order_no=generate_order_no();
         //创建会员充值订单
-        $resuoo=MemberRecharge::insert(['recharge_time' => time(),'member_id'=>$data['member_id'],'order_money'=>$data['total_amount'],'shop_id'=>$data['shop_id'],'order_no'=>$par['orderNo'],'pay_type'=>$data['payChannel'],'merchant_id'=>$data['merchant_id'],'amount'=>$par['amount'], 'status' => 1, 'logNo' => $par[ 'logNo' ]]);
+        $resuoo=MemberRecharge::insert(['recharge_time' => time(),'member_id'=>$data['member_id'],'order_money'=>$data['total_amount'],'shop_id'=>$data['shop_id'],'order_no'=>$par['orderNo'],'pay_type'=>$data['payChannel'],'merchant_id'=>$data['merchant_id'],'amount'=>$par['amount'], 'status' => 1, 'logNo' => $par[ 'logNo' ],'user_id'=>$data['user_id'],'order_number'=>generate_order_no()]);
         if (!$resuoo){
             return false;
         }

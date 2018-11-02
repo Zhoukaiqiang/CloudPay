@@ -210,7 +210,7 @@ class Member extends Common
                     'order_money'=>$data['money'],
                     'amount'=>$data['amount'],
                     'recharge_time'=>time(),
-                    'pay_type'=>'PAY',
+                    'pay_type'=>'cash',
                     'order_number'=>generate_order_no($data['id']),
                     'merchant_id'=>$merchant['merchant_id'],
                     'discount_amount'=>$data['discount_amount'],
