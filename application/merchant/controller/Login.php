@@ -40,21 +40,12 @@ class Login extends Controller
         $this->request = Request::instance()->param();
     }
 
-    /**
-     * 密码生成  ----（*上线删除*）
-     * @return string
-     */
-    public function gen_password()
-    {
-        $password = request()->param("password");
-        $phone = request()->param("phone");
-        return md5('$ysf' . md5($password) . $phone);
-    }
+
 
     /**
      * 用户登录 -- 可以 商户登录 / 门店店员登录
-     * @param [strin]   user_name 用户名（电话）
-     * @param [stirng]  password  用户密码
+     * @param [string]   user_name 用户名（电话）
+     * @param [string]  password  用户密码
      * @method POST
      * @return [json] 返回信息
      * @throws Exception
@@ -63,16 +54,13 @@ class Login extends Controller
     {
         if (request()->isPost()) {
             $data = \request()->post();
-
             /** 检验参数 */
-
             check_params("merchant_login", $data);
-
             $this->check_exist($data['phone'], 'phone', 1);
             $db_res = MerchantUser::where("phone", $data['phone'])->field("shop_id,id,name,phone,role,password")->find();
-
             if (!$db_res) {
-                $db_res = TotalMerchant::alias("merc")->where("merc.phone", $data['phone'])
+                $Merc = new TotalMerchant();
+                $db_res = $Merc::get(["phone" => $data['phone']])->alias("merc")
                     ->join("cloud_merchant_shop ms" ,"ms.merchant_id = merc.id")
                     ->field("merc.id, merc.name, merc.phone, merc.password, merc.status, ms.id as shop_id")
                     ->find();
@@ -86,7 +74,7 @@ class Login extends Controller
             } else {
 
                 /** 登录成功设置session */
-                if (empty($res['role'])) {
+                if (empty($res["role"])) {
                     Session::set("username_", ["id" => $res['id'], "role" => -1], 'app');
                 } else {
                     Session::set("username_", ["id" => $res['id'], "role" => $res["role"]], 'app');

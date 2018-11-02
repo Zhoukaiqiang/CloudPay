@@ -291,10 +291,11 @@ function is_user_can($id)
 if (!function_exists('sign_ature')) {
     function sign_ature($flag, Array $arr, $key = null)
     {
-        $key = $key ? $key : KEY;
-
-
-//        $arr=array_change_key_case($arr);
+        if (!$key) {
+            $key_main = KEY;
+        }else {
+            $key_main = $key;
+        }
 
         ksort($arr);
         if ($flag == 0000) {
@@ -307,7 +308,6 @@ if (!function_exists('sign_ature')) {
 
             foreach ($arr as $k => $v) {
                 if (in_array($k, $data)) {
-
                     $str .= $v;
                 }
             }
@@ -321,12 +321,8 @@ if (!function_exists('sign_ature')) {
                     $str .= $val;
                 }
             }
-
-
         }
-
-
-        return md5($str . $key);
+        return md5($str . $key_main);
     }
 }
 
