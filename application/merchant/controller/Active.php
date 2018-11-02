@@ -458,7 +458,7 @@ class Active extends Common
           );
 //        $postjson=json_encode($arr);
           $res=curl_request($url,true,$arr,true);
-          halt($res);
+
       }
     }
 

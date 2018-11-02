@@ -297,12 +297,13 @@ class Index extends Common
         /** 默认展示今天的 门店数据 */
         $rows = $Order::where($where)->count("id");
         $pages = page($rows);
-        $field = ['o.order_number', 'o.pay_time', "shop.shop_name", "o.cashier", "o.pay_type", "o.received_money", "o.order_money", "o.discount", "o.status"];
+        $field = ['o.id','o.order_number', 'o.pay_time', "shop.shop_name", "o.cashier", "o.pay_type", "o.received_money", "o.order_money", "o.discount", "o.status","c.name"];
 
         $data[ "list" ] = $Order::where($where_join)
             ->alias("o")
             ->field($field)
-            ->join("cloud_merchant_shop shop", "o.shop_id")
+            ->join("cloud_merchant_shop shop", "o.shop_id","left")
+            ->join('cloud_merchant_user c','o.user_id=c.id',"left")
             ->group("o.id")
             ->limit($pages[ "offset" ], $pages[ "limit" ])->field($field)->select();
         $data[ "pages" ] = $pages;

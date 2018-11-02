@@ -199,12 +199,14 @@ class Receipt extends Common
      */
     public function order_search(Request $request)
     {
+
         $order=$request->param('order');
         if($this->merchant_id){
             //查询当前商户订单
             $info=Order::alias('a')
-                ->field('a.id,a.order_number,a.status,a.received_money,a.order_money,a.discount,b.shop_name,a.cashier,a.pay_time,a.cashier,a.pay_type,a.order_remark,a.order_number,a.status,a.authorize_number,a.prove_number,a.give_money')
+                ->field('a.id,a.order_number,a.status,a.received_money,a.order_money,a.discount,b.shop_name,a.cashier,a.pay_time,a.cashier,a.pay_type,a.order_remark,a.order_number,a.status,a.authorize_number,a.prove_number,a.give_money,c.name')
                 ->join('cloud_merchant_shop b','a.shop_id=b.id','left')
+                ->join('cloud_merchant_user c','a.user_id=c.id','left')
                 ->where(['a.order_number'=>$order,'a.merchant_id'=>$this->merchant_id])
                 ->find();
             check_data($info);
@@ -212,8 +214,9 @@ class Receipt extends Common
             //获取当前门店
             $shop=MerchantUser::field('shop_id')->where('id',$this->user_id)->find();
             $info=Order::alias('a')
-                ->field('a.id,a.order_number,a.status,a.received_money,a.order_money,a.discount,b.shop_name,a.cashier,a.pay_time,a.cashier,a.pay_type,a.order_remark,a.order_number,a.status,a.authorize_number,a.prove_number,a.give_money')
+                ->field('a.id,a.order_number,a.status,a.received_money,a.order_money,a.discount,b.shop_name,a.cashier,a.pay_time,a.cashier,a.pay_type,a.order_remark,a.order_number,a.status,a.authorize_number,a.prove_number,a.give_money,c.name')
                 ->join('cloud_merchant_shop b','a.shop_id=b.id','left')
+                ->join('cloud_merchant_user c','a.user_id=c.id','left')
                 ->where(['a.order_number'=>$order,'a.shop_id'=>$shop['shop_id']])
                 ->find();
             check_data($info);
