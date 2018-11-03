@@ -9,7 +9,7 @@ use think\Exception;
 use think\Request;
 use think\Session;
 
-class Service extends Controller
+class Service extends Agent
 {
     /**
      * 显示服务商列表
@@ -19,13 +19,35 @@ class Service extends Controller
     public function service_list(Request $request)
     {
         //获取上级代理商id
-        $id =  Session::get("username_")['id'];
+        $id = Session::get("username_")['id'];
+        $status = $request->param("status");
+        $ky = $request->param("ky");
+        if ($status) {
+            $status_f = "eq";
+        } else {
+            $status_f = "neq";
+            $status = -2;
+        }
+        if ($ky) {
+            $ky_f = "LIKE";
+            $ky = $ky . "%";
+        } else {
+            $ky_f = "NOT LIKE";
+            $ky = "-2";
+        }
+        $where = [
+            "status" => [$status_f, $status],
+            "agent_name" => [$ky_f, $ky],
+        ];
+
         //获取所有行数
-        $rows = TotalAgent::where('parent_id', $id)->count();
+        $rows = TotalAgent::where('parent_id', $id)->where($where)->count();
+
         $pages = page($rows);
         //获取当前代理商下的所有子代理
         $data['list'] = TotalAgent::field(['id,agent_name,contact_person,agent_phone,agent_mode,agent_area,create_time,status'])
             ->where('parent_id', $id)
+            ->where($where)
             ->limit($pages['offset'], $pages['limit'])->select();
         $data['pages'] = $pages;
 
@@ -63,6 +85,7 @@ class Service extends Controller
     public function stop_agent(Request $request)
     {
         $param = $request->param();
+
         check_params("service_stop_agent", $param);
 
         $id = $param['id'];
@@ -106,8 +129,8 @@ class Service extends Controller
             if (!empty($data['contract_picture'])) {
                 $data['contract_picture'] = json_encode($data['contract_picture']);
             }
-            $data['json']=json_encode($data['json']);
-            $result = TotalAgent::where('id',$data['id'])->update($data, true);
+            $data['json'] = json_encode($data['json']);
+            $result = TotalAgent::where('id', $data['id'])->update($data, true);
             if ($result) {
                 return_msg(200, '修改成功');
             } else {
@@ -117,15 +140,15 @@ class Service extends Controller
             //获取子代id
             $id = request()->param('id');
             //通过子代id查询子代信息
-            $data = TotalAgent::where('id',$id)->find();
+            $data = TotalAgent::where('id', $id)->find();
 //            $data = collection($data['data'])->toArray();
-            $data['json']=json_decode($data['json']);
+            $data['json'] = json_decode($data['json']);
             //解析图片
             $data['contract_picture'] = json_decode($data['contract_picture']);
 
             if (count($data)) {
                 return_msg(200, 'success', $data);
-            }else {
+            } else {
                 return_msg(400, "no data");
             }
 
@@ -144,7 +167,7 @@ class Service extends Controller
             $data = request()->post();
             //获取上级代理商id
             $data['parent_id'] = Session::get('username_')['id'];
-            $data['create_time']  = time();
+            $data['create_time'] = time();
             //验证
             $validate = Loader::validate('AgentValidate');
             if (!$validate->scene('agent_detail')->check($data)) {
@@ -152,8 +175,8 @@ class Service extends Controller
                 return_msg(400, 'failure', $error);
             }
             //上传图片
-            $data['contract_picture']=json_encode($data['contract_picture']);
-            $data['json']=json_encode($data['json']);
+            $data['contract_picture'] = json_encode($data['contract_picture']);
+            $data['json'] = json_encode($data['json']);
             //保存
             $info = TotalAgent::insert($data);
             if ($info) {

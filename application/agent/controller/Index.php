@@ -71,13 +71,19 @@ class Index extends Controller
         $info = TotalAgent::field('id,username,agent_phone,status, parent_id')
             ->where('agent_phone', $data['phone'])
             ->find();
-        if ($info) {
+        if($info){
 
             Session::set("username_", $info);
 
-            return_msg(200, '登录成功', $info);
-        } else {
-            return_msg(400, '登录失败');
+            /*$this->redirect('/agent/index/login',[
+                "phone" => $info["phone"],
+                "password" => $info['password'],
+                "token" => "access_token",
+            ]);*/
+
+            return_msg(200,'登录成功',$info);
+        }else{
+            return_msg(400,'登录失败');
         }
     }
 
@@ -87,9 +93,9 @@ class Index extends Controller
     public function logout()
     {
         Session::clear();
-        if (Session::has("username_")) {
+        if(Session::has("username_")) {
             return_msg(400, "失败");
-        } else {
+        }else {
             return_msg(200, "成功");
         }
     }

@@ -37,6 +37,7 @@ class Active extends Common
     {
         if($request->isPost()){
             $data=$request->post();
+
             $data['recharge_money']=explode(',',$data['recharge_money']);
             $data['give_money']=explode(',',$data['give_money']);
 
@@ -740,7 +741,7 @@ class Active extends Common
         $pages=page($row);
 
         $data['list']=MemberExclusive::alias('a')
-            ->field('a.id,a.cancel_time,a.order_number,a.status,b.member_phone,c.name user_name,d.name active_name,d.coupons_money,d.order_money,d.consump_number,d.last_consump,d.recharge_total,d.consump_total,d.register_status')
+            ->field('a.id,a.cancel_time,a.order_number,a.status,b.member_phone,c.name user_name,d.coupons_title active_name,d.coupons_money,d.order_money,d.consump_number,d.last_consump,d.recharge_total,d.consump_total,d.register_status')
             ->join($where)
             ->where(['a.merchant_id'=>$this->merchant_id,'a.status'=>0])
             ->limit($pages['offset'],$pages['limit'])

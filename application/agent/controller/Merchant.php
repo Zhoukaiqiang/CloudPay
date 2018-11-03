@@ -245,11 +245,7 @@ class Merchant extends Incom
             $data['agent_id']=$agent_id;
 //            $data['channel']=3;//表示间联
             //验证
-//            $validate = Loader::validate('AgentValidate');
-//            if (!$validate->scene('add_middle')->check($data)) {
-//                $error = $validate->getError();
-//                return_msg(400, 'failure', $error);
-//            }
+            check_params('add_middle',$data,'AgentValidate');
             //上传图片
 //            $data['attachment']=$this->upload_logo();
 //            $data['agent_id']=$agent_id;

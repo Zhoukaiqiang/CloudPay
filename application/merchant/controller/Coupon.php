@@ -35,12 +35,11 @@ class Coupon extends Commonality
                 ->join('shop_active_exclusive b','a.exclusive_id=b.id')
                 ->where(['a.SN'=>['=',$request->param('sncode')],'a.status'=>1])->select();
 
-            return_msg(200,'success',$data);
+            check_data($data);
         }elseif($id){
             //核销优惠券
-
             $user_id=$this->id;
-            $data=MemberExclusive::where('id',$id)->update(['status'=>0,'cancel_time'=>time(),'usre_id'=>$user_id]);
+            $data=MemberExclusive::where('id',$id)->update(['status'=>0,'cancel_time'=>time(),'user_id'=>$user_id]);
             if($data){
                 return_msg(200,'success','核销成功');
             }else{

@@ -4,10 +4,13 @@ namespace app\merchant\controller;
 
 use app\admin\model\MerchantIncom;
 use app\merchant\model\MemberExclusive;
+use app\merchant\model\MemberRecharge;
 use app\merchant\model\MerchantMember;
+use app\merchant\model\MerchantMemberCard;
 use app\merchant\model\MerchantShop;
 use app\merchant\model\Order;
 use app\merchant\model\ShopActiveExclusive;
+use app\merchant\model\ShopActiveRecharge;
 use app\merchant\model\TotalMerchant;
 use think\Controller;
 use think\Request;
@@ -15,9 +18,9 @@ use think\Session;
 
 class Wechat extends Controller
 {
-    public $appid;
-    public $secret;
-    public $redirect_uri;
+    protected $appid;
+    protected $secret;
+    protected $redirect_uri;
 
     public function _initialize()
     {
@@ -59,6 +62,7 @@ class Wechat extends Controller
     {
 //        echo 1;
         $code = $request->param("code");
+
 //        halt($code);
         $state = $request->param("state");
         if (isset($code) || (int)$state == 202) {
@@ -306,6 +310,8 @@ class Wechat extends Controller
                 }
                 //新会员注册
                 $insert_id=MerchantMember::insertGetId($data,true);
+                //生成会员码
+                $this->qrcode($insert_id);
                 if($insert_id){
                     return_msg(200,'注册成功');
                 }else{
@@ -345,6 +351,9 @@ class Wechat extends Controller
                         'order_number'=>generate_order_no(),
                     ];
                     MemberExclusive::insert($arr1,true);
+
+                    //生成会员码
+                    $this->qrcode($insert_id);
                     return_msg(200,'注册成功');
                 }else{
                     return_msg(400,'注册失败');
@@ -367,6 +376,9 @@ class Wechat extends Controller
                         'order_number'=>generate_order_no(),
                     ];
                     $re = MemberExclusive::insert($arr1,true);
+
+                    //生成会员码
+                    $this->qrcode($insert_id);
                     return_msg(200,'注册成功');
                 }else{
                     return_msg(400,'注册失败');
@@ -374,6 +386,9 @@ class Wechat extends Controller
             }elseif($res['register_status'] == -1){
                 $insert_id=MerchantMember::insertGetId($data,true);
                 if($insert_id){
+
+                    //生成会员码
+                    $this->qrcode($insert_id);
                     return_msg(200,'注册成功');
                 }else{
                     return_msg(400,'注册失败');
@@ -382,6 +397,191 @@ class Wechat extends Controller
         }
     }
 
+    /**
+     * Notes:生成二维码地址
+     * User: guoyang
+     * DATE: 2018/10/25
+     * @param null $url 二维码地址
+     * @param null $shop_id
+     * @param null $name
+     */
+    public function qrcode($member_id)
+    {
+        $url="http://47.92.212.66/index.php/merchant/proceeds/member_income?member_id=$member_id";
+        header("content-type:text/html;charset=utf-8");
+//        Vendor('phpqrcode.phpqrcode');  //引入的phpqrcode类
+        import('phpqrcode.phpqrcode', EXTEND_PATH,'.php');
+        $path = "/uploads/QRcode/".date("Ymd").DS;//创建路径
 
+//
+        $time = time().'.png'; //创建文件名
+
+
+        //$file_name = iconv("utf-8","gb2312",$time);
+
+        $file_path = $_SERVER['DOCUMENT_ROOT'].$path;
+
+        if(!file_exists($file_path)){
+            mkdir($file_path, 0777,true);//创建目录
+        }
+        $file_path = $file_path.$this->runningWater().'.png';//1.命名生成的二维码文件
+        $level = 'L';  //3.纠错级别：L、M、Q、H
+        $size = 4;//4.点的大小：1到10,用于手机端4就可以了
+        ob_end_clean();//清空缓冲区
+        //生成二维码-保存：
+        \QRcode::png($url, $file_path, $level, $size);
+        //保存二维码地址
+        MerchantMember::where('id',$member_id)->update(['member_qrcode'=>$file_path]);
+    }
+
+    /**
+     * 流水号
+     * @return string
+     */
+    public function runningWater()
+    {
+        list($usec, $sec) = explode(" ", microtime());
+        $times=str_replace('.','',$usec + $sec);
+        //當前時間
+        return time().$times;
+    }
+
+    /**
+     *微信会员卡
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function wx_member_card()
+    {
+        //获取用户appid
+        /*if(Session::has("openid")){
+            $openid=Session::get("openid");
+        }else{
+            $openid=$this->get_code();
+            $openid=$openid['openid'];
+        }*/
+        $openid=1;//测试
+        //取出会员信息
+        $data['list']=MerchantMember::field('id,merchant_id,shop_id,money,member_phone')->where('openid',$openid)->select();
+        //取出会员活动
+        foreach($data['list'] as &$v){
+            $v['recharge']=ShopActiveRecharge::field('recharge_money,give_money')->where('merchant_id',$v['merchant_id'])->select();
+            $v['member_card']=MerchantMemberCard::field('member_color,member_content,member_cart_name')->where('merchant_id',$v['merchant_id'])->find();
+        }
+        check_data($data);
+    }
+
+    /**
+     *会员卡列表详情
+     * @param Request $request
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function wx_member_card_list(Request $request)
+    {
+        $id=$request->param('id');
+        $merchant_id=$request->param('merchant_id');
+
+        $data['list']=MerchantMember::field('id,merchant_id,shop_id,money,member_phone')->where(['id'=>$id,'merchant_id'=>$merchant_id])->select();
+
+        foreach($data['list'] as &$v){
+            $v['recharge']=ShopActiveRecharge::field('recharge_money,give_money')->where('merchant_id',$v['merchant_id'])->select();
+            $v['member_card']=MerchantMemberCard::field('member_color,member_content,member_cart_name')->where('merchant_id',$v['merchant_id'])->find();
+        }
+        check_data($data);
+    }
+
+
+    /* public function wx_member_recharge(Request $request)
+     {
+         //获取会员id
+         $id = $request->param('id');
+         //取出会员活动
+         $data=MerchantMember::field('')
+     }*/
+
+    /**
+     *充值记录
+     * @param Request $request
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function wx_member_recharge_record(Request $request)
+    {
+        //获取商户id
+        $merchant_id = $request->param('merchant_id');
+        $data = MemberRecharge::alias('a')
+            ->field('a.id,a.order_money,a.status,a.recharge_time,b.member_head')
+            ->join('cloud_merchant_member b','a.member_id=b.id','left')
+            ->where('a.merchant_id',$merchant_id)
+            ->select();
+        check_data($data);
+    }
+
+    /**
+     *会员充值详情
+     * @param Request $request
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function wx_member_recharge_detail(Request $request)
+    {
+        //获取充值记录id
+        $id = $request->param('id');
+        $data = MemberRecharge::alias('a')
+            ->field('a.amount,a.order_money,a.discount_amount,a.recharge_time,a.order_no,b.shop_name')
+            ->join('cloud_merchant_shop b','a.shop_id=b.id','left')
+            ->where('a.id',$id)
+            ->find();
+        check_data($data);
+    }
+
+    /**
+     *会员消费记录
+     * @param Request $request
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function wx_member_consump_record(Request $request)
+    {
+        //获取商户id
+        $merchant_id = $request->param('merchant_id');
+        //取出当前商户下会员消费信息
+        $where=[
+            'a.merchant_id'=>$merchant_id,
+            'a.status'=>1,
+            'a.member_id'=>['>',0]
+        ];
+        $data = Order::alias('a')
+            ->field('a.id,a.order_money,a.status,a.pay_time,b.member_head')
+            ->join('cloud_merchant_member b','a.member_id=b.id','left')
+            ->where($where)
+            ->select();
+        check_data($data);
+    }
+
+    /**
+     *会员消费详情
+     * @param Request $request
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function wx_member_consump_detail(Request $request)
+    {
+        //获取id
+        $id = $request->param('id');
+        $data=Order::alias('a')
+            ->field('a.discount,a.order_money,a.received_money,a.pay_time,a.order_number,b.shop_name')
+            ->join('cloud_merchant_shop b','a.shop_id=b.id','left')
+            ->where('a.id',$id)
+            ->find();
+        check_data($data);
+    }
 
 }
