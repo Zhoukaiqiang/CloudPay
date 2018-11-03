@@ -316,8 +316,10 @@ class Incom extends Controller
             } else {
                 return_msg(400, 'failure');
             }
+
         } else {
-            halt($result);
+
+
 //            $info=TotalMerchant::field('')
             //审核未通过
             MerchantIncom::where('merchant_id', $merchant_id)->delete();

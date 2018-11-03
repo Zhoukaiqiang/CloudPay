@@ -46,7 +46,8 @@ class Wechat extends Controller
      */
     public function get_code()
     {
-        $code = "https://open.weixin.qq.com/connect/oauth2/authorize?appid=".$this->appid."&redirect_uri=".urlencode($this->redirect_uri)."&response_type=code&scope=snsapi_base&state=202#wechat_redirect";
+
+        $code = "https://open.weixin.qq.com/connect/oauth2/authorize?appid=".$this->appid."&redirect_uri=".urlencode($this->redirect_uri)."&response_type=code&scope=snsapi_userinfo&state=202#wechat_redirect";
 
         header("Location:".$code);
     }
@@ -60,6 +61,7 @@ class Wechat extends Controller
      */
     public function back_url(Request $request)
     {
+
 //        echo 1;
         $code = $request->param("code");
 
@@ -72,7 +74,6 @@ class Wechat extends Controller
             $userinfo = $this->get_user_info($code);
 
             Session::set('openid',$userinfo['openid']);
-            return $userinfo;
 
         } else {
             return_msg(400, "fail");
@@ -91,12 +92,14 @@ class Wechat extends Controller
         $access_token_url = "https://api.weixin.qq.com/sns/oauth2/access_token?appid=" . $this->appid . "&secret=" . $this->secret . "&code=" . $code . "&grant_type=authorization_code";
         $access_token_json = $this->https_request($access_token_url);//自定义函数
         $access_token_array = json_decode($access_token_json, true);
-//        halt($access_token_array);
+//        halt($access_token_array['access_token']);
         $access_token = $access_token_array['access_token'];
+//        halt($access_token);
         $openid = $access_token_array['openid'];
         $userinfo_url = "https://api.weixin.qq.com/sns/userinfo?access_token=$access_token&openid=$openid&lang=zh_CN";
         $userinfo_json = $this->https_request($userinfo_url);
         $userinfo_array = json_decode($userinfo_json, true);
+
         return $userinfo_array;
     }
 
@@ -215,8 +218,8 @@ class Wechat extends Controller
         if(Session::has("openid")){
             $openid=Session::get("openid");
         }else{
-            $openid=$this->get_code();
-            $openid=$openid['openid'];
+            $this->get_code();
+            $openid=Session::get("openid");
         }
         $join=[
             ['cloud_shop_active_exclusive b','a.exclusive_id=b.id','left'],
@@ -229,6 +232,8 @@ class Wechat extends Controller
             ->select();
         check_data($data);
     }
+
+
 
     /**
      *验证token
@@ -269,9 +274,10 @@ class Wechat extends Controller
         if(Session::has("openid")){
             $openid=Session::get("openid");
         }else{
-            $openid=$this->get_code();
-            $openid=$openid['openid'];
+            $this->get_code();
+            $openid=Session::get("openid");
         }
+
         $data=$request->post();
         $data['openid'] = $openid;
 
@@ -432,6 +438,7 @@ class Wechat extends Controller
         \QRcode::png($url, $file_path, $level, $size);
         //保存二维码地址
         MerchantMember::where('id',$member_id)->update(['member_qrcode'=>$file_path]);
+
     }
 
     /**
@@ -458,8 +465,8 @@ class Wechat extends Controller
         /*if(Session::has("openid")){
             $openid=Session::get("openid");
         }else{
-            $openid=$this->get_code();
-            $openid=$openid['openid'];
+            $this->get_code();
+            $openid=Session::get("openid");
         }*/
         $openid=1;//测试
         //取出会员信息
@@ -514,7 +521,7 @@ class Wechat extends Controller
         //获取商户id
         $merchant_id = $request->param('merchant_id');
         $data = MemberRecharge::alias('a')
-            ->field('a.id,a.order_money,a.status,a.recharge_time,b.member_head')
+            ->field('a.id,a.order_money,a.status,a.recharge_time,a.pay_type,b.member_head')
             ->join('cloud_merchant_member b','a.member_id=b.id','left')
             ->where('a.merchant_id',$merchant_id)
             ->select();
@@ -558,7 +565,7 @@ class Wechat extends Controller
             'a.member_id'=>['>',0]
         ];
         $data = Order::alias('a')
-            ->field('a.id,a.order_money,a.status,a.pay_time,b.member_head')
+            ->field('a.id,a.order_money,a.status,a.pay_time,a.pay_type,b.member_head')
             ->join('cloud_merchant_member b','a.member_id=b.id','left')
             ->where($where)
             ->select();

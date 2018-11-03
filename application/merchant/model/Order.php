@@ -6,6 +6,9 @@ use think\Model;
 
 class Order extends Model
 {
+    protected $autoWriteTimestamp=true;
+    protected $createTime = "pay_time";
+    protected $updateTime = false;
 //    public function getStatusAttr($value)
 //    {
 //        //

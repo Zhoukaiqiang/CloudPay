@@ -14,11 +14,12 @@ use think\exception\DbException;
 use think\Request;
 use think\Session;
 use think\Validate;
+use Zxing\Qrcode\Decoder\DataBlock;
 
 class Index extends Controller
 {
 
-    protected $id;
+
 
     /**
      * 用户登录
@@ -31,7 +32,6 @@ class Index extends Controller
     {
         $data = $request->param();
         check_params("agent_login", $data);
-//        $user_name_type = 'phone';
         $this->check_exist($data['phone'], 'phone', 1);
         $db_res = Db('total_agent')->field('id,username,agent_phone,status,password, parent_id')
             ->where('agent_phone', $data['phone'])->find();
@@ -71,19 +71,18 @@ class Index extends Controller
         $info = TotalAgent::field('id,username,agent_phone,status, parent_id')
             ->where('agent_phone', $data['phone'])
             ->find();
-        if($info){
+        if ($info) {
 
             Session::set("username_", $info);
-
             /*$this->redirect('/agent/index/login',[
                 "phone" => $info["phone"],
                 "password" => $info['password'],
                 "token" => "access_token",
             ]);*/
 
-            return_msg(200,'登录成功',$info);
-        }else{
-            return_msg(400,'登录失败');
+            return_msg(200, '登录成功', $info);
+        } else {
+            return_msg(400, '登录失败');
         }
     }
 
@@ -93,9 +92,9 @@ class Index extends Controller
     public function logout()
     {
         Session::clear();
-        if(Session::has("username_")) {
+        if (Session::has("username_")) {
             return_msg(400, "失败");
-        }else {
+        } else {
             return_msg(200, "成功");
         }
     }
@@ -224,12 +223,13 @@ class Index extends Controller
         if ($request->isGet()) {
             $id = Session::get("username_")["id"];
             /** 昨日活跃商户 */
-            $data["active_mer"] = TotalMerchant::alias("mer")
+            $data["active_mer"] = Db::name("total_merchant")->alias("mer")
+                ->join("cloud_order o", "o.merchant_id = mer.id", "RIGHT")
                 ->where("mer.agent_id = $id")
-                ->join("cloud_order o ", "o.merchant_id = mer.id")
-                ->whereTime("o.pay_time", "yesterday")
+                ->whereTime("pay_time", "yesterday")
                 ->group("o.merchant_id")
                 ->count("o.id");
+
             /** 昨日新增商户 */
 
             $data["new_come"] = TotalMerchant::where("agent_id = $id")
@@ -245,8 +245,8 @@ class Index extends Controller
             /** 7日无交易商户 */
             $data["inactive_mer"] = TotalMerchant::alias("mer")
                 ->where("mer.agent_id = $id")
-                ->join("cloud_order o ", "o.merchant_id = mer.id")
-                ->whereTime("o.pay_time", "<", strtotime("-7 days"))
+                ->join("cloud_order o", "o.merchant_id = mer.id")
+                ->whereTime("pay_time", "<", strtotime("-7 days"))
                 ->group("o.merchant_id")
                 ->count("mer.id");
 
@@ -781,7 +781,11 @@ class Index extends Controller
         if ($status) {
             $status_f = "eq";
         } else {
+
             $status_f = "<>";
+
+            $status_f = ">";
+
             $status = -2;
         }
 
@@ -794,12 +798,20 @@ class Index extends Controller
         if ($partner_id) {
             $partner_f = "eq";
         } else {
+
             $partner_f = "neq";
+
+            $partner_f = ">";
+
             $partner_id = -2;
         }
         if ($name) {
             $name_f = "LIKE";
+
             $name = $name . "$";
+
+            $name = $name . "%";
+
         } else {
             $name_f = "NOT LIKE";
             $name = "-2";
@@ -817,9 +829,11 @@ class Index extends Controller
         $rows = TotalMerchant::alias('a')
             ->join('cloud_order', 'cloud_order.merchant_id = a.id')
             ->join('cloud_agent_partner', ' cloud_agent_partner.id = a.partner_id')
-            ->where('a.abbreviation|a.contact|a.phone', $name_f, $name)
+
+            ->where('a.abbreviation|a.contact|a.phone|a.name', $name_f, $name)
             ->where('a.partner_id', $partner_f, $partner_id)
-            ->where(['a.status' => [$status_f, $status], 'a.agent_id' => ['=', $agent_id], 'a.address' => [$address_f, $address]])
+            ->where(['a.status' => [$status_f, $status], 'a.agent_id' => ['eq', $agent_id], 'a.address' => [$address_f, $address]])
+
             ->whereTime('a.opening_time', $create_f, $create_time)
             ->group('a.id')
             ->count('a.id');
@@ -829,9 +843,11 @@ class Index extends Controller
             ->field('a.channel,a.address,a.name,a.id,a.contact,a.phone,a.status,a.opening_time,a.review_status,a.abbreviation,a.contact,a.phone,cloud_order.received_money,cloud_order.cashier,cloud_agent_partner.partner_name')
             ->join('cloud_order', 'a.id=cloud_order.merchant_id')
             ->join('cloud_agent_partner', 'a.partner_id=cloud_agent_partner.id')
-            ->where('a.abbreviation|a.contact|a.phone', $name_f, $name)
+
+            ->where('a.abbreviation|a.contact|a.phone|a.name', $name_f, $name)
             ->where('a.partner_id', $partner_f, $partner_id)
-            ->where(['a.status' => [$status_f, $status], 'a.agent_id' => ['=', $agent_id], 'a.address' => [$address_f, $address]])
+            ->where(['a.status' => [$status_f, $status], 'a.agent_id' => ['eq', $agent_id], 'a.address' => [$address_f, $address]])
+
             ->whereTime('a.opening_time', $create_f, $create_time)
             ->group('a.id')
             ->limit($pages['offset'], $pages['limit'])
@@ -858,11 +874,14 @@ class Index extends Controller
         $partner_id = $request->param('partner_id');
         $deal = $request->param('deal');
         $create_time = $request->param('opening_time');
+
         $address = $request->param('address');
+
 
         if ($deal) {
             $deal_f = "eq";
         } else {
+
             $deal_f = "<>";
             $deal = -2;
         }
@@ -886,6 +905,22 @@ class Index extends Controller
             $name_f = "NOT LIKE";
             $name = "-2";
         }
+
+
+        if ($partner_id) {
+            $partner_f = "eq";
+        } else {
+            $partner_f = "neq";
+            $partner_id = -2;
+        }
+        if ($name) {
+            $name_f = "LIKE";
+            $name = $name . "%";
+        } else {
+            $name_f = "NOT LIKE";
+            $name = "-2";
+        }
+
         if ($create_time) {
             $create_f = "between";
             $night = strtotime(date("Y-m-d 23:59:59", $create_time));
@@ -895,31 +930,74 @@ class Index extends Controller
             $create_time = -2;
         }
 
-        $total = Db::name('total_merchant')->where("agent_id", $this->id)->count('id');
+
+        $total = Db::name('total_merchant')->where("agent_id", Session::get("username_")['id'])->count('id');
+
 
         $rows = TotalMerchant::alias('a')
             ->field('a.abbreviation,a.contact,a.phone,cloud_order.received_money,cloud_order.cashier')
-            ->join('cloud_order', 'a.id=cloud_order.merchant_id', 'left')
+            ->join('cloud_order', 'a.id=cloud_order.merchant_id')
             ->join('cloud_agent_partner', 'cloud_agent_partner.id=a.partner_id')
-            ->where('a.abbreviation|a.contact|a.phone', $name_f, $name)
+
+            ->where('a.name', $name_f, $name)
             ->where('a.partner_id', $partner_f, $partner_id)
-            ->where('a.agent_id',  $this->id)
+            ->where('a.agent_id', Session::get("username_")['id'])
+
             ->whereTime('cloud_order.pay_time', $create_f, $create_time)
             ->group('a.id')
             ->count('a.id');
         $pages = page($rows);
+        if ($deal) {
+            $total_arr = Db::name("total_merchant")->where("agent_id", Session::get("username_")['id'])->field("id")->select();
+
+            foreach ($total_arr as $v) {
+                $ta[] = $v["id"];
+            }
+            $arr = Db::name("total_merchant")->alias("m")->where("m.agent_id", Session::get("username_")['id'])
+                ->join("cloud_order o", "o.merchant_id = m.id")
+                ->group("m.id")
+                ->field("m.id")->select();
+
+            foreach ($arr as $v) {
+                $aa[] = $v["id"];
+            }
+            $result = array_diff($ta, $aa);
+            $str = implode(',', $result);
+
+            $data['list'] = TotalMerchant::alias('a')
+                ->where("a.id", "in", $str)
+                ->where('a.name', $name_f, $name)
+                ->where('a.partner_id', $partner_f, $partner_id)
+                ->group('a.id')
+                ->limit($pages['offset'], $pages['limit'])
+                ->select();
+        } else {
+            $data['list'] = TotalMerchant::alias('a')
+                ->field('a.name,a.address,cloud_agent_partner.partner_name,a.id,a.abbreviation,a.contact,a.phone,cloud_order.received_money,cloud_order.cashier')
+                ->join('cloud_order', 'a.id=cloud_order.merchant_id')
+                ->join('cloud_agent_partner', 'cloud_agent_partner.id=a.partner_id')
+                ->where('a.agent_id', Session::get("username_")['id'])
+                ->where('a.name', $name_f, $name)
+                ->where('a.partner_id', $partner_f, $partner_id)
+                ->whereTime('cloud_order.pay_time', $create_f, $create_time)
+                ->group('a.id')
+                ->limit($pages['offset'], $pages['limit'])
+                ->select();
+        }
+
 
         $data['list'] = TotalMerchant::alias('a')
             ->field('a.name,a.address,cloud_agent_partner.partner_name,a.id,a.abbreviation,a.contact,a.phone,cloud_order.received_money,cloud_order.cashier')
             ->join('cloud_order', 'a.id=cloud_order.merchant_id', 'left')
             ->join('cloud_agent_partner', 'cloud_agent_partner.id=a.partner_id')
             ->where('a.abbreviation|a.contact|a.phone', $name_f, $name)
-            ->where('a.agent_id',  $this->id)
+            ->where('a.agent_id',  Session::get("username_")['id'])
             ->where('a.partner_id', $partner_f, $partner_id)
             ->whereTime('cloud_order.pay_time', $create_f, $create_time)
             ->group('a.id')
             ->limit($pages['offset'], $pages['limit'])
             ->select();
+
 
         foreach ($data['list'] as &$v) {
             $where = [
@@ -955,54 +1033,65 @@ class Index extends Controller
      * @throws \think\db\exception\DataNotFoundException
      * @throws \think\db\exception\ModelNotFoundException
      * @throws \think\exception\DbException
+     * @throws \Exception
      */
     public function facilitator_list(Request $request)
     {
-        $parent_id = $request->param('id');
+        $parent_id = Session::get("username_")['id'];
         //服务商名称|联系人|联系方式
         $name = $request->param('keyword');
         //服务商的状态，1启用 0停用 3全部
         $status = $request->param('status');
         //代理区域    0代表全部区域
-        $agent_area = $request->param('agent_area') ? $request->param('agent_area') : '0';
+        $agent_area = $request->param('agent_area');
         //时间
-        $create_time = $request->param('create_time') ? $request->param('create_time') : 1507424363;
-        $end_time = $request->param('end_time') ? $request->param('end_time') + 3600 * 24 - 1 : 1917651563;
+        $create_time = $request->param('create_time');
         //服务商
-        if ($status != 0 && $status != 1) {
-            $status = 3;
+
+        if ($status) {
+            $status_f = "eq";
+        } else {
+            $status_f = "<>";
+            $status = -2;
         }
-        $agent_ateabol = 'eq';
-        if ($agent_area == '0') {
-            $agent_ateabol = '<>';
+        if ($agent_area) {
+            $agent_f = 'LIKE';
+        } else {
+            $agent_f = 'NOT LIKE';
+            $agent_area = "-2";
         }
-        $statusbol = 'eq';
-        if ($status == 3) {
-            $statusbol = '<>';
+        if ($name) {
+            $name_f = 'LIKE';
+            $name = $name . "%";
+        } else {
+            $name_f = 'NOT LIKE';
+            $name = "-2";
         }
-        $parent_id = 0;
-        $symbol = '<>';
-        if (!empty($name)) {
-            $symbol = 'eq';
-            $parent_id = Db::name('total_agent')->where('agent_name|contact_person|agent_phone', 'like', "%$name%")
-                ->field(['id'])->find();
-            $parent_id = $parent_id['id'];
+        if ($create_time) {
+            $create_f = 'between';
+            $night = strtotime(date("Y-m-d, 24:59:59", $create_time));
+            $create_time = [$create_time, $night];
+        } else {
+            $create_f = '>';
+            $create_time = -2;
         }
-        $total = Db::name('total_agent')->count('id');
+
+        $total = Db::name('total_agent')->where("parent_id ", $parent_id)->count('id');
 
         $rows = Db::name('total_agent')->where([
-            'parent_id' => [$symbol, $parent_id],
-            'agent_area' => [$agent_ateabol, $agent_area],
-            'status' => [$statusbol, $status]
-            , 'create_time' => ['between time', [$create_time, $end_time]]
-        ])
-            ->count('id');
+            "agent_name" => [$name_f, $name],
+            'parent_id' => $parent_id,
+            'agent_area' => [$agent_f, $agent_area],
+            'status' => [$status_f, $status],
+            'create_time' => [$create_f, $create_time]
+        ])->count('id');
         $pages = page($rows);
         $data['list'] = Db::name('total_agent')->where([
-            'parent_id' => [$symbol, $parent_id],
-            'agent_area' => [$agent_ateabol, $agent_area],
-            'status' => [$statusbol, $status]
-            , 'create_time' => ['between time', [$request->param('create_time'), $request->param('end_time')]]
+            "agent_name" => [$name_f, $name],
+            'parent_id' => $parent_id,
+            'agent_area' => [$agent_f, $agent_area],
+            'status' => [$status_f, $status],
+            'create_time' => [$create_f, $create_time]
         ])
             ->field(['id,agent_name,contact_person,agent_phone,agent_mode,agent_area,create_time,status'])
             ->limit($pages['offset'], $pages['limit'])
@@ -1024,79 +1113,67 @@ class Index extends Controller
      * @throws \think\db\exception\DataNotFoundException
      * @throws \think\db\exception\ModelNotFoundException
      * @throws \think\exception\DbException
+     * @throws  \Exception
      */
 
     public function facilitator_tenant(Request $request)
     {
         $name = $request->param('keyword');
-        //0关闭 1开启
+        //服务商的状态，1启用 0停用 3全部
         $status = $request->param('status');
-        //合伙人id 0全部
-        $agent_id = $request->param('agent_id') ? $request->param('agent_id') : 0;
-        $status_symbol = 'eq';
-        if ($status != 0 && $status != 1) {
-            $status = 2;
-            $status_symbol = '<>';
+        //代理区域    0代表全部区域
+        $agent_area = $request->param('agent_area');
+        //时间
+        $agent_id = Session::get("username_")["id"];
+        //服务商
+
+        if ($status) {
+            $status_f = "eq";
+        } else {
+            $status_f = "<>";
+            $status = -2;
         }
-        $agentsyom = 'eq';
-        if ($agent_id == 0) {
-            $agentsyom = '<>';
+        if ($agent_area) {
+            $agent_f = 'LIKE';
+        } else {
+            $agent_f = 'NOT LIKE';
+            $agent_area = "-2";
         }
-        $total = Db::name('total_agent')->count('id');
+        if ($name) {
+            $name_f = 'LIKE';
+            $name = $name . "%";
+        } else {
+            $name_f = 'NOT LIKE';
+            $name = "-2";
+        }
+        $total = Db::name('total_agent')->where("parent_id",$agent_id)->count('id');
 
         $rows = Db::name('total_merchant')
-            ->where(['name|contact|phone' => ['like', "%$name%"],
-                'status' => [$status_symbol, $status], 'agent_id' => [$agentsyom, $agent_id]])
+            ->where(['name|contact|phone' => [$name_f, $name],
+                'status' => [$status_f, $status], 'agent_id' => ['eq', $agent_id]])
             ->count('id');
         $pages = page($rows);
 
         $data['list'] = Db::name('total_merchant')
-            ->where(['name|contact|phone' => ['like', "%$name%"],
-                'status' => [$status_symbol, $status], 'agent_id' => [$agentsyom, $agent_id]])
-            ->field(['id', 'agent_name', 'address', 'status', 'abbreviation', 'opening_time'])
+            ->where(['name|contact|phone' => [$name_f, $name],
+                'status' => [$status_f, $status], 'agent_id' => ['eq', $agent_id]])
+            ->field(['id', 'agent_name', 'address', 'status', 'abbreviation', 'opening_time',"name"])
             ->limit($pages['offset'], $pages['limit'])
             ->select();
         $data['pages'] = $pages;
         $data['pages']['rows'] = $rows;
         $data['pages']['total_row'] = $total;
-        if (count($data['list'])) {
-            return_msg(200, 'success', $data);
-        } else {
-            return_msg(400, '没有数据');
-        }
+        check_data($data["list"], $data);
 
     }
 
-    /**
-     *  验证参数是否正确
-     * @param   [array] $arr 所有参数
-     * @return [json] 参数验证结果/返回参数
-     */
-    public function check_params($arr)
-    {
-        /* 获取参数的验证规则 */
-        try {
-
-            $rule = $this->rules[$this->request->controller()][$this->request->action()];
-
-        } catch (Exception $e) {
-            return true;
-        }
-
-        /* 验证参数并返回错误 */
-        $this->validater = new Validate($rule);
-        if (!$this->validater->check($arr)) {
-            return_msg(400, $this->validater->getError());
-        }
-
-        return $arr;
-    }
 
     /**
      * 获取对应类型的交易量
      * @param $id
      * @param $type
      * @return int|string
+     * @throws \Exception
      */
     protected function get_type_num($id, $type, $time = 0)
     {
