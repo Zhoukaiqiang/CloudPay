@@ -129,9 +129,7 @@ class Commonality extends Common
         import('phpqrcode.phpqrcode', EXTEND_PATH,'.php');
         $path = "/uploads/QRcode/".date("Ymd").DS;//创建路径
 
-//
         $time = time().'.png'; //创建文件名
-
 
         $file_name = iconv("utf-8","gb2312",$time);
 
@@ -140,7 +138,7 @@ class Commonality extends Common
         if(!file_exists($file_path)){
             mkdir($file_path, 0700,true);//创建目录
         }
-        $file_path = $file_path.$this->runningWater().'.png';//1.命名生成的二维码文件
+        $file_path = "/uploads/".$this->runningWater().'.png';//1.命名生成的二维码文件
         $level = 'L';  //3.纠错级别：L、M、Q、H
         $size = 4;//4.点的大小：1到10,用于手机端4就可以了
         ob_end_clean();//清空缓冲区

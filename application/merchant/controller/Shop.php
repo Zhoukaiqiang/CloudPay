@@ -77,6 +77,7 @@ class Shop extends Commonality
      */
     public function shop_incom(Request $request)
     {
+
         $data = $request->post();
         $Merc = Db::name("merchant_incom")->where("merchant_id", $this->merchant_id)->find();
         $key = $Merc["key"] ? $Merc["key"] : null;
@@ -160,7 +161,8 @@ class Shop extends Commonality
             $data["check_msg"] = $res["check_msg"];
             $data["key"] = $res["key"];
             $data["rec"] = $res["trmNo"];
-            $result = Db::name("merchant_incom")->where($param["shop_id"])->update($data);
+            $data["merchant_id"] = $this->merchant_id;
+            $result = Db::name("merchant_shop")->where($param["shop_id"])->update($data);
             if ($result) {
                 return_msg(200, "操作成功！",$param["shop_id"]);
             }else {

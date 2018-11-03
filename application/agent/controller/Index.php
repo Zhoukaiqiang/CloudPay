@@ -18,6 +18,8 @@ use think\Validate;
 class Index extends Controller
 {
 
+    protected $id;
+
     /**
      * 用户登录
      * @param [strin]   user_name 用户名（电话）
@@ -40,6 +42,7 @@ class Index extends Controller
             unset($db_res['password']); //密码不返回
             /** 登录成功储存session */
             Session::set("username_", $db_res);
+            $this->id = Session::get("username_")["id"];
             return_msg(200, '登录成功！', $db_res);
         }
     }
@@ -53,31 +56,28 @@ class Index extends Controller
      */
     public function agent_login(Request $request)
     {
-        $data=$request->param();
-        if(!isset($data['token'])){
-            return_msg(400,'非法登录');
+        $data = $request->param();
+        if (!isset($data['token'])) {
+            return_msg(400, '非法登录');
         }
-        if(md5($data['phone'].'token')!=$data['token']){
-            return_msg(400,'token验证失败');
+        if (md5($data['phone'] . 'token') != $data['token']) {
+            return_msg(400, 'token验证失败');
         }
-        $this->check_exist($data['phone'],'phone',1);
-        $status=TotalAgent::field('status')->where('agent_phone',$data['phone'])->find();
-        if($status['status']==0){
-            return_msg(400,'该代理商不能进入代理商系统');
+        $this->check_exist($data['phone'], 'phone', 1);
+        $status = TotalAgent::field('status')->where('agent_phone', $data['phone'])->find();
+        if ($status['status'] == 0) {
+            return_msg(400, '该代理商不能进入代理商系统');
         }
-        $info=TotalAgent::field('id,username,agent_phone,status, parent_id')
-            ->where('agent_phone',$data['phone'])
+        $info = TotalAgent::field('id,username,agent_phone,status, parent_id')
+            ->where('agent_phone', $data['phone'])
             ->find();
-        if($info){
+        if ($info) {
+
             Session::set("username_", $info);
-            $this->redirect('/agent/index/login',[
-                "phone" => $info["phone"],
-                "password" => $info['password'],
-                "token" => "access_token",
-            ]);
-            return_msg(200,'登录成功',$info);
-        }else{
-            return_msg(400,'登录失败');
+
+            return_msg(200, '登录成功', $info);
+        } else {
+            return_msg(400, '登录失败');
         }
     }
 
@@ -87,6 +87,11 @@ class Index extends Controller
     public function logout()
     {
         Session::clear();
+        if (Session::has("username_")) {
+            return_msg(400, "失败");
+        } else {
+            return_msg(200, "成功");
+        }
     }
 
 
@@ -97,15 +102,16 @@ class Index extends Controller
      * @throws \think\db\exception\DataNotFoundException
      * @throws \think\db\exception\ModelNotFoundException
      */
-    public function get_second_agent (Request $request) {
+    public function get_second_agent(Request $request)
+    {
         if ($request->isGet()) {
             $id = Session::get("username_")["id"];
             $res = TotalAgent::where("parent_id", $id)->field("agent_name,id")->select();
 
             if (count($res)) {
                 return_msg(200, "success", $res);
-            }else {
-                return_msg(400, "no data" );
+            } else {
+                return_msg(400, "no data");
             }
         }
     }
@@ -130,7 +136,7 @@ class Index extends Controller
             /** 当前代理商下所有直属商户交易量 --  微信/支付宝/银行卡  */
             $data["ali_num"] = $this->get_type_num($id, "alipay", $time);
             $data["wx_num"] = $this->get_type_num($id, "wxpay", $time);
-            $data["bank_num"] = $this->get_type_num($id, "etc" , $time);
+            $data["bank_num"] = $this->get_type_num($id, "etc", $time);
 
             return_msg(200, "success", $data);
         }
@@ -143,7 +149,8 @@ class Index extends Controller
      * @method GET
      * @param Request $request
      */
-    public function get_diagram(Request $request) {
+    public function get_diagram(Request $request)
+    {
         if ($request->isGet()) {
             $id = Session::get("username_")["id"];
             /* 接受参数 */
@@ -161,12 +168,12 @@ class Index extends Controller
                 $pay_type_flag = "eq";
             }
 
-             $sum = [];
+            $sum = [];
             /** 默认展示7天数据 */
 
-            while($i < 0) {
-                $morning = strtotime(date('Y-m-d 00:00:00', strtotime($i .' days')));
-                $night = strtotime(date('Y-m-d 23:59:59', strtotime($i .' days')));
+            while ($i < 0) {
+                $morning = strtotime(date('Y-m-d 00:00:00', strtotime($i . ' days')));
+                $night = strtotime(date('Y-m-d 23:59:59', strtotime($i . ' days')));
                 $date = [$morning, $night];
                 $data['chartData'][] = TotalMerchant::alias("mer")
                     ->join("cloud_order o", "o.merchant_id = mer.id")
@@ -186,10 +193,10 @@ class Index extends Controller
             }
 
 
-            foreach($data["chartData"] as $k => $v) {
+            foreach ($data["chartData"] as $k => $v) {
                 $filted_data[] = [
                     "amount" => $v,
-                    "count"    => $sum[$k],
+                    "count" => $sum[$k],
                     "pay_time" => date('Y-m-d', strtotime($i + $k . ' days')),
                 ];
             }
@@ -198,6 +205,7 @@ class Index extends Controller
             check_data($filted_data);
         }
     }
+
     /**
      * 首页--商户数据
      * @param [int] $id 二级代理商ID
@@ -250,9 +258,9 @@ class Index extends Controller
         $time_flag = ">";
         if ($time == 7) {
             $time = strtotime("-7 days");
-        }elseif ($time == 30) {
+        } elseif ($time == 30) {
             $time = strtotime("-30 days");
-        }elseif ($time != 0) {
+        } elseif ($time != 0) {
             $time = [$time];
             $time_flag = "between";
         }
@@ -266,7 +274,6 @@ class Index extends Controller
             ->sum("o.received_money");
         return $res;
     }
-
 
 
     /**
@@ -751,53 +758,62 @@ class Index extends Controller
      * @throws \think\db\exception\DataNotFoundException
      * @throws \think\db\exception\ModelNotFoundException
      * @throws \think\exception\DbException
+     * @throws  Exception
      */
     public function merchant_list(Request $request)
     {
         //获取商户|联系人|联系方式
-        $agent_id = Session::get('username_');
-
+        $agent_id = Session::get('username_')["id"];
         $name = $request->param('keyword');
         //获取合伙人id
-        $partner_id = $request->param('partner_id') ? $request->param('partner_id') : 0;
-        //获取是否交易
-//        $deal=$request->param('deal');
-        //状态0开启 1关闭
-        $status = $request->param('status') ? $request->param('status') : 3;
-        $create_time = $request->param('opening_time') ? $request->param('opening_time') : 0;
-        $end_time = $create_time + 60 * 60 * 24 - 1;
-        $address = $request->param('address') ? $request->param('address') : '0';
+        $partner_id = $request->param('partner_id');
+        $status = $request->param('status');
+        $create_time = $request->param('opening_time');
+        $address = $request->param('address');
 
-        $statusxyom = 'eq';
-        if ($status == 3) {
-            $statusxyom = '<>';
-        }
-        if ($status == 2) {
-            $status = 0;
-        }
-        $addresssyom = '=';
-        if ($address == '0') {
-            $addresssyom = '<>';
+        if ($status) {
+            $status_f = "eq";
+        } else {
+            $status_f = "<>";
+            $status = -2;
         }
 
-        $nodeal = 'between';
+        if ($address) {
+            $address_f = "LIKE";
+        } else {
+            $address_f = "NOT LIKE";
+            $address = "-2";
+        }
+        if ($partner_id) {
+            $partner_f = "eq";
+        } else {
+            $partner_f = "neq";
+            $partner_id = -2;
+        }
+        if ($name) {
+            $name_f = "LIKE";
+            $name = $name . "$";
+        } else {
+            $name_f = "NOT LIKE";
+            $name = "-2";
+        }
+        if ($create_time) {
+            $create_f = "between";
+            $night = strtotime(date("Y-m-d 23:59:59", $create_time));
+            $create_time = [(int)$create_time, $night];
+        } else {
+            $create_f = ">";
+            $create_time = -2;
+        }
 
-        if ($create_time == 0) {
-            $nodeal = 'not between';
-        }
-        $symbol = '=';
-        if ($partner_id == 0) {
-            $symbol = '<>';
-        }
-        $total = Db::name('total_merchant')->count('id');
+        $total = Db::name('total_merchant')->where("agent_id", $agent_id)->count('id');
         $rows = TotalMerchant::alias('a')
-            ->field('a.address,a.name,a.id,a.contact,a.phone,a.status,a.opening_time,a.review_status,a.abbreviation,a.contact,a.phone,cloud_order.received_money,cloud_order.cashier,cloud_agent_partner.partner_name')
-            ->join('cloud_order', 'a.id=cloud_order.merchant_id')
-            ->join('cloud_agent_partner', 'a.partner_id=cloud_agent_partner.id')
-            ->where('a.abbreviation|a.contact|a.phone', 'like', "%$name%")
-            ->where('a.partner_id', $symbol, $partner_id)
-            ->where(['a.status' => [$statusxyom, $status], 'a.agent_id' => ['=', $agent_id], 'a.address' => [$addresssyom, $address]])
-            ->whereTime('a.opening_time', $nodeal, [$create_time, $end_time])
+            ->join('cloud_order', 'cloud_order.merchant_id = a.id')
+            ->join('cloud_agent_partner', ' cloud_agent_partner.id = a.partner_id')
+            ->where('a.abbreviation|a.contact|a.phone', $name_f, $name)
+            ->where('a.partner_id', $partner_f, $partner_id)
+            ->where(['a.status' => [$status_f, $status], 'a.agent_id' => ['=', $agent_id], 'a.address' => [$address_f, $address]])
+            ->whereTime('a.opening_time', $create_f, $create_time)
             ->group('a.id')
             ->count('a.id');
         $pages = page($rows);
@@ -806,21 +822,18 @@ class Index extends Controller
             ->field('a.channel,a.address,a.name,a.id,a.contact,a.phone,a.status,a.opening_time,a.review_status,a.abbreviation,a.contact,a.phone,cloud_order.received_money,cloud_order.cashier,cloud_agent_partner.partner_name')
             ->join('cloud_order', 'a.id=cloud_order.merchant_id')
             ->join('cloud_agent_partner', 'a.partner_id=cloud_agent_partner.id')
-            ->where('a.name|a.contact|a.phone', 'like', "%$name%")
-            ->where('a.partner_id', $symbol, $partner_id)
-            ->where(['a.status' => [$statusxyom, $status], 'a.agent_id' => ['=', $agent_id], 'a.address' => [$addresssyom, $address]])
-            ->whereTime('a.opening_time', $nodeal, [$create_time, $end_time])
+            ->where('a.abbreviation|a.contact|a.phone', $name_f, $name)
+            ->where('a.partner_id', $partner_f, $partner_id)
+            ->where(['a.status' => [$status_f, $status], 'a.agent_id' => ['=', $agent_id], 'a.address' => [$address_f, $address]])
+            ->whereTime('a.opening_time', $create_f, $create_time)
             ->group('a.id')
             ->limit($pages['offset'], $pages['limit'])
             ->select();
         $data['pages'] = $pages;
         $data['pages']['rows'] = $rows;
         $data['pages']['total_row'] = $total;
-        if (count($data['list'])) {
-            return_msg(200, 'success', $data);
-        } else {
-            return_msg(400, '没有数据');
-        }
+
+        check_data($data["list"], $data);
     }
 
     /**
@@ -829,38 +842,62 @@ class Index extends Controller
      * @throws \think\db\exception\DataNotFoundException
      * @throws \think\db\exception\ModelNotFoundException
      * @throws \think\exception\DbException
+     * @throws  Exception
      */
     public function merchant_deal(Request $request)
     {
-        //获取商户|联系人|联系方式
         $name = $request->param('keyword');
         //获取合伙人id
-        $partner_id = $request->param('partner_id') ? $request->param('partner_id') : 0;
-        //获取是否交易 //如果$deal=1是有交易用户，$deal=2是无交易用户
-        $deal = $request->param('deal') ? $request->param('deal') : 0;
+        $partner_id = $request->param('partner_id');
+        $deal = $request->param('deal');
+        $create_time = $request->param('opening_time');
+        $address = $request->param('address');
 
-        $create_time = $request->param('pay_time') ? $request->param('pay_time') : 1507424363;
-        $end_time = $request->param('pay_time') ? $request->param('pay_time') + 3600 * 24 - 1 : 1917651563;
+        if ($deal) {
+            $deal_f = "eq";
+        } else {
+            $deal_f = "<>";
+            $deal = -2;
+        }
 
-        //是否交易
-        $nodeal = 'between';
-        if ($deal == 2) {
-            $nodeal = 'not between';
+        if ($address) {
+            $address_f = "LIKE";
+        } else {
+            $address_f = "NOT LIKE";
+            $address = "-2";
         }
-        //合伙人
-        $symbol = '<>';
-        if ($partner_id > 0) {
-            $symbol = 'eq';
+        if ($partner_id) {
+            $partner_f = "eq";
+        } else {
+            $partner_f = "neq";
+            $partner_id = -2;
         }
-        $total = Db::name('total_merchant')->count('id');
+        if ($name) {
+            $name_f = "LIKE";
+            $name = $name . "$";
+        } else {
+            $name_f = "NOT LIKE";
+            $name = "-2";
+        }
+        if ($create_time) {
+            $create_f = "between";
+            $night = strtotime(date("Y-m-d 23:59:59", $create_time));
+            $create_time = [(int)$create_time, $night];
+        } else {
+            $create_f = ">";
+            $create_time = -2;
+        }
+
+        $total = Db::name('total_merchant')->where("agent_id", $this->id)->count('id');
 
         $rows = TotalMerchant::alias('a')
             ->field('a.abbreviation,a.contact,a.phone,cloud_order.received_money,cloud_order.cashier')
             ->join('cloud_order', 'a.id=cloud_order.merchant_id', 'left')
             ->join('cloud_agent_partner', 'cloud_agent_partner.id=a.partner_id')
-            ->where('a.abbreviation|a.contact|a.phone', 'like', "%$name%")
-            ->where('a.partner_id', $symbol, $partner_id)
-            ->whereTime('cloud_order.pay_time', $nodeal, [$create_time, $end_time])
+            ->where('a.abbreviation|a.contact|a.phone', $name_f, $name)
+            ->where('a.partner_id', $partner_f, $partner_id)
+            ->where('a.agent_id',  $this->id)
+            ->whereTime('cloud_order.pay_time', $create_f, $create_time)
             ->group('a.id')
             ->count('a.id');
         $pages = page($rows);
@@ -869,9 +906,10 @@ class Index extends Controller
             ->field('a.name,a.address,cloud_agent_partner.partner_name,a.id,a.abbreviation,a.contact,a.phone,cloud_order.received_money,cloud_order.cashier')
             ->join('cloud_order', 'a.id=cloud_order.merchant_id', 'left')
             ->join('cloud_agent_partner', 'cloud_agent_partner.id=a.partner_id')
-            ->where('a.name|a.contact|a.phone', 'like', "%$name%")
-            ->where('a.partner_id', $symbol, $partner_id)
-            ->whereTime('cloud_order.pay_time', $nodeal, [$create_time, $end_time])
+            ->where('a.abbreviation|a.contact|a.phone', $name_f, $name)
+            ->where('a.agent_id',  $this->id)
+            ->where('a.partner_id', $partner_f, $partner_id)
+            ->whereTime('cloud_order.pay_time', $create_f, $create_time)
             ->group('a.id')
             ->limit($pages['offset'], $pages['limit'])
             ->select();
@@ -901,14 +939,7 @@ class Index extends Controller
         $data['pages'] = $pages;
         $data['pages']['rows'] = $rows;
         $data['pages']['total_row'] = $total;
-        if (count($data) !== 0) {
-
-            return_msg(200, 'success', $data);
-
-        } else {
-
-            return_msg(400, '没有数据');
-        }
+        check_data($data["list"], $data);
     }
 
     /**
@@ -1065,9 +1096,9 @@ class Index extends Controller
         $time_flag = ">";
         if ($time == 7) {
             $time = strtotime("-7 days");
-        }elseif ($time == 30) {
+        } elseif ($time == 30) {
             $time = strtotime("-30 days");
-        }elseif ($time != 0) {
+        } elseif ($time != 0) {
             $time = [$time];
             $time_flag = "between";
         }
