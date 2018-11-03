@@ -387,8 +387,9 @@ class Merchant extends Incom
      */
     public function merchant_group()
     {
+
         $agent_id=Session::get("username_")["id"];
-        $agent_id=1;//测试
+
         //取出当前代理商下所有会员互通商户
         $data=MerchantGroup::where('agent_id',$agent_id)->select();
         foreach($data as &$v){
@@ -410,7 +411,7 @@ class Merchant extends Incom
     public function add_group(Request $request)
     {
         $agent_id=Session::get('username_')['id'];
-        $agent_id=1;//测试
+
         if($request->isPost()){
             //获取分组id和当前商户id
             $data=$request->post();
@@ -450,7 +451,7 @@ class Merchant extends Incom
     public function search(Request $request)
     {
         $agent_id=Session::get('username_')['id'];
-        $agent_id=1;//测试
+
         //获取商户名
         $name=$request->param('name');
         //搜索商户
@@ -458,6 +459,19 @@ class Merchant extends Incom
                 ->where(['agent_id'=>$agent_id,'name'=>['like',$name.'%']])
                 ->select();
         return_msg(200,'success',$data);
+    }
+
+    /**
+     *新增会员互通
+     */
+    public function new_group()
+    {
+        //新增会员互通
+        $agent_id=Session::get('username_')['id'];
+        $arr=[
+            'agent_id'=>$agent_id
+        ];
+        MerchantGroup::insert($arr);
     }
 
     /**
@@ -470,10 +484,10 @@ class Merchant extends Incom
     public function del(Request $request)
     {
         $group_id=$request->param('group_id');
-        $group_id=1;//测试
         if($request->isPost()){
             //获取商户id
             $id=$request->post('id');
+            $group_id=$request->param('group_id');
             //取出分组数据
             $data=MerchantGroup::where('id',$group_id)->find();
             $arr=explode(',',$data['merchant_id']);
@@ -483,7 +497,11 @@ class Merchant extends Incom
                 }
             }
             $merchant_id=implode(',',$arr);
-            $info=MerchantGroup::where('id',$group_id)->update(['merchant_id'=>$merchant_id]);
+            if($merchant_id==null){
+                $info=MerchantGroup::where('id',$group_id)->delete();
+            }else{
+                $info=MerchantGroup::where('id',$group_id)->update(['merchant_id'=>$merchant_id]);
+            }
             if($info){
                 return_msg(200,'删除成功');
             }else{

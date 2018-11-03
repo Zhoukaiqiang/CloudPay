@@ -22,4 +22,14 @@ class MemberExclusive extends Model
                 break;
         }
     }
+
+    public function getStartTimeAttr($v)
+    {
+        return date("Y-m-d", $v);
+    }
+
+    public function getEndTimeAttr($v)
+    {
+        return date("Y-m-d", $v);
+    }
 }

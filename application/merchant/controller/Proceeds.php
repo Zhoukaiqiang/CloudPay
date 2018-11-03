@@ -65,10 +65,12 @@ class Proceeds extends Scancode
      */
     public function member_income(Request $request)
     {
+
         //支付金额
        $money= $request->param('money');
        //会员id
        $member_id= $request->param('member_id');
+
        $result=Db::name('merchant_member')->where('id',$member_id)->field('money')->find();
        if($result['money']-$money <= 0){
            return_msg('400','余额不足');

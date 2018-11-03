@@ -9,7 +9,7 @@ class MemberRecharge extends Model
     protected $autoWriteTimestamp=true;
     protected $createTime = "recharge_time";
     protected $updateTime = false;
-    public function getPayTypeAttr($val)
+    /*public function getPayTypeAttr($val)
     {
         switch ($val) {
             case 'ALIPAY':
@@ -25,7 +25,7 @@ class MemberRecharge extends Model
                 return "现金";
                 break;
         }
-    }
+    }*/
 
     public function getStatusAttr($val)
     {
