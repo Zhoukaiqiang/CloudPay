@@ -195,19 +195,9 @@ class Proceeds extends Scancode
 
     public function clientLordesau(Request $request)
     {
-        $data=$request->post();
-        //如果是商户收款
-        if($this->role==-1){
-            $shop=MerchantShop::where('merchant_id',$this->id)->field('id')->find();
-            $data['shop_id']=$shop->id;
-        }
-        //支付渠道
-//        $data['payChannel']=$this->isplay($data['authCode']);
-        $data['payChannel']='WXPAY';
-        //公共参数
-        $data= $this->publics($data);
-        //调用接口
-        return $this->client_lordesau($data);
+        $data = $request->post();
+        /** 生成收款维码---识别客户是wx / ali  跳转到指定URL （请求星POS） 获取交易信息*/
+
 
     }
 

@@ -224,12 +224,9 @@ class Scancode extends Commonality
 
         //获取返回结果 */
         $par = curl_request($url, true, $data, true);
-//return $par;
         // json转成数组
 
         $par = json_decode($par, true);
-
-
 
         $par['message']=urldecode($par['message']);
 

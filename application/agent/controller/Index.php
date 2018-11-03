@@ -132,7 +132,7 @@ class Index extends Controller
     public function get_count_data(Request $request)
     {
         if ($request->isGet()) {
-            $id = $request->param("id") ? $request->param("id") : Session::get("username_")["id"];
+            $id = Session::get("username_")["id"];
             /** 当前代理商下所有直属商户交易额 --  微信/支付宝/银行卡  */
             $time = $request->param("time") ? $request->param("time") : 0;
             $data["ali_amount"] = $this->get_type_amount($id, 'alipay', $time);
@@ -217,16 +217,17 @@ class Index extends Controller
      * @param [int] $id 二级代理商ID
      * @throws DbException
      * @return [json]
+     * @throws Exception
      */
     public function get_merchant_data(Request $request)
     {
         if ($request->isGet()) {
-            $id = $request->param("id") ? $request->param("id") : Session::get("username_")["id"];
+            $id = Session::get("username_")["id"];
             /** 昨日活跃商户 */
             $data["active_mer"] = TotalMerchant::alias("mer")
                 ->where("mer.agent_id = $id")
                 ->join("cloud_order o ", "o.merchant_id = mer.id")
-                ->whereTime("pay_time", "yesterday")
+                ->whereTime("o.pay_time", "yesterday")
                 ->group("o.merchant_id")
                 ->count("o.id");
             /** 昨日新增商户 */
@@ -245,7 +246,7 @@ class Index extends Controller
             $data["inactive_mer"] = TotalMerchant::alias("mer")
                 ->where("mer.agent_id = $id")
                 ->join("cloud_order o ", "o.merchant_id = mer.id")
-                ->whereTime("pay_time", "<", strtotime("-7 days"))
+                ->whereTime("o.pay_time", "<", strtotime("-7 days"))
                 ->group("o.merchant_id")
                 ->count("mer.id");
 
