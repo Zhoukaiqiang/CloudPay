@@ -291,6 +291,7 @@ class Incom extends Controller
 //        $info=MerchantIncom::insert($data);
         $data = $data->toArray();
         $data['signValue'] = sign_ature(0000, $data);
+//        halt($data);
 //        var_dump(json_encode($data));die;
 //        dump($data);die;
 //        var_dump(json_encode($data));die;
@@ -298,6 +299,7 @@ class Incom extends Controller
         //发送给新大陆
         $result = curl_request($this->url, true, $data, true);
         $result = json_decode($result, true);
+//        halt($result);
         $signValue = sign_ature(1111, $result);
         if ($result['msg_cd'] == '000000' && $result['signValue'] == $signValue) {
             //审核通过
@@ -350,10 +352,10 @@ class Incom extends Controller
         $data['version'] = 'V1.0.1';
 
         $data['signValue'] = sign_ature(0000, $data);
-
+//        halt($data);
         $result = curl_request($this->url, true, $data, true);
-
         $result = json_decode($result, true);
+//        halt($result);
 
 //        halt($result);
         //生成签名
@@ -368,7 +370,7 @@ class Incom extends Controller
                     TotalMerchant::where('merchant_id', $merchant_id)->update(['review_status' => 0]);
 
                     if ($res) {
-                        return_msg(200, 'success');
+                        return_msg(200, '转人工');
                     } else {
                         return_msg(400, 'error');
                     }
@@ -383,18 +385,18 @@ class Incom extends Controller
                     //生成二维码
                     $this->qrcode($merchant_id);
                     if ($res) {
-                        return_msg(200, 'success');
+                        return_msg(200, '进件成功');
                     } else {
                         return_msg(400, 'error');
                     }
                 } else {
                     //驳回
                     TotalMerchant::where('merchant_id', $merchant_id)->update(['review_status' => 3, 'rejected' => $result['msg_dat']]);
-                    return_msg(400, 'error', $result['msg_dat']);
+                    return_msg(400, $result['msg_dat']);
                 }
             }
         } else {
-
+            return_msg(400,  $result['msg_dat']);
         }
     }
 
@@ -465,12 +467,14 @@ class Incom extends Controller
         $data['imgTyp'] = $info['imgTyp'];
         $data['imgNm'] = $info['imgNm'];
         $data['merchant_id'] = $info['merchant_id'];
+        $data['orgNo']=ORG_NO;
+//        halt($data);
         $data = $data->toArray();
         $file = $request->file('imgFile');
         /** 转为二进制 */
 
         $data['imgFile'] = bin2hex(file_get_contents($file->getRealPath()));
-
+//        halt($data);
         $img = $this->upload_pics($file);
 
         $this->send($data, $img);
@@ -486,8 +490,10 @@ class Incom extends Controller
     {
         //获取签名
         $data['signValue'] = sign_ature(0000, $data);
+//        halt($data);
         //发送给新大陆
         $result = json_decode(curl_request($this->url, true, $data, true), true);
+//        halt($result);
         if ($result['msg_cd'] !== '000000') {
             return_msg(400, $result["msg_dat"]);
         }
@@ -511,8 +517,10 @@ class Incom extends Controller
 
                 $arr[] = json_decode($file_img['img']);
                 $arr[] = $img;
+                $arr=json_encode($arr);
+//                halt($data['merchant_id']);
+                IncomImg::where('merchant_id', $data['merchant_id'])->update(['img' => $arr]);
 
-                IncomImg::where('merchant_id', $data['merchant_id'])->update(['img' => json_encode($arr)]);
             }
 //            $file_img=$file_img['img'].$img;
             $res = [

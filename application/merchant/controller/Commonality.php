@@ -123,7 +123,7 @@ class Commonality extends Common
      */
     public function qrcode($url=null, $shop_id=null, $name = null)
     {
-        $url=$url ? $url: "http://api.hzyspay.com/merchant/Ordermeals/returntime?shop_id=$shop_id&name=$name";
+        $url=$url ? $url: "http://api.hzyspay.com/merchant/Ordermeals/returntime?shop_id=$shop_id&table_name=$name";
         header("content-type:text/html;charset=utf-8");
         Vendor('phpqrcode.phpqrcode');  //引入的phpqrcode类
         import('phpqrcode.phpqrcode', EXTEND_PATH,'.php');

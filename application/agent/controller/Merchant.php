@@ -250,7 +250,7 @@ class Merchant extends Incom
 //            $data['attachment']=$this->upload_logo();
 //            $data['agent_id']=$agent_id;
 //            $data['attachment']=json_encode($data['attachment']);
-
+//            halt($data);
 
             $insert_id=TotalMerchant::insertGetId($data,true);
             $arr=[];

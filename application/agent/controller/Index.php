@@ -20,7 +20,6 @@ class Index extends Controller
 {
 
 
-
     /**
      * 用户登录
      * @param [strin]   user_name 用户名（电话）
@@ -42,7 +41,6 @@ class Index extends Controller
             unset($db_res['password']); //密码不返回
             /** 登录成功储存session */
             Session::set("username_", $db_res);
-            $this->id = Session::get("username_")["id"];
             return_msg(200, '登录成功！', $db_res);
         }
     }
@@ -781,11 +779,7 @@ class Index extends Controller
         if ($status) {
             $status_f = "eq";
         } else {
-
-            $status_f = "<>";
-
             $status_f = ">";
-
             $status = -2;
         }
 
@@ -798,20 +792,12 @@ class Index extends Controller
         if ($partner_id) {
             $partner_f = "eq";
         } else {
-
-            $partner_f = "neq";
-
             $partner_f = ">";
-
             $partner_id = -2;
         }
         if ($name) {
             $name_f = "LIKE";
-
-            $name = $name . "$";
-
             $name = $name . "%";
-
         } else {
             $name_f = "NOT LIKE";
             $name = "-2";
@@ -829,11 +815,9 @@ class Index extends Controller
         $rows = TotalMerchant::alias('a')
             ->join('cloud_order', 'cloud_order.merchant_id = a.id')
             ->join('cloud_agent_partner', ' cloud_agent_partner.id = a.partner_id')
-
             ->where('a.abbreviation|a.contact|a.phone|a.name', $name_f, $name)
             ->where('a.partner_id', $partner_f, $partner_id)
             ->where(['a.status' => [$status_f, $status], 'a.agent_id' => ['eq', $agent_id], 'a.address' => [$address_f, $address]])
-
             ->whereTime('a.opening_time', $create_f, $create_time)
             ->group('a.id')
             ->count('a.id');
@@ -843,11 +827,9 @@ class Index extends Controller
             ->field('a.channel,a.address,a.name,a.id,a.contact,a.phone,a.status,a.opening_time,a.review_status,a.abbreviation,a.contact,a.phone,cloud_order.received_money,cloud_order.cashier,cloud_agent_partner.partner_name')
             ->join('cloud_order', 'a.id=cloud_order.merchant_id')
             ->join('cloud_agent_partner', 'a.partner_id=cloud_agent_partner.id')
-
             ->where('a.abbreviation|a.contact|a.phone|a.name', $name_f, $name)
             ->where('a.partner_id', $partner_f, $partner_id)
             ->where(['a.status' => [$status_f, $status], 'a.agent_id' => ['eq', $agent_id], 'a.address' => [$address_f, $address]])
-
             ->whereTime('a.opening_time', $create_f, $create_time)
             ->group('a.id')
             ->limit($pages['offset'], $pages['limit'])
@@ -875,37 +857,12 @@ class Index extends Controller
         $deal = $request->param('deal');
         $create_time = $request->param('opening_time');
 
-        $address = $request->param('address');
-
-
         if ($deal) {
             $deal_f = "eq";
         } else {
-
-            $deal_f = "<>";
+            $deal_f = ">";
             $deal = -2;
         }
-
-        if ($address) {
-            $address_f = "LIKE";
-        } else {
-            $address_f = "NOT LIKE";
-            $address = "-2";
-        }
-        if ($partner_id) {
-            $partner_f = "eq";
-        } else {
-            $partner_f = "neq";
-            $partner_id = -2;
-        }
-        if ($name) {
-            $name_f = "LIKE";
-            $name = $name . "$";
-        } else {
-            $name_f = "NOT LIKE";
-            $name = "-2";
-        }
-
 
         if ($partner_id) {
             $partner_f = "eq";
@@ -920,7 +877,6 @@ class Index extends Controller
             $name_f = "NOT LIKE";
             $name = "-2";
         }
-
         if ($create_time) {
             $create_f = "between";
             $night = strtotime(date("Y-m-d 23:59:59", $create_time));
@@ -930,19 +886,15 @@ class Index extends Controller
             $create_time = -2;
         }
 
-
         $total = Db::name('total_merchant')->where("agent_id", Session::get("username_")['id'])->count('id');
-
 
         $rows = TotalMerchant::alias('a')
             ->field('a.abbreviation,a.contact,a.phone,cloud_order.received_money,cloud_order.cashier')
             ->join('cloud_order', 'a.id=cloud_order.merchant_id')
             ->join('cloud_agent_partner', 'cloud_agent_partner.id=a.partner_id')
-
             ->where('a.name', $name_f, $name)
             ->where('a.partner_id', $partner_f, $partner_id)
             ->where('a.agent_id', Session::get("username_")['id'])
-
             ->whereTime('cloud_order.pay_time', $create_f, $create_time)
             ->group('a.id')
             ->count('a.id');
@@ -984,19 +936,6 @@ class Index extends Controller
                 ->limit($pages['offset'], $pages['limit'])
                 ->select();
         }
-
-
-        $data['list'] = TotalMerchant::alias('a')
-            ->field('a.name,a.address,cloud_agent_partner.partner_name,a.id,a.abbreviation,a.contact,a.phone,cloud_order.received_money,cloud_order.cashier')
-            ->join('cloud_order', 'a.id=cloud_order.merchant_id', 'left')
-            ->join('cloud_agent_partner', 'cloud_agent_partner.id=a.partner_id')
-            ->where('a.abbreviation|a.contact|a.phone', $name_f, $name)
-            ->where('a.agent_id',  Session::get("username_")['id'])
-            ->where('a.partner_id', $partner_f, $partner_id)
-            ->whereTime('cloud_order.pay_time', $create_f, $create_time)
-            ->group('a.id')
-            ->limit($pages['offset'], $pages['limit'])
-            ->select();
 
 
         foreach ($data['list'] as &$v) {
