@@ -193,15 +193,17 @@ class Proceeds extends Scancode
     /**
      * 客户主扫
      * @param Request $request
+     * @deprecated 弃用
      */
 
     public function clientLordesau(Request $request)
     {
         $data = $request->post();
         /** 生成收款维码---识别客户是wx / ali  跳转到指定URL （请求星POS） 获取交易信息*/
-
+        echo $this->IsWeixinOrAlipay();
 
     }
+
 
     /**
      * 客户主扫  查询订单详情

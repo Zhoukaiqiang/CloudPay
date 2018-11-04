@@ -204,8 +204,8 @@ if (!function_exists("generate_order_no")) {
         if (empty($uid)) {
             $uid = rand(100, 999);
         }
-        $order_num = (string)date("YmdHms") + (string)$uid + rand(100, 999);
-        return $order_num;
+        $order_num = date("YmdHis") + strval($uid) + rand(100, 999);
+        return (string)$order_num;
 
     }
 }
@@ -296,16 +296,15 @@ if (!function_exists('sign_ature')) {
         }else {
             $key_main = $key;
         }
-
+        $str = '';
         ksort($arr);
+
         if ($flag == 0000) {
             $data = [
                 //客户主扫
                 //查询
                 "qryNo",
                 'payChannel','authCode','total_amount','amount','trmNo','tradeNo','txnTime','signType','opSys','characterSet','serviceId', 'version', 'incom_type', 'stl_typ', 'stl_sign', 'stl_oac', 'bnk_acnm', 'wc_lbnk_no', 'bus_lic_no', 'bse_lice_nm', 'crp_nm', 'mercAdds', 'bus_exp_dt', 'crp_id_no', 'crp_exp_dt', 'stoe_nm', 'stoe_cnt_nm', 'stoe_cnt_tel', 'mcc_cd', 'stoe_area_cod', 'stoe_adds', 'trm_rec', 'mailbox', 'alipay_flg', 'yhkpay_flg' , 'mercId', 'orgNo', 'imgTyp', 'imgNm', 'log_no', 'stoe_id', 'lbnk_nm','orderNo','Amount','txnAmt'];
-            $str = '';
-
             foreach ($arr as $k => $v) {
                 if (in_array($k, $data)) {
                     $str .= $v;
@@ -314,10 +313,8 @@ if (!function_exists('sign_ature')) {
 
         } elseif ($flag == 1111) {
             $data = ['Amount','txnAmt,total_amount','amount','orderNo','result','logNo','tradeNo','sysTime','message','returnCode','check_flag', 'msg_cd', 'msg_dat', 'mercId', 'log_no', 'stoe_id', 'mobile', 'sign_stats', 'deliv_stats'];
-            $str = '';
             foreach ($arr as $key1 => $val) {
                 if (in_array($key1, $data)) {
-//                    echo $key1."<br/>";
                     $str .= $val;
                 }
             }

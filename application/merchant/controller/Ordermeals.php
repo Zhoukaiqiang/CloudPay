@@ -12,14 +12,16 @@ namespace app\merchant\controller;
 use app\merchant\model\MerchantShop;
 use think\Controller;
 use think\Request;
+use think\Session;
 
 class Ordermeals extends Controller
 {
     public function returntime()
     {
-
+        $mid = \request()->param("merchant_id");
         $shop_id=\request()->param('shop_id');
         $name=\request()->param('name');
+        Session::set("merchant_id", $mid, "_app");
         return_msg(200,'success',['shop'=>$shop_id,'name'=>$name]);
     }
 
