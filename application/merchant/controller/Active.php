@@ -445,13 +445,14 @@ class Active extends Common
         $openid=MerchantMember::field('openid')->where('shop_id',$shop_id)->select();
 
         $access_token=$this->get_access();
-
+        //获取门店名
+        $shop_name=MerchantShop::field('shop_name')->where('id',$shop_id)->find();
         $url="https://api.weixin.qq.com/cgi-bin/message/template/send?access_token=".$access_token;
       foreach($openid as $v){
           $arr=array(
               "touser"=>$v['openid'],
               "template_id"=>"Jo5aZi-6uWfA7Vl_gTGqsaABqeIfuJIzrXBRe3cDOIg",
-              "url"=>"http://192.168.0.209:8080/share?shop_id=".$shop_id,
+              "url"=>"http://192.168.0.209:8080/share?shop_name=".$shop_name['shop_name'],
               "data"=>array(
                   'first'=>array('value'=>'点击获取更多优惠'),
                   'keyword1'=>array('value'=>date("Y-m-d H:i:s"),'color'=>'#173177'),

@@ -271,13 +271,13 @@ class Wechat extends Controller
      */
     public function member_register(Request $request)
     {
-        if(Session::has("openid")){
+        /*if(Session::has("openid")){
             $openid=Session::get("openid");
         }else{
             $this->get_code();
             $openid=Session::get("openid");
-        }
-
+        }*/
+        $openid=1;
         $data=$request->post();
         $data['openid'] = $openid;
 
@@ -453,6 +453,18 @@ class Wechat extends Controller
         return time().$times;
     }
 
+    public function get_qrcode()
+    {
+        if(Session::has("openid")){
+            $openid=Session::get("openid");
+        }else{
+            $this->get_code();
+            $openid=Session::get("openid");
+        }
+        //取出会员卡信息
+        $data=MerchantMember::field('member_qrcode')->where('openid',$openid)->find();
+        check_data($data['member_qrcode']);
+    }
     /**
      *微信会员卡
      * @throws \think\db\exception\DataNotFoundException
@@ -462,13 +474,14 @@ class Wechat extends Controller
     public function wx_member_card()
     {
         //获取用户appid
-        /*if(Session::has("openid")){
+        if(Session::has("openid")){
             $openid=Session::get("openid");
         }else{
             $this->get_code();
             $openid=Session::get("openid");
-        }*/
-        $openid=1;//测试
+        }
+
+//        $openid=1;//测试
         //取出会员信息
         $data['list']=MerchantMember::field('id,merchant_id,shop_id,money,member_phone')->where('openid',$openid)->select();
         //取出会员活动
@@ -590,5 +603,6 @@ class Wechat extends Controller
             ->find();
         check_data($data);
     }
+
 
 }
