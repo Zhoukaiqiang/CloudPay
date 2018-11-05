@@ -126,7 +126,7 @@ class Wechat extends Controller
      * 会员充值
      * 连贯操作 ->go_wxpay()
      */
-    public function member_recharge($param = null)
+    public function member_recharge()
     {
         /** 查询 -> 支付 */
 //        $data=MerchantIncom::field('mercId,rec,key')->where('merchant_id',"87")->find();
@@ -147,7 +147,7 @@ class Wechat extends Controller
         $res = curl_request($url, true, $param, true);
 
         $res = json_decode(urldecode($res), true);
-//        halt($res);
+        halt($res);
         /** 如果查询成功请求公众号支付否则返回错误信息 */
         if ($res["returnCode"] == "000000") {
 
@@ -445,7 +445,7 @@ class Wechat extends Controller
         //保存二维码地址
         $file_path=substr($file_path,1);
         MerchantMember::where('id',$member_id)->update(['member_qrcode'=>$file_path]);
-        return_msg(200,$file_path);
+//        return_msg(200,$file_path);
     }
 
     /**
@@ -670,5 +670,9 @@ class Wechat extends Controller
         check_data($data);
     }
 
-
+    public function check()
+    {
+        $data=request()->param();
+        halt($data);
+    }
 }

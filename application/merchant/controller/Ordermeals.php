@@ -14,6 +14,7 @@ use app\merchant\model\MerchantDishCart;
 use app\merchant\model\MerchantDishNorm;
 use app\merchant\model\MerchantShop;
 use app\merchant\model\Order;
+use app\merchant\model\TotalMerchant;
 use think\Controller;
 use think\Request;
 use think\Session;
@@ -336,6 +337,13 @@ class Ordermeals extends Controller
             ->join('cloud_merchant_dish b','a.dish_id=b.id','left')
             ->where(['a.table_number'=>$info['table_name'],'a.shop_id'=>$info['shop_id']])
             ->select();
+        //餐具费
+        $number = MerchantShop::where('id', $info[ 'shop_id' ])->field('istableware,tableware_money')->find();
+
+        if ($number[ 'istableware' ] == 1) {
+            $data['money'] = ['name' => '餐具费', 'money' => $number[ 'tableware_money' ] * $info[ 'meal_number' ], 'deal' => $info[ 'meal_number' ]];
+        }
+
         check_data($data);
      }
 
@@ -345,6 +353,8 @@ class Ordermeals extends Controller
     public function submit_order()
     {
         $data=request()->post();
+        //取出商户id
+        $merchant=MerchantShop::filed('merchant_id')->where('shop_id',$data['shop_id'])->find();
         $arr=[
             'status'=>0,
             'order_money'=>$data['total_money'],
@@ -355,6 +365,7 @@ class Ordermeals extends Controller
             'order_number'=>generate_order_no(),
             'table_name'=>$data['table_name'],
             'meal_number'=>$data['meal_number'],
+            'merchant_id'=>$merchant['merchant_id']
         ];
         $data=Order::insert($arr);
         if($data){
@@ -382,6 +393,29 @@ class Ordermeals extends Controller
             ->where(['a.table_number'=>$res['table_name'],'a.shop_id'=>$res['shop_id']])
             ->select();
 
+        //餐具费
+        $number = MerchantShop::where('id', $res[ 'shop_id' ])->field('istableware,tableware_money')->find();
+
+        if ($number[ 'istableware' ] == 1) {
+            $data['money'] = ['name' => '餐具费', 'money' => $number[ 'tableware_money' ] * $res[ 'meal_number' ], 'deal' => $res[ 'meal_number' ]];
+        }
+        check_data($data);
+     }
+
+    /**
+     *继续点菜
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function continue_order()
+    {
+        $info=request()->post();
+        $data=MerchantDishCart::alias('a')
+            ->field('a.id,a.dish_number,b.dish_name,b.money')
+            ->join('cloud_merchant_dish b','a.dish_id=b.id','left')
+            ->where(['a.table_number'=>$info['table_name'],'a.shop_id'=>$info['shop_id']])
+            ->select();
         check_data($data);
      }
 

@@ -235,25 +235,25 @@ class Index extends Admin
     {
         /* 判断参数是否为默认，默认则不进入查询 */
         if (empty($param['keywords'])) {
-            $param['keywords_flag'] = '<>';
+            $param['keywords_flag'] = 'not like';
             $param['keywords'] = '-2';
         } else {
             $param['keywords_flag'] = 'like';
         }
 
         if (empty($param['status'])) {
-            $param['status_flag'] = '<>';
-            $param['status'] = '-2';
+            $param['status_flag'] = '>';
+            $param['status'] = -2;
         } else {
             $param['status_flag'] = 'eq';
 
         }
 
         if (empty($param['agent_area'])) {
-            $param['agent_area_flag'] = '<>';
+            $param['agent_area_flag'] = 'not like';
             $param['agent_area'] = '-2';
         } else {
-            $param['agent_area_flag'] = 'eq';
+            $param['agent_area_flag'] = 'like';
         }
 
         switch ($param['contract_time']) {
