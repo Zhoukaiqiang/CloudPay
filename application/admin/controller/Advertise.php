@@ -53,25 +53,18 @@ class Advertise extends Admin
                 //存入相对路径/upload/日期/文件名
                 $data = DS . 'uploads' . DS . $info->getSaveName();
                 $url = str_replace('\\', '/', $data);
-                $insertData = array(
-                    'url' => $url,
-                    "admin_id" => $param['admin_id'],
-                    "agent_id" => $param['agent_id'],
-                    "http" => $param['http'],
-                );
-                $result = TotalAd::create($insertData);
+                $insertData = $param;
+                $insertData["url"] = $url;
+                $result = Db::name("total_ad")->insertGetId($insertData);
                 if ($result) {
-                    $id = TotalAd::where(['url' => $url])->value('id');
-                    $data_arr = ['id' => $id, 'url' => $url];
-                    $this->return_msg(200, '图片上传成功', $data_arr);
+                    $res = Db::name("total_ad")->where($result)->find();
+                    return_msg(200, '图片上传成功', $res);
                 } else {
-                    $this->return_msg(400, '图片上传失败');
-
+                    return_msg(400, '图片上传失败');
                 }
-
             } else {
                 // 上传失败获取错误信息
-                $this->return_msg(400, '上传失败', $file->getError());
+                return_msg(400, '上传失败', $file->getError());
             }
         }
     }

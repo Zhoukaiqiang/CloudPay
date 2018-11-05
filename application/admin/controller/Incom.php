@@ -775,6 +775,7 @@ class Incom extends Controller
         halt($shop_api);
     }
 
+
     public function wx_pay(Request $request)
     {
         $merchant_id = $request->param('merchant_id');

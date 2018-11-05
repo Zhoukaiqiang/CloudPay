@@ -38,8 +38,6 @@ class Index extends Admin
         //mark 日后需计算上会员充值钱数
         $past = $request->param('start_time') ? $request->param('start_time') : "yesterday";
         $present = $request->param('end_time') ? $request->param('end_time') : null;
-        //$channel = $request->param('channel') ? $request->param('end_time') : -1;
-
 
         /* 获取所有商户、代理商的数量 */
         $agent = Db::name('total_agent')->count('id');
@@ -50,8 +48,8 @@ class Index extends Admin
             $member = MemberRecharge::whereTime("recharge_time", "yesterday")->field("sum(amount) amount, count(id) id")->select();
             $member = collection($member)->toArray();
             $Mea = (int)$member[0]['amount'];
-            $member_wx = MemberRecharge::whereTime("recharge_time", "yesterday")->where("pay_type", "WXPAY")->field("sum(amount) amount, count(id) id")->select();
-            $member_ali = MemberRecharge::whereTime("recharge_time", "yesterday")->where("pay_type", "ALIPAY")->field("sum(amount) amount, count(id) id")->select();
+            $member_wx = MemberRecharge::whereTime("recharge_time", "yesterday")->where("pay_type", "wxpay")->field("sum(amount) amount, count(id) id")->select();
+            $member_ali = MemberRecharge::whereTime("recharge_time", "yesterday")->where("pay_type", "alipay")->field("sum(amount) amount, count(id) id")->select();
             $member_wx = collection($member_wx)->toArray();$member_ali = collection($member_ali)->toArray();
             $meWx = (int)$member_wx[0]['amount'];$meAli = (int)$member_ali[0]["amount"];
             $total = Db::name('order')->whereTime('pay_time', "yesterday")->sum('received_money') + $Mea;
@@ -73,8 +71,8 @@ class Index extends Admin
             $member = MemberRecharge::whereTime("recharge_time", $time_flag, [$past, $present])->field("sum(amount) amount, count(id) id")->select();
             $member = collection($member)->toArray();
             $Mea = (int)$member[0]['amount'];
-            $member_wx = MemberRecharge::whereTime("recharge_time", $time_flag, [$past, $present])->where("pay_type", "WXPAY")->field("sum(amount) amount, count(id) id")->select();
-            $member_ali = MemberRecharge::whereTime("recharge_time", $time_flag, [$past, $present])->where("pay_type", "ALIPAY")->field("sum(amount) amount, count(id) id")->select();
+            $member_wx = MemberRecharge::whereTime("recharge_time", $time_flag, [$past, $present])->where("pay_type", "wxpay")->field("sum(amount) amount, count(id) id")->select();
+            $member_ali = MemberRecharge::whereTime("recharge_time", $time_flag, [$past, $present])->where("pay_type", "alipay")->field("sum(amount) amount, count(id) id")->select();
             $member_wx = collection($member_wx)->toArray();$member_ali = collection($member_ali)->toArray();
             $meWx = (int)$member_wx[0]['amount'];$meAli = (int)$member_ali[0]["amount"];
 
@@ -89,22 +87,19 @@ class Index extends Admin
             $mEtc = $Mea - $meWx - $meAli;
             $mEtc_num = $member[0]["id"] - $member_wx[0]["id"] - $member_ali[0]["id"];
 
-            $etc = Db::name('order')->whereTime('pay_time', $time_flag, [$past, $present])->where(['pay_type' => 'etc'])->sum('received_money') + $mEtc;
-            $etc_num = Db::name('order')->whereTime('pay_time', $time_flag, [$past, $present])->where(['pay_type' => 'etc'])->count('id') + $mEtc_num;
+            $etc = Db::name('order')->whereTime('pay_time', $time_flag, [$past, $present])->where('pay_type' , 'etc')->sum('received_money');
+            $etc_num = Db::name('order')->whereTime('pay_time', $time_flag, [$past, $present])->where('pay_type','etc')->count('id') ;
 
         }
 
 
         /** 返回昨日新增商户/代理商 */
-        $merchant_num = Db::name("total_merchant")->whereTime("opening_time", "yesterday")->count("id");
-        $agent_num = Db::name("total_agent")->whereTime("create_time", "yesterday")->count("id");
+        $merchant_num = Db::name("total_merchant")->whereTime("opening_time", "today")->count("id");
+        $agent_num = Db::name("total_agent")->whereTime("create_time", "today")->count("id");
         /** 活跃商户数 */
-        $active_merchant = Order::field("merchant_id")->whereTime("pay_time", "yesterday")->select();
-        $active_arr = [];
-        foreach ($active_merchant as $v) {
-            array_push($active_arr, $v->merchant_id);
-        }
-        $data["active_merchant"] = count(array_unique($active_arr));
+        $active_merchant = Order::whereTime("pay_time", "today")->group("merchant_id")->count("id");
+
+        $data["active_merchant"] = $active_merchant;
         /* 组装数据 */
         $data['new_merchant'] = $merchant_num;
         $data['merchant'] = $merchant;
@@ -117,7 +112,7 @@ class Index extends Admin
         $data['etc'] = ['amount' => $etc, 'pay_num' => $etc_num];
         $data['total'] = ['amount' => $total / 10000, 'pay_num' => $total_num / 10000];
 
-        return json_encode($data);
+        check_data($data);
     }
 
 
@@ -215,8 +210,6 @@ class Index extends Admin
         $this->query['status'] = $request->param('status');
         $this->query['agent_area'] = $request->param('agent_area');
         $this->query['contract_time'] = $request->param('contract_time');
-
-
         /* 传入参数并返回数据 */
         $this->get_search_result($this->query);
 
@@ -235,15 +228,15 @@ class Index extends Admin
     {
         /* 判断参数是否为默认，默认则不进入查询 */
         if (empty($param['keywords'])) {
-            $param['keywords_flag'] = '<>';
+            $param['keywords_flag'] = 'NOT LIKE';
             $param['keywords'] = '-2';
         } else {
-            $param['keywords_flag'] = 'like';
+            $param['keywords_flag'] = 'LIKE';
         }
 
         if (empty($param['status'])) {
             $param['status_flag'] = '<>';
-            $param['status'] = '-2';
+            $param['status'] = -2;
         } else {
             $param['status_flag'] = 'eq';
 
@@ -266,6 +259,7 @@ class Index extends Admin
                 break;
             default:
                 $param['contract_time_flag'] = '>=';
+                $param['contract_time'] = -2;
         }
 
 
@@ -277,7 +271,7 @@ class Index extends Admin
                 'status' => [$param['status_flag'], $param['status']],
                 'agent_area' => [$param['agent_area_flag'], $param['agent_area']],
             ])
-            ->whereTime('contract_time', $param['contract_time_flag'], $param['contract_time'])
+//            ->whereTime('contract_time', $param['contract_time_flag'], $param['contract_time'])
             ->count('id');
 
         $pages = page($rows);
@@ -288,7 +282,7 @@ class Index extends Admin
                 'status' => [$param['status_flag'], $param['status']],
                 'agent_area' => [$param['agent_area_flag'], $param['agent_area']],
             ])
-            ->whereTime('contract_time', $param['contract_time_flag'], $param['contract_time'])
+//            ->whereTime('contract_time', $param['contract_time_flag'], $param['contract_time'])
             ->field(['agent_name', 'contact_person', 'agent_mode', 'agent_area', 'admin_id', 'create_time', 'contract_time', 'status', 'id'])
             ->limit($pages['offset'], $pages['limit'])
             ->select();
@@ -578,7 +572,7 @@ class Index extends Admin
     public function search_staff(Request $request)
     {
 
-        $query['keywords'] = $request->param('keywords') ? $request->param('keywords') : -2;
+        $query['keywords'] = $request->param('keywords');
         $query['status'] = $request->param('status');
         if ($query['status'] == -1) {
             $query['status'] = 0;
@@ -602,11 +596,12 @@ class Index extends Admin
         $param['keywords_flag'] = 'LIKE';
         $param['status_flag'] = "eq";
 
-        if ($param['keywords'] < -1) {
-            $param['keywords_flag'] = '<>';
+        if ($param['keywords']) {
+            $param['keywords_flag'] = 'LIKE';
+            $param['keywords'] = $param['keywords'] . "%";
         }
         if ($param['status'] != 1 && $param['status'] != 0) {
-            $param['status_flag'] = '<>';
+            $param['status_flag'] = '>';
         }
 
         /**
@@ -622,7 +617,7 @@ class Index extends Admin
         $rows = indexModel::name('total_admin')
             ->field("name,phone,status,create_time,role_id,id")
             ->where([
-                "name|phone" => [$param['keywords_flag'], $param['keywords'] . "%"],
+                "name|phone" => [$param['keywords_flag'], $param['keywords']],
                 "status" => [$param['status_flag'], $param['status']],
             ])
             ->count("id");
@@ -640,11 +635,7 @@ class Index extends Admin
 
         $res['pages'] = $pages;
         $res['pages']['total_row'] = $total;
-        if ($rows !== 0) {
-            return_msg(200, '获取搜索结果成功', $res);
-        } else {
-            return_msg(400, '没有找到数据');
-        }
+        check_data($res["list"], $res);
     }
 
 
@@ -695,7 +686,6 @@ class Index extends Admin
             $data["pay_type"] = "etc";
         } elseif (isset($param["PayChannel"])) {
             switch ($param["PayChannel"]) {
-
                 case 1:
                     $data["pay_type"] = "alipay";
                     break;

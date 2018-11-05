@@ -100,8 +100,10 @@ class Pay extends Common
             $pngAbsolutePath = $root . $filename;
             if (!file_exists($pngAbsolutePath)) {
                 $qrCode->writeFile($pngAbsolutePath);
+            }else {
+                return_msg(400, "错误");
             }
-            echo $pngAbsolutePath;
+            echo json_encode(["code"=> 200, "msg" => "成功", "data" => $pngAbsolutePath]);
 
             /** 订单入库 */
             switch ($re["result"]) {
@@ -120,7 +122,9 @@ class Pay extends Common
             $dt['order_money'] = (int)$re["total_amount"] / 100;
             $dt['received_money'] = (int)$re["amount"] / 100;
             $dt['create_time'] = time();
+            $dt['pay_type'] = strtolower($param["channel"]);
             $dt['status'] = $rst;
+            $dt['merchant_id'] = $this->merchant_id;
             $dt['logNo'] = $re["logNo"];
             $dt['order_no'] = $re["orderNo"];
             $dt['order_number'] = $data["tradeNo"];
@@ -183,7 +187,7 @@ class Pay extends Common
                 if (!file_exists($pngAbsolutePath)) {
                     $qrCode->writeFile($pngAbsolutePath);
                 }
-                echo $pngAbsolutePath;
+                echo json_encode(["code"=> 200, "msg" => "成功", "data" => $pngAbsolutePath]);
 
                 /** 订单入库 */
                 switch ($re["result"]) {
@@ -202,7 +206,9 @@ class Pay extends Common
                 $dt['order_money'] = (int)$re["total_amount"] / 100;
                 $dt['received_money'] = (int)$re["amount"] / 100;
                 $dt['create_time'] = time();
+                $dt['pay_type'] = strtolower("$channel");
                 $dt['status'] = $rst;
+                $dt['merchant_id'] = $this->merchant_id;
                 $dt['logNo'] = $re["logNo"];
                 $dt['order_no'] = $re["orderNo"];
                 $dt['order_number'] = $data["tradeNo"];
