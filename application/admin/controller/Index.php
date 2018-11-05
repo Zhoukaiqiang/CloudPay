@@ -243,10 +243,10 @@ class Index extends Admin
         }
 
         if (empty($param['agent_area'])) {
-            $param['agent_area_flag'] = '<>';
+            $param['agent_area_flag'] = 'not like';
             $param['agent_area'] = '-2';
         } else {
-            $param['agent_area_flag'] = 'eq';
+            $param['agent_area_flag'] = 'like';
         }
 
         switch ($param['contract_time']) {

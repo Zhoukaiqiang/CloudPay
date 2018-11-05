@@ -123,29 +123,29 @@ class Commonality extends Common
      */
     public function qrcode($url=null, $shop_id=null, $name = null)
     {
-        $merchant_id = $this->merchant_id;
-        $url=$url ? $url : "http://api.hzyspay.com/merchant/Ordermeals/returntime?shop_id=$shop_id&name=$name&merchant_id=$merchant_id";
+        $url=$url ? $url : "http://api.hzyspay.com/merchant/Ordermeals/returntime?shop_id=$shop_id&name=$name";
         header("content-type:text/html;charset=utf-8");
         Vendor('phpqrcode.phpqrcode');  //引入的phpqrcode类
         import('phpqrcode.phpqrcode', EXTEND_PATH,'.php');
-        $path = "/uploads/QRcode/".date("Ymd").DS;//创建路径
+        $path = "./uploads/QRcode/".date("Ymd").DS;//创建路径
 
         $time = time().'.png'; //创建文件名
 
         $file_name = iconv("utf-8","gb2312",$time);
 
-        $file_path = $_SERVER['DOCUMENT_ROOT'].$path;
+        $file_path = $path;
 
         if(!file_exists($file_path)){
             mkdir($file_path, 0700,true);//创建目录
         }
-        $file_path = "/uploads/".$this->runningWater().'.png';//1.命名生成的二维码文件
+        $file_path = $file_path.$this->runningWater().'.png';//1.命名生成的二维码文件
         $level = 'L';  //3.纠错级别：L、M、Q、H
         $size = 4;//4.点的大小：1到10,用于手机端4就可以了
         ob_end_clean();//清空缓冲区
+
         //生成二维码-保存：
         \QRcode::png($url, $file_path, $level, $size);
-
+        $file_path=substr($file_path,1);
         return_msg(200,'success',$file_path);
 
     }

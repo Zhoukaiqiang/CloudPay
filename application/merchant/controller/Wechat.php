@@ -126,7 +126,7 @@ class Wechat extends Controller
      * 会员充值
      * 连贯操作 ->go_wxpay()
      */
-    public function member_recharge($param = null)
+    public function member_recharge()
     {
         /** 查询 -> 支付 */
 //        $data=MerchantIncom::field('mercId,rec,key')->where('merchant_id',"87")->find();
@@ -147,7 +147,7 @@ class Wechat extends Controller
         $res = curl_request($url, true, $param, true);
 
         $res = json_decode(urldecode($res), true);
-//        halt($res);
+        halt($res);
         /** 如果查询成功请求公众号支付否则返回错误信息 */
         if ($res["returnCode"] == "000000") {
 
@@ -271,13 +271,14 @@ class Wechat extends Controller
      */
     public function member_register(Request $request)
     {
-        /*if(Session::has("openid")){
+        if(Session::has("openid")){
             $openid=Session::get("openid");
         }else{
             $this->get_code();
             $openid=Session::get("openid");
-        }*/
-        $openid=1;
+        }
+//        $openid=1;
+//        echo 1;
         $data=$request->post();
         $data['openid'] = $openid;
 
@@ -290,6 +291,7 @@ class Wechat extends Controller
         //验证
         check_params('member_register',$data,'MerchantValidate');
         if(isset($data['partner_phone'])){
+//            halt($data);1
             //查看是否有活动
             $res=ShopActiveExclusive::field('id,register_status')->where('merchant_id',$info['merchant_id'])->find();
             if($res['register_status'] == 1){
@@ -366,10 +368,12 @@ class Wechat extends Controller
                 }
             }
         }else{
+//            echo 1;die;
             //查看是否有新会员注册活动
             $res=ShopActiveExclusive::field('id,register_status')->where('merchant_id',$info['merchant_id'])->find();
-
-            if($res['register_status'] == 0){
+//            halt($res['register_status']);
+//            echo $res['register_status'];die;
+            if($res['register_status'] == 0 || $res['register_status']==2){
                 //新会员注册派卷
                 $insert_id=MerchantMember::insertGetId($data,true);
                 if($insert_id){
@@ -389,7 +393,8 @@ class Wechat extends Controller
                 }else{
                     return_msg(400,'注册失败');
                 }
-            }elseif($res['register_status'] == -1){
+            }elseif($res['register_status'] == -1 || $res['register_status']==1){
+//                echo 2;die;
                 $insert_id=MerchantMember::insertGetId($data,true);
                 if($insert_id){
 
@@ -413,11 +418,12 @@ class Wechat extends Controller
      */
     public function qrcode($member_id)
     {
+
         $url="http://47.92.212.66/index.php/merchant/proceeds/member_income?member_id=$member_id";
         header("content-type:text/html;charset=utf-8");
 //        Vendor('phpqrcode.phpqrcode');  //引入的phpqrcode类
         import('phpqrcode.phpqrcode', EXTEND_PATH,'.php');
-        $path = "/uploads/QRcode/".date("Ymd").DS;//创建路径
+        $path = "./uploads/QRcode/".date("Ymd").DS;//创建路径
 
 //
         $time = time().'.png'; //创建文件名
@@ -425,7 +431,7 @@ class Wechat extends Controller
 
         //$file_name = iconv("utf-8","gb2312",$time);
 
-        $file_path = $_SERVER['DOCUMENT_ROOT'].$path;
+        $file_path = $path;
 
         if(!file_exists($file_path)){
             mkdir($file_path, 0777,true);//创建目录
@@ -437,8 +443,9 @@ class Wechat extends Controller
         //生成二维码-保存：
         \QRcode::png($url, $file_path, $level, $size);
         //保存二维码地址
+        $file_path=substr($file_path,1);
         MerchantMember::where('id',$member_id)->update(['member_qrcode'=>$file_path]);
-
+//        return_msg(200,$file_path);
     }
 
     /**
@@ -453,6 +460,12 @@ class Wechat extends Controller
         return time().$times;
     }
 
+    /**
+     *获取二维码
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
     public function get_qrcode()
     {
         if(Session::has("openid")){
@@ -461,9 +474,10 @@ class Wechat extends Controller
             $this->get_code();
             $openid=Session::get("openid");
         }
+//        $openid="oFQ1K09QyKH8qENIxUnhWIGUnPG8";
         //取出会员卡信息
         $data=MerchantMember::field('member_qrcode')->where('openid',$openid)->find();
-        check_data($data['member_qrcode']);
+        check_data($data);
     }
     /**
      *微信会员卡
@@ -604,5 +618,61 @@ class Wechat extends Controller
         check_data($data);
     }
 
+    /**
+     * 微信首页数据
+     * @param $where
+     * @param $where_join
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function wx_merchant_index()
+    {
+        //交易额
+        $data['total_amount'] = Order::where('status',1)->whereTime('pay_time','today')->sum('received_money');
 
+        //交易笔数
+        $data['count'] = Order::where('status',1)->whereTime('pay_time','today')->count();
+
+        //支付宝交易
+        $data['alipay'] = Order::where(['status'=>1,'pay_type'=>'alipay'])->whereTime('pay_time','today')->sum('received_money');
+
+        //支付宝交易笔数
+        $data['alipay_number']=Order::where(['status'=>1,'pay_type'=>'alipay'])->whereTime('pay_time','today')->count();
+
+        //微信交易
+        $data['wxpay']=Order::where(['status'=>1,'pay_type'=>'wxpay'])->whereTime('pay_time','today')->sum('received_money');
+
+        //微信交易笔数
+        $data['wxpay_number']=Order::where(['status'=>1,'pay_type'=>'wxpay'])->whereTime('pay_time','today')->count();
+
+        //银联交易
+        $data['etc']=Order::where(['status'=>1,'pay_type'=>'etc'])->whereTime('pay_time','today')->sum('received_money');
+
+        //银联交易笔数
+        $data['etc_number']=Order::where(['status'=>1,'pay_type'=>'etc'])->whereTime('pay_time','today')->count();
+
+        //昨日活跃商户
+        $data['active_merchant']=Order::where(['merchant_id'=>['>',0],'status'=>1])->whereTime('pay_time','>','yesterday')->count();
+
+        //昨日新增商户
+        $data['new_merchant']=TotalMerchant::where('review_status',2)->whereTime('opening_time','>','yesterday')->count();
+
+        //营业中商户
+        $data['open_merchant']=TotalMerchant::where('review_status',2)->count();
+
+        //总商户
+        $data['total_merchant']=TotalMerchant::count();
+
+        //审核中商户
+        $data['review_merchant']=TotalMerchant::where(['review_status'=>['<',2]])->count();
+
+        check_data($data);
+    }
+
+    public function check()
+    {
+        $data=request()->param();
+        halt($data);
+    }
 }

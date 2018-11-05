@@ -16,7 +16,7 @@ class Sweep extends Controller
     {
         $merchant_id=$request->param('merchant_id');
         $ua = $_SERVER['HTTP_USER_AGENT'];
-        if (strpos($ua, 'MicroMessenger')) {
+        if (strpos($ua, 'MicroMessenger')){
             $url="http://47.92.212.66/index.php/merchant/sweep/wxpay?merchant_id=$merchant_id";
             $this->redirect($url);
         }elseif (strpos($ua, 'AlipayClient')) {
