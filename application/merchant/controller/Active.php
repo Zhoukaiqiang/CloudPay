@@ -452,7 +452,7 @@ class Active extends Common
           $arr=array(
               "touser"=>$v['openid'],
               "template_id"=>"Jo5aZi-6uWfA7Vl_gTGqsaABqeIfuJIzrXBRe3cDOIg",
-              "url"=>"http://192.168.0.209:8080/share?shop_name=".$shop_name['shop_name'],
+              "url"=>"http://47.92.212.66:8080/share?shop_name=".$shop_name['shop_name'],
               "data"=>array(
                   'first'=>array('value'=>'点击获取更多优惠'),
                   'keyword1'=>array('value'=>date("Y-m-d H:i:s"),'color'=>'#173177'),

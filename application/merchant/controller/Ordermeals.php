@@ -204,16 +204,21 @@ class Ordermeals extends Controller
                 $arr=rtrim($arr,']');
                 $arr=explode(',',$arr);
                 $v['dish_attr']=$arr;
+                $v['count']=0;
+                $v['amount']=0;
             }
             check_data($data);
         }else{
             //取出所有分类
             $data=MerchantDish::alias('a')
-                ->field('a.norm_id,b.dish_norm')
+                ->field('a.dish_img,a.dish_describe,a.norm_id,b.dish_norm')
                 ->join('cloud_merchant_dish_norm b','a.norm_id=b.id','left')
                 ->where(['a.shop_id'=>$shop_id])
                 ->group('a.norm_id')
                 ->select();
+            foreach($data as &$v){
+                $v['count']=0;
+            }
             check_data($data);
         }
     }
@@ -332,7 +337,7 @@ class Ordermeals extends Controller
     {
         $info=request()->post();
 
-        $data=MerchantDishCart::alias('a')
+        $data['list']=MerchantDishCart::alias('a')
             ->field('a.id,a.dish_number,b.dish_name,b.money')
             ->join('cloud_merchant_dish b','a.dish_id=b.id','left')
             ->where(['a.table_number'=>$info['table_name'],'a.shop_id'=>$info['shop_id']])
@@ -352,9 +357,11 @@ class Ordermeals extends Controller
      */
     public function submit_order()
     {
+
         $data=request()->post();
         //取出商户id
-        $merchant=MerchantShop::filed('merchant_id')->where('shop_id',$data['shop_id'])->find();
+        $merchant=MerchantShop::field('merchant_id')->where('id',$data['shop_id'])->find();
+
         $arr=[
             'status'=>0,
             'order_money'=>$data['total_money'],
@@ -367,6 +374,7 @@ class Ordermeals extends Controller
             'meal_number'=>$data['meal_number'],
             'merchant_id'=>$merchant['merchant_id']
         ];
+
         $data=Order::insert($arr);
         if($data){
             return_msg(200,'成功');
@@ -434,5 +442,25 @@ class Ordermeals extends Controller
         $info['order']=Order::field('status,meal_number,order_number,received_money')->where(['shop_id'=>$data['shop_id'],'table_name'=>$data['table_name']])->find();
 
 
+    }
+
+    /**
+     *呼叫服务员
+     */
+    public function call_waiter()
+    {
+        $data=request()->post();
+        $arr=[
+            'order_receiving'=>0,
+            'create_time'=>time(),
+            'table_name'=>$data['table_name'],
+            'shop_id'=>$data['shop_id']
+        ];
+        $info=Order::insert($arr);
+        if($info){
+            return_msg(200,'操作成功');
+        }else{
+            return_msg(400,'操作失败');
+        }
     }
 }
