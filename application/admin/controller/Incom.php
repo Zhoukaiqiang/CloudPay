@@ -748,53 +748,6 @@ class Incom extends Controller
         }
     }
 
-    /**
-     *微信公众号查询
-     * @param Request $request
-     * @throws \think\db\exception\DataNotFoundException
-     * @throws \think\db\exception\ModelNotFoundException
-     * @throws \think\exception\DbException
-     */
-    public function wx_query(Request $request)
-    {
-        $merchant_id = $request->param('merchant_id');
-        $data = MerchantIncom::field('mercId')->where('merchant_id', $merchant_id)->find();
-        $arr = [
-            'mercId' => $data['mercId'],
-            'trmNo' => '95081598',
-            'orgNo' => ORG_NO,
-            'txnTime' => '20170527153245',
-            'signType' => 'MD5',
-            'version' => ' V1.0.0',
-            'opSys' => 3,
-            ''
-        ];
-        $arr['signValue'] = sign_ature(0000, $arr);
-        $shop_api = curl_request($this->url, true, $arr, true);
-        $shop_api = json_decode($shop_api, true);
-        halt($shop_api);
-    }
-
-
-    public function wx_pay(Request $request)
-    {
-        $merchant_id = $request->param('merchant_id');
-        $data = MerchantIncom::field('mercId')->where('merchant_id', $merchant_id)->find();
-        $arr = [
-            'mercId' => $data['mercId'],
-            'trmNo' => '95081598',
-            'orgNo' => ORG_NO,
-            'txnTime' => '20170527153245',
-            'signType' => 'MD5',
-            'version' => ' V1.0.0',
-            'amount' => '9',
-            'total_amount' => '10'
-        ];
-        $arr['signValue'] = sign_ature(0000, $arr);
-        $shop_api = curl_request($this->url, true, $arr, true);
-        $shop_api = json_decode($shop_api, true);
-        halt($shop_api);
-    }
 
 }
 

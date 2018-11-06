@@ -9,13 +9,15 @@
 namespace app\merchant\controller;
 
 
+use app\agent\controller\Merchant;
+use app\agent\model\MerchantIncom;
 use Endroid\QrCode\QrCode;
 use think\Controller;
 use think\Db;
 use think\Request;
 use think\Session;
 
-class Pay extends Common
+class Pay
 {
 
     protected $merchant_id;
@@ -100,10 +102,10 @@ class Pay extends Common
             $pngAbsolutePath = $root . $filename;
             if (!file_exists($pngAbsolutePath)) {
                 $qrCode->writeFile($pngAbsolutePath);
-            }else {
+            } else {
                 return_msg(400, "错误");
             }
-            echo json_encode(["code"=> 200, "msg" => "成功", "data" => $pngAbsolutePath]);
+            echo json_encode(["code" => 200, "msg" => "成功", "data" => $pngAbsolutePath]);
 
             /** 订单入库 */
             switch ($re["result"]) {
@@ -147,13 +149,16 @@ class Pay extends Common
      */
     protected function starPos($param)
     {
-        $res = Db::name("merchant_incom")->where("merchant_id", $this->merchant_id)->find();
+        $id = 87;
+        $res = Db::name("merchant_incom")->where("merchant_id", $id)->find();
         $trms = json_decode($res["rec"], true);
-        if (count($trms)) {
-            $trmNo = $trms[0]["trmNo"];
-        } else {
-            $trmNo = $trms;
-        }
+        halt($trms);
+//        if (count($trms)) {
+//            $trmNo = $trms[0]["trmNo"];
+//        } else {
+//            $trmNo = $trms;
+//        }
+        $trmNo = "95445645";
         $channel = $this->IsWeixinOrAlipay();
         if (empty($channel)) {
             return_msg(400, "渠道错误");
@@ -187,7 +192,7 @@ class Pay extends Common
                 if (!file_exists($pngAbsolutePath)) {
                     $qrCode->writeFile($pngAbsolutePath);
                 }
-                echo json_encode(["code"=> 200, "msg" => "成功", "data" => $pngAbsolutePath]);
+                echo json_encode(["code" => 200, "msg" => "成功", "data" => $pngAbsolutePath]);
 
                 /** 订单入库 */
                 switch ($re["result"]) {
@@ -241,13 +246,13 @@ class Pay extends Common
         }
         if ($pngAbsolutePath) {
             return_msg(200, "成功", $pngAbsolutePath);
-        }else {
+        } else {
             return_msg(400, "失败");
         }
     }
 
     /**
-     * 台牌码支付 --根据Merchant_id 返回收款码
+     * 台牌码支付 --根据Merchant_id 返回收款URL
      * @param [int] $amount
      * @param [int] $mid 商户ID
      * @param [int] $total_amount
@@ -289,7 +294,7 @@ class Pay extends Common
 
         if ($re["returnCode"] == "000000") {
 
-            echo json_encode(["code"=> 200, "msg" => "成功", "data" => $re["payCode"]]);
+            echo json_encode(["code" => 200, "msg" => "成功", "data" => $re["payCode"]]);
 
             /** 订单入库 */
             switch ($re["result"]) {
@@ -323,6 +328,96 @@ class Pay extends Common
             return_msg(400, $re["message"]);
         }
     }
+
+
+    /**
+     * 微信公众号查询
+     * @description 连贯操作
+     */
+    public function wx_query(Array $arg = [])
+    {
+        /** 查询 -> 支付 */
+        $trms = json_decode($arg["rec"], true);
+        if (count($trms)) {
+            $trmNo = $trms[0]["trmNo"];
+        } else {
+            $trmNo = $trms;
+        }
+        $param = [
+            "orgNo" => "27573",
+            "mercId" => $arg["mercId"],
+            "trmNo" => $trmNo,
+            "txnTime" => (string)date("YmdHis", time()),
+            "signType" => 'MD5',
+            "version" => 'V1.0.0',
+        ];
+        $key = $arg["key"];
+        $param["signValue"] = sign_ature(0000, $param, $key);
+        $url = "http://gateway.starpos.com.cn/adpweb/ehpspos3/pubSigQry.json";
+        $res = curl_request($url, true, $param, true);
+        $res = json_decode(urldecode($res), true);
+        /** 如果查询成功请求公众号支付否则返回错误信息 */
+        if ($res["returnCode"] == "000000") {
+            return true;
+        } else {
+            return_msg(400, "微信查询失败：".$res["message"]);
+        }
+    }
+
+    /**微信公众号支付
+     * @param Request $request
+     * @param $mid $amount $t_amount $code;
+     */
+    public function wxpay(Request $request)
+    {
+        $query = $request->param();
+        $query["mid"] = 87;
+        $data = Db::name("merchant_incom")->where("merchant_id", $query["mid"])->find();
+        $this->wx_query($data);
+        /** 查询 -> 支付 */
+        $trms = json_decode($data["rec"], true);
+        if (count($trms)) {
+            $trmNo = $trms[0]["trmNo"];
+        } else {
+            $trmNo = $trms;
+        }
+
+        $param["orgNo"] = "27573";
+        $param["trmNo"] = (string)$trmNo;
+        $param["txnTime"] = (string)date("YmdHis");
+        $param["version"] = "V1.0.0";
+        $param["mercId"] = $data["mercId"];
+        $param["amount"] = (string)1; //金额
+        $param["total_amount"] = (string)1;  //总金额
+        $param["code"] = "071qUnwD0UAzAd2MRTtD0209wD0qUnwi";  //授权码 未使用的话，5分钟后过期
+        $key = $data["key"];
+        $param["signValue"] = sign_ature(0000, $param, $key);
+
+        $url = "http://gateway.starpos.com.cn/adpweb/ehpspos3/pubSigPay.json";
+        $res = curl_request($url, true, $param, true);
+        $res = json_decode(urldecode($res), true);
+
+        /** 如果查询成功请求公众号支付否则返回错误信息 */
+        if ($res["returnCode"] == "000000") {
+            /** [array] 成功存入数据库 $data */
+            $data = [
+                "order_no" => $res["orderNo"],
+                "order_number" => $res["LogNo"],
+                "order_money" => $res["total_amount"],
+                "received_money" => $res["amount"],
+                "pay_time" => $res["apiTimestamp"],
+                "payer" => $res["PrepayId"],
+                "order_remark" => $res["attach"],
+                "pay_type" => "wxpay",
+                "merchant_id" => $query["mid"],
+            ];
+            $query = Db::name("order")->insertGetId($data);
+            return_msg(200, $query);
+        } else {
+            return_msg(400, $res["message"]);
+        }
+    }
+
     /**
      * 订单查询
      */
