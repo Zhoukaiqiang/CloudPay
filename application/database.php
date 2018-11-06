@@ -17,9 +17,9 @@ return [
     // 数据库名
     'database'        => 'cloud',
     // 用户名
-    'username'        => 'cloud',
+    'username'        => 'root',
     // 密码
-    'password'        => 'cloudpay',
+    'password'        => '2ffda247c7953f52',
     // 端口
     'hostport'        => '3306',
     // 连接dsn

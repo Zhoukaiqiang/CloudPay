@@ -11,6 +11,7 @@
 namespace app\Merchant\controller;
 
 use app\admin\model\TotalMerchant;
+use app\merchant\model\MerchantShop;
 use app\merchant\model\MerchantUser;
 use think\Controller;
 use think\Db;
@@ -57,7 +58,7 @@ class Login extends Controller
             /** 检验参数 */
             check_params("merchant_login", $data);
             $this->check_exist($data['phone'], 'phone', 1);
-            $db_res = MerchantUser::where("phone", $data['phone'])->field("shop_id,id,name,phone,role,password")->find();
+            $db_res = MerchantUser::where("phone", $data["phone"])->field("shop_id,id,name,phone,role,password")->find();
             if (!$db_res) {
                 $Merc = new TotalMerchant();
                 $db_res = $Merc::get(["phone" => $data['phone']])->alias("merc")
@@ -67,9 +68,10 @@ class Login extends Controller
             }
 
             $res = $db_res->toArray();
+            $shopName = MerchantShop::get($res["shop_id"])["shop_name"];
+            Session::set("shop_name", $shopName,'app');
 
             if ($db_res['password'] !== encrypt_password($data['password'], $data["phone"])) {
-
                 return_msg(400, '用户密码不正确！');
             } else {
 

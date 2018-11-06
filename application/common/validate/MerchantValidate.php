@@ -79,6 +79,9 @@ class MerchantValidate extends Validate
         ["stl_sign", "require|number|length:1", "结算标志必填"],
         ["stl_type", "require|number|length:1", "结算类型必填"],
 
+        //台牌码支付
+        ["mid", "require", "商户ID必填"],
+
     ];
 
     //命名规则 控制器_函数名称
@@ -134,6 +137,9 @@ class MerchantValidate extends Validate
         ,"stoe_nm", "stoe_cn_nm", "stoe_cnt_tel", "mcc_cd", "stoe_area_cod", "stoe_adds", "trm_rec",
             "mailbox", "alipay_flg", "yhkpay_flg"
         ],
+
+        //台牌码 --支付
+        "tag_pay" => ["amount", "mid"],
     ];
 
 }

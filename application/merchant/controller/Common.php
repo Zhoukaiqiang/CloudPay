@@ -6,7 +6,7 @@ use think\Controller;
 use think\Request;
 use think\Session;
 
-class Common extends Controller
+class Common extends Login
 {
     protected $merchant_id;
     protected $user_id;

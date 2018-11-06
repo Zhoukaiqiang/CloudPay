@@ -56,7 +56,7 @@ class Pay extends Common
     }
 
     /**
-     * 生成WX/ALI首款码
+     * 生成WX/ALI 收款码
      * @param $param
      * @throws \think\db\exception\DataNotFoundException
      * @throws \think\db\exception\ModelNotFoundException
@@ -223,7 +223,106 @@ class Pay extends Common
         }
     }
 
+    /**
+     * 台牌码 --商户码
+     * @param $request [mix] 参数
+     */
+    public function merchant_tag()
+    {
+        $mid = $this->merchant_id;
+        $shop_name = Session::get("shop_name", "app");
+        $url = "http://pay.hzyspay.com/incom/index.php?merchant_id=$mid&shop_name=$shop_name";
+        $qrCode = new QrCode($url);
+        $filename = md5($qrCode->getText()) . ".png";
+        $root = "uploads/";
+        $pngAbsolutePath = $root . $filename;
+        if (!file_exists($pngAbsolutePath)) {
+            $qrCode->writeFile($pngAbsolutePath);
+        }
+        if ($pngAbsolutePath) {
+            return_msg(200, "成功", $pngAbsolutePath);
+        }else {
+            return_msg(400, "失败");
+        }
+    }
 
+    /**
+     * 台牌码支付 --根据Merchant_id 返回收款码
+     * @param [int] $amount
+     * @param [int] $mid 商户ID
+     * @param [int] $total_amount
+     * @param [string] $channel
+     * @param Request $request
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function MerchantTagPay(Request $request)
+    {
+        $param = $request->param();
+        check_params("tag_pay", $param, "MerchantValidate");
+        $res = Db::name("merchant_incom")->where("merchant_id", $param["mid"])->find();
+        $trms = json_decode($res["rec"], true);
+        if (count($trms)) {
+            $trmNo = $trms[0]["trmNo"];
+        } else {
+            $trmNo = $trms;
+        }
+
+        /** 公共参数 */
+        $data["opSys"] = "3";
+        $data["characterSet"] = "00";
+        $data["orgNo"] = "27573";
+        $data["mercId"] = $res["mercId"];
+        $data["trmNo"] = (string)$trmNo;
+        $data["tradeNo"] = generate_order_no($this->merchant_id);
+        $data["txnTime"] = (string)date("YmdHis");
+        $data["signType"] = "MD5";
+        $data["version"] = "V1.0.0";
+        /** 客户主扫参数 */
+        $data["amount"] = strval($param['amount'] * 100);
+        $data["total_amount"] = strval($param['amount'] * 100);
+        $data["payChannel"] = $param["channel"];
+        $data["signValue"] = sign_ature(0000, $data, $res["key"]);
+        $rp = curl_request($this->url, true, $data, true);
+        $re = json_decode(urldecode($rp), true);
+
+        if ($re["returnCode"] == "000000") {
+
+            echo json_encode(["code"=> 200, "msg" => "成功", "data" => $re["payCode"]]);
+
+            /** 订单入库 */
+            switch ($re["result"]) {
+                case "S":
+                    $rst = 1;
+                    break;
+                case "F":
+                    $rst = 2;
+                    break;
+                case "Z":
+                    $rst = -1;  //未知
+                    break;
+                default:
+                    $rst = 0;
+            }
+            $dt['order_money'] = (int)$re["total_amount"] / 100;
+            $dt['received_money'] = (int)$re["amount"] / 100;
+            $dt['create_time'] = time();
+            $dt['pay_type'] = strtolower($param["channel"]);
+            $dt['status'] = $rst;
+            $dt['merchant_id'] = $this->merchant_id;
+            $dt['logNo'] = $re["logNo"];
+            $dt['order_no'] = $re["orderNo"];
+            $dt['order_number'] = $data["tradeNo"];
+            $dt['pay_time'] = strtotime($data["txnTime"]);
+            /** 保存订单号到Session */
+            Session::set("logNo", $re["logNo"], "_app");
+            Db::name("order")->insertGetId($dt);
+
+        } else {
+            return_msg(400, $re["message"]);
+        }
+    }
     /**
      * 订单查询
      */
