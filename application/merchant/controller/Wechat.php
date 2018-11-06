@@ -291,9 +291,10 @@ class Wechat extends Controller
         //验证
         check_params('member_register',$data,'MerchantValidate');
         if(isset($data['partner_phone'])){
-//            halt($data);1
+//            halt($data);
             //查看是否有活动
             $res=ShopActiveExclusive::field('id,register_status')->where('merchant_id',$info['merchant_id'])->find();
+//            halt($res);
             if($res['register_status'] == 1){
                 //老会员推荐新会员注册
                 //查询是否有该手机号
@@ -359,6 +360,36 @@ class Wechat extends Controller
                         'order_number'=>generate_order_no(),
                     ];
                     MemberExclusive::insert($arr1,true);
+
+                    //生成会员码
+                    $this->qrcode($insert_id);
+                    return_msg(200,'注册成功');
+                }else{
+                    return_msg(400,'注册失败');
+                }
+            }elseif($res['register_status']==0){
+                //新会员注册派卷
+                $insert_id=MerchantMember::insertGetId($data,true);
+                if($insert_id){
+                    $arr1=[
+                        'member_id'=>$insert_id,
+                        'exclusive_id'=>$res['id'],
+                        'merchant_id'=>$info['merchant_id'],
+                        'SN'=>getSN(),
+                        'status'=>1,
+                        'order_number'=>generate_order_no(),
+                    ];
+                    $re = MemberExclusive::insert($arr1,true);
+
+                    //生成会员码
+                    $this->qrcode($insert_id);
+                    return_msg(200,'注册成功');
+                }else{
+                    return_msg(400,'注册失败');
+                }
+            }else{
+                $insert_id=MerchantMember::insertGetId($data,true);
+                if($insert_id){
 
                     //生成会员码
                     $this->qrcode($insert_id);
@@ -670,9 +701,4 @@ class Wechat extends Controller
         check_data($data);
     }
 
-    public function check()
-    {
-        $data=request()->param();
-        halt($data);
-    }
 }

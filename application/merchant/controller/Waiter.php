@@ -719,7 +719,7 @@ class Waiter extends Commonality
             }
         }
 
-        return json_encode($data);
+        check_data($data);
 
     }
 
