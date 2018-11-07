@@ -52,13 +52,13 @@ class User extends Common
     public function login()
     {
         $data = request()->param();
-        $user_name_type = 'phone';
         check_params("login", $data);
 
         $this->check_exist($data['phone'], 'phone', 1);
         $db_res = Db('total_admin')->field('id,name,phone,status,password,is_super_vip,role_id')
             ->where('phone', $data['phone'])->find();
 
+//        halt(encrypt_password($data['password'] , $data["phone"]));
         if ($db_res['password'] !== encrypt_password($data['password'], $data["phone"])) {
             $this->return_msg(400, '用户密码不正确！');
         } else {

@@ -7,6 +7,7 @@ use app\admin\model\TotalCapital;
 use app\admin\controller\Admin;
 use think\Controller;
 use think\Db;
+use think\Exception;
 use think\Request;
 
 
@@ -17,13 +18,15 @@ class Capital extends Admin
      * status 0未结款 1已结款
      *
      * @return \think\Response
+     * @throws  Exception
      */
     public function index()
     {
+
         $id = \request()->param("id");
-        is_user_can($id);
+//        is_user_can($id);
         //获取总行数
-        $rows=TotalCapital::where('status',0)->count();
+        $rows=TotalCapital::where('status = 0')->count();
         $pages=page($rows);
         $data['data']=TotalCapital::alias('a')
             ->field('a.id,a.date,a.settlement_start,a.settlement_end,a.description,a.account,a.invoice,b.agent_name,b.contact_person, b.agent_area,a.settlement_money ')
@@ -32,7 +35,7 @@ class Capital extends Admin
             ->limit($pages['offset'],$pages['limit'])
             ->select();
         $data['pages']=$pages;
-        return_msg('200','success',$data);
+        check_data($data["data"], $data);
     }
 
     /**
@@ -46,18 +49,20 @@ class Capital extends Admin
             //确认结算
             //改变结算状态为已结款
             $id=request()->param('id');
-            //获取结款时间
-            $time=time();
+            if (empty($id)) {
+                return_msg(400, "错误");
+            }
+
             $data=[
-                'id'=>$id,
                 'description' => \request()->param("description"),
-                'settlement_time'=>$time
+                'settlement_time'=>time(),
+                "status" => 1,
             ];
-            $result=TotalCapital::update($data);
+            $result=TotalCapital::update($data,["id" =>$id]);
             if($result){
-                return_msg(200,'已结款');
+                return_msg(200,'结款成功');
             }else{
-                return_msg(400,'结款失败');
+                return_msg(400,'未处理');
             }
         }else{
             $id=request()->param('id');
@@ -73,20 +78,22 @@ class Capital extends Admin
     /**
      * 暂缓处理
      *
-     * @param  id int 资金结算id
-     * @param  description string 暂缓处理描述
+     * @param  $id int 资金结算id
+     * @param   string 暂缓处理描述
      * @return \think\Response
+     * @throws Exception
      */
     public function deal()
     {
         if(request()->isPost()){
             $data = request()->post();
+            $data["status"] = 0;
             //跟新数据
-            $result=TotalCapital::update($data,true);
+            $result = TotalCapital::update($data,["id" => $data["id"]]);
             if($result){
-                $this->success('处理成功','index');
+                return_msg("200",'暂缓处理成功');
             }else{
-                $this->error('处理失败','index');
+                return_msg("400",'处理失败');
             }
         }else{
             $id=request()->param('id');
@@ -114,11 +121,11 @@ class Capital extends Admin
         $data['list']=TotalCapital::alias('a')
             ->field('a.date,a.settlement_start,a.settlement_end,a.account,b.agent_name,a.settlement_time,a.invoice,b.contact_person, b.agent_area,a.settlement_money ')
             ->join('cloud_total_agent b','a.agent_id=b.id','left')
-            ->where('a.status=1')
+            ->where('a.status = 1')
             ->limit($pages['offset'],$pages['limit'])
             ->select();
         $data['pages']=$pages;
-        return_msg('200','success',$data);
+        check_data($data["list"], $data);
     }
 
     /**
@@ -208,9 +215,7 @@ class Capital extends Admin
         }
 
         /**
-         *
          * 根据条件SQL搜索
-         *
          */
         /* 总共有N条数据 */
         $total = Db::name('total_capital')->count('id');

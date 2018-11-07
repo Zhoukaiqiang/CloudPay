@@ -6,6 +6,7 @@ use app\admin\model\TotalAdmin;
 use app\admin\model\TotalAgent;
 use app\admin\controller\Admin;
 use think\Controller;
+use think\Exception;
 use think\Loader;
 use think\Request;
 use think\Validate;
@@ -18,37 +19,34 @@ class Agent extends Admin
      * @throws \think\db\exception\DataNotFoundException
      * @throws \think\db\exception\ModelNotFoundException
      * @throws \think\exception\DbException
+     * @throws Exception
      */
     public function index()
     {
         //获取总行数
-        if($this->role_id==1){
+        if($this->role_id == 1){
             $rows = TotalAgent::count();
             $pages = page($rows);
             //取出数据表中的数据
             $data['data'] = TotalAgent::alias('a')
                 ->field('a.id,a.agent_name,a.agent_phone,a.contact_person,a.agent_mode,a.agent_area,a.create_time,a.contract_time,a.status,b.name')
-                ->join('cloud_total_admin b', 'a.admin_id=b.id', 'left')
+                ->join('cloud_total_admin b', 'a.admin_id=b.id')
                 ->limit($pages['offset'], $pages['limit'])
                 ->select();
             $data['pages'] = $pages;
-            return_msg('200', 'success', $data);
-        }elseif($this->role_id==0){
+            check_data($data["data"], $data);
+        }elseif($this->role_id == 0 ){
             //运营专员
             $rows=TotalAgent::where('admin_id',$this->admin_id)->count();
-
             $pages = page($rows);
-
             $data['data'] = TotalAgent::alias('a')
                 ->field('a.id,a.agent_name,a.agent_phone,a.contact_person,a.agent_mode,a.agent_area,a.create_time,a.contract_time,a.status,b.name')
-                ->join('cloud_total_admin b', 'a.admin_id=b.id', 'left')
+                ->join('cloud_total_admin b', 'a.admin_id=b.id')
                 ->where('a.admin_id',$this->admin_id)
                 ->limit($pages['offset'], $pages['limit'])
                 ->select();
-
             $data['pages'] = $pages;
-
-            return_msg('200', 'success', $data);
+            check_data($data["data"], $data);
         }
 
     }

@@ -110,7 +110,7 @@ class Index extends Admin
         $data['alipay'] = $alipay;
         $data['alipay_num'] = $alipay_num;
         $data['etc'] = ['amount' => $etc, 'pay_num' => $etc_num];
-        $data['total'] = ['amount' => $total / 10000, 'pay_num' => $total_num / 10000];
+        $data['total'] = ['amount' => $total, 'pay_num' => $total_num];
 
         check_data($data);
     }
@@ -232,6 +232,7 @@ class Index extends Admin
             $param['keywords'] = '-2';
         } else {
             $param['keywords_flag'] = 'LIKE';
+            $param['keywords'] = $param['keywords'] . "%";
         }
 
         if (empty($param['status'])) {
@@ -239,7 +240,6 @@ class Index extends Admin
             $param['status'] = -2;
         } else {
             $param['status_flag'] = 'eq';
-
         }
 
         if (empty($param['agent_area'])) {
@@ -267,18 +267,18 @@ class Index extends Admin
         //查询有多少条数据
         $rows = Db::name('total_agent')
             ->where([
-                'agent_name|contact_person|agent_phone' => [$param['keywords_flag'], $param['keywords'] . "%"],
+                'agent_name|contact_person|agent_phone' => [$param['keywords_flag'], $param['keywords'] ],
                 'status' => [$param['status_flag'], $param['status']],
                 'agent_area' => [$param['agent_area_flag'], $param['agent_area']],
             ])
-//            ->whereTime('contract_time', $param['contract_time_flag'], $param['contract_time'])
+//          ->whereTime('contract_time', $param['contract_time_flag'], $param['contract_time'])
             ->count('id');
 
         $pages = page($rows);
         /* 根据查询条件获取数据并返回 */
         $res['data'] = Db::name('total_agent')
             ->where([
-                'agent_name|contact_person|agent_phone' => [$param['keywords_flag'], $param['keywords'] . "%"],
+                'agent_name|contact_person|agent_phone' => [$param['keywords_flag'], $param['keywords']],
                 'status' => [$param['status_flag'], $param['status']],
                 'agent_area' => [$param['agent_area_flag'], $param['agent_area']],
             ])
@@ -324,31 +324,21 @@ class Index extends Admin
      * @throws \think\db\exception\DataNotFoundException
      * @throws \think\db\exception\ModelNotFoundException
      * @throws \think\exception\DbException
+     * @throws Exception
      */
     public function get_vendor_search_res(Array $param)
     {
-
         /* 初始化 *_flag */
-
-
         if ($param['keywords'] < -1) {
             $param['keywords_flag'] = '<>';
         } else {
             $param['keywords_flag'] = 'like';
         }
-
-        if ($param['category'] < -1) {
-            $param['category_flag'] = '<>';
-        } else {
-            $param['category_flag'] = 'eq';
-        }
-
         if ($param['address'] < -1) {
             $param['address_flag'] = '<>';
         } else {
             $param['address_flag'] = 'eq';
         }
-
         /* 前端参数 JSON.stringfy([xxx,xxx]) */
         switch (gettype($param['time'])) {
             case 'array':
@@ -362,23 +352,24 @@ class Index extends Admin
         $rows = Db::name('total_merchant')->alias('m')
             ->where([
                 'm.name|m.contact|m.phone|m.agent_name' => [$param['keywords_flag'], "%" . $param['keywords'] . "%"],
-                'm.category' => [$param['category_flag'], $param['category']],
+//                'm.category' => [$param['category_flag'], $param['category']],
                 'm.address' => [$param['address_flag'], $param['address']],
             ])
-            ->whereTime('opening_time', $param['time_flag'], $param['time'])
-            ->field(['m.name', 'm.contact', 'm.status', 'm.channel', 'm.address', 'm.opening_time', 'a.agent_name', 'm.id', 'a.agent_phone'])
+//            ->whereTime('opening_time', $param['time_flag'], $param['time'])
+//            ->field(['m.name', 'm.contact', 'm.status', 'm.channel', 'm.address', 'm.opening_time', 'a.agent_name', 'm.id', 'a.agent_phone'])
             ->join('cloud_total_agent a', 'm.agent_id=a.id', 'left')
+            ->group("m.id")
             ->count('m.id');
 
         $pages = page($rows);
         /* 根据查询条件获取数据并返回 */
-        $res = Db::name('total_merchant')->alias('m')
+        $res["list"] = Db::name('total_merchant')->alias('m')
             ->where([
                 'm.name|m.contact|m.phone|m.agent_name' => [$param['keywords_flag'], $param['keywords'] . "%"],
-                'm.category' => [$param['category_flag'], $param['category']],
+//                'm.category' => [$param['category_flag'], $param['category']],
                 'm.address' => [$param['address_flag'], $param['address']],
             ])
-            ->whereTime('opening_time', $param['time_flag'], $param['time'])
+//            ->whereTime('opening_time', $param['time_flag'], $param['time'])
             ->field(['m.name', 'm.contact', 'm.status', 'm.channel', 'm.address', 'm.opening_time', 'a.agent_name', 'm.id', 'a.agent_phone'])
             ->join('cloud_total_agent a', 'm.agent_id=a.id', 'left')
             ->limit($pages['offset'], $pages['limit'])

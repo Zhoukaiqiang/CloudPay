@@ -14,6 +14,7 @@ use app\agent\model\MerchantIncom;
 use Endroid\QrCode\QrCode;
 use think\Controller;
 use think\Db;
+use think\Exception;
 use think\Request;
 use think\Session;
 
@@ -367,6 +368,7 @@ class Pay
     /**微信公众号支付
      * @param Request $request
      * @param $mid $amount $t_amount $code;
+     * @throws Exception
      */
     public function wxpay(Request $request)
     {

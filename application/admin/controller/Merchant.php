@@ -6,6 +6,7 @@ use app\admin\model\TotalAgent;
 use app\admin\controller\Admin;
 use think\Controller;
 use app\admin\model\TotalMerchant;
+use think\Db;
 use think\Request;
 
 class Merchant extends Admin
@@ -20,17 +21,18 @@ class Merchant extends Admin
     public function index()
     {
         //获取总行数
-            $rows=TotalMerchant::where('review_status',2)->count();
+            $rows = Db::name("total_merchant")->count("id");
             $pages = page($rows);
-            $data['list']=TotalMerchant::alias('a')
+            $data['list'] = Db::name("total_merchant")->alias('a')
                 ->field('a.id,a.name,a.phone,a.address,a.contact,a.channel,a.opening_time,a.status,b.agent_name,b.agent_phone')
-                ->join('cloud_total_agent b','a.agent_id=b.id','left')
-                ->where('a.review_status = 2')
+                ->join('cloud_total_agent b','a.agent_id = b.id')
+//                ->where('a.review_status = 2')
                 ->limit($pages['offset'],$pages['limit'])
                 ->select();
+
             $data['pages']=$pages;
             $data['pages']['rows'] = $rows;
-            return_msg('200','success',$data);
+            check_data($data["list"], $data);
 
     }
 
