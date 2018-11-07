@@ -13,6 +13,7 @@ use app\merchant\model\ShopActiveExclusive;
 use app\merchant\model\ShopActiveRecharge;
 use app\merchant\model\TotalMerchant;
 use think\Controller;
+use think\Cookie;
 use think\Request;
 use think\Session;
 
@@ -29,7 +30,7 @@ class Wechat extends Controller
         $WxPay = "pubSigPay";
         $this->appid = 'wx1aeeaac161a210df';//appid
         $this->secret = '0b1ddf2e988b7d05e4e775cc8bdfc831'; //secrect
-        $this->redirect_uri = 'http://pay.hzyspay.com/index.php/merchant/wechat/back_url';//返回的域名网址
+        $this->redirect_uri = 'http://pay.hzyspay.com/index.php/merchant/wechat/get_code';//返回的域名网址
 //        $this->appid="wx193727ba2313b0d8";
 //        $this->secret="fe7c3669faec17d3e681c4c938af12a6";
 //        $this->redirect_uri = 'http://47.92.212.66/index.php/merchant/wechat/back_url';//返回的域名网址
@@ -46,10 +47,46 @@ class Wechat extends Controller
      */
     public function get_code()
     {
+        $data=request()->param();
+        if(!isset($data['code'])){
 
-        $code = "https://open.weixin.qq.com/connect/oauth2/authorize?appid=".$this->appid."&redirect_uri=".urlencode($this->redirect_uri)."&response_type=code&scope=snsapi_userinfo&state=202#wechat_redirect";
+            $code = "https://open.weixin.qq.com/connect/oauth2/authorize?appid=".$this->appid."&redirect_uri=".urlencode($this->redirect_uri)."&response_type=code&scope=snsapi_userinfo&state=202#wechat_redirect";
 
-        header("Location:".$code);
+            header("Location:".$code);
+        }else{
+            if (isset($data['code']) || (int)$data['state'] == 202) {
+//            halt($data['code']);
+                Session::set("code", $data['code']);
+
+                $userinfo = $this->get_user_info($data['code']);
+//                halt($userinfo);
+                Session::set('openid',$userinfo['openid']);
+//                halt($access_token);
+                $access_token=Session::get('access_token');
+//                return array('access_token'=>$access_token,'openid'=>$userinfo['openid'],'code'=>$data['code']);
+                $arr=[
+                    'access_token'=>$access_token,
+                    'code'=>$data['code'],
+                    'openid'=>$userinfo['openid']
+                ];
+                halt($arr);
+                $arr=json_encode($arr);
+                return $arr;
+            } else {
+                return_msg(400, "fail");
+            }
+        }
+    }
+
+    public function getin()
+    {
+        $code=request()->param();
+        if(isset($code['code'])){
+            Session::set('code',$code['code'],'app');
+            $this->back_url();
+        }else{
+            $this->get_code();
+        }
     }
 
     /**
@@ -59,26 +96,20 @@ class Wechat extends Controller
      * @throws \think\db\exception\ModelNotFoundException
      * @throws \think\exception\DbException
      */
-    public function back_url(Request $request)
+    public function back_url()
     {
-
-//        echo 1;
-        $code = $request->param("code");
-
-//        halt($code);
-        $state = $request->param("state");
-        if (isset($code) || (int)$state == 202) {
-//            halt(1);
-            Session::set("code", $code);
-
+        if(Session::has('code','app')){
+            $code=Session::get('code','app');
+        }else{
+            $this->getin();
+        }
             $userinfo = $this->get_user_info($code);
-
+//            halt($userinfo);
+//            return $userinfo['openid'];
             Session::set('openid',$userinfo['openid']);
 
-        } else {
-            return_msg(400, "fail");
-        }
     }
+
 
     /**
      * 获取信息
@@ -91,9 +122,11 @@ class Wechat extends Controller
     {
         $access_token_url = "https://api.weixin.qq.com/sns/oauth2/access_token?appid=" . $this->appid . "&secret=" . $this->secret . "&code=" . $code . "&grant_type=authorization_code";
         $access_token_json = $this->https_request($access_token_url);//自定义函数
+//        halt($access_token_json);
         $access_token_array = json_decode($access_token_json, true);
-//        halt($access_token_array['access_token']);
-        $access_token = $access_token_array['access_token'];
+//        halt($access_token_array);
+        $access_token = $access_token_array["access_token"];
+        Session::set('access_token',$access_token);
 //        halt($access_token);
         $openid = $access_token_array['openid'];
         $userinfo_url = "https://api.weixin.qq.com/sns/userinfo?access_token=$access_token&openid=$openid&lang=zh_CN";
@@ -121,6 +154,145 @@ class Wechat extends Controller
         return $output;
     }
 
+
+    /**
+     *获取ticket
+     * @return mixed
+     */
+    public function get_ticket()
+    {
+        $access_token_url = "https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=" . $this->appid . "&secret=" .$this->secret;
+        $access_token_json = $this->https_request($access_token_url);//自定义函数
+        $access_token_array = json_decode($access_token_json, true);
+//        halt($access_token_array);
+        $access_token = $access_token_array["access_token"];
+        $ticket_url = "https://api.weixin.qq.com/cgi-bin/ticket/getticket?access_token=".$access_token."&type=jsapi";
+        $ticket=$this->https_request($ticket_url);
+        $ticket=json_decode($ticket,true);
+        return $ticket['ticket'];
+    }
+
+    public function getRandChar()
+    {
+        $ticket=get_ticket();
+        $noncestr=$this->getstr(16);
+        $timestamp = time();
+        if ($_SERVER['QUERY_STRING']){
+            $url = 'http://'.$_SERVER['HTTP_HOST'].$_SERVER['PHP_SELF'].'?'.$_SERVER['QUERY_STRING'];
+        }else{
+            $url = 'http://'.$_SERVER['HTTP_HOST'].$_SERVER['PHP_SELF'];
+        }
+
+        $parameters = array("noncestr" => $noncestr,
+            "jsapi_ticket" => $ticket,
+            "timestamp" => $timestamp,
+            "url" => $url);
+        ksort($parameters);
+
+        $string1 = "";
+        foreach ($parameters as $key => $val){
+            $string1 .= $key."=".$val."&";
+        }
+        $string1 = substr($string1,0,-1);
+        $signature = sha1($string1);
+    }
+
+    public function getstr($len)
+    {
+        $str = null;
+        $strPol = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyz";
+        $max = strlen($strPol)-1;
+
+        for($i=0;$i<$len;$i++){
+            $str.=$strPol[rand(0,$max)];//rand($min,$max)生成介于min和max两个数之间的一个随机整数
+        }
+        return $str;
+    }
+    /**
+     * 会员充值
+     * 连贯操作 ->go_wxpay()
+     */
+    public function member_recharge()
+    {
+        /** 查询 -> 支付 */
+//        $data=MerchantIncom::field('mercId,rec,key')->where('merchant_id',"87")->find();
+        $param = [
+            "orgNo" => "27573",
+            "mercId" => "800332000002146",
+            "trmNo" => "95445644",
+            "txnTime" => (string)date("YmdHms", time()),
+            "signType" => 'MD5',
+            "version" => 'V1.0.0',
+
+        ];
+        $key = "0FF9606C39C2CCF1515E5CE108B506F0";
+
+        $param["signValue"] = sign_ature(0000, $param, $key);
+
+        $url = "http://gateway.starpos.com.cn/adpweb/ehpspos3/pubSigQry.json";
+        $res = curl_request($url, true, $param, true);
+
+        $res = json_decode(urldecode($res), true);
+        halt($res);
+        /** 如果查询成功请求公众号支付否则返回错误信息 */
+        if ($res["returnCode"] == "000000") {
+
+            $this->go_wxpay($param);
+
+        } else {
+            return_msg(400, "fail", $res["message"]);
+        }
+
+
+    }
+
+    /**
+     * 调用星pos微信支付接口
+     * @param null $param
+     */
+    protected function go_wxpay($param = null)
+    {
+        $request = \request();
+        unset($param["signType"]);
+        unset($param["signValue"]);
+        $param["amount"] = (string)$request->param("amount");  //金额
+        $param["total_amount"] = (string)$request->param("total_amount");  //总金额
+        $param["signValue"] = sign_ature(0000, $param);
+
+//        $param["appid"] = 'wx1aeeaac161a210df';
+        $param["code"] = "021guDVz0d4yJf1nl2Yz0BcGVz0guDvq,";  //授权码 未使用的话，5分钟后过期
+//        halt($param);
+        $url = "http://gateway.starpos.com.cn/adpweb/ehpspos3/pubSigPay.json";
+
+//        halt($param);
+        $res = curl_request($url, true, $param, true);
+
+        $res = json_decode(urldecode($res), true);
+
+            /** 如果查询成功请求公众号支付否则返回错误信息 */
+        if ($res["returnCode"] == "000000") {
+
+            /** [array] 成功存入数据库 $data */
+            $data = [
+                "order_no" => $res["orderNo"],
+                "order_number" => $res["LogNo"],
+                "order_money" => $res["total_amount"],
+                "received_money" => $res["amount"],
+                "pay_time" => $res["apiTimestamp"],
+                "payer" => $res["PrepayId"],
+                "order_remark" => $res["attach"],
+                "pay_type"   => "wxpay",
+            ];
+
+            $query = Order::create($data);
+            return_msg(200, $res);
+
+        } else {
+            return_msg(400, $res["message"]);
+        }
+    }
+
+
     /**
      *获取优惠券信息
      * @throws \think\db\exception\DataNotFoundException
@@ -129,12 +301,8 @@ class Wechat extends Controller
      */
     public function get_exclusive()
     {
-        if(Session::has("openid")){
-            $openid=Session::get("openid");
-        }else{
-            $this->get_code();
-            $openid=Session::get("openid");
-        }
+//        $openid=$this->get_openid();
+        $openid=1;//测试
         $join=[
             ['cloud_shop_active_exclusive b','a.exclusive_id=b.id','left'],
             ['cloud_merchant_member c','a.member_id=c.id','left']
@@ -177,6 +345,24 @@ class Wechat extends Controller
     }
 
     /**
+     *获取openid
+     * @return mixed
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function get_openid()
+    {
+        Session::clear();
+        if(Session::has("openid")){
+            $openid=Session::get("openid");
+            return $openid;
+        }else{
+
+            $openid=$this->get_code();
+        }
+    }
+    /**
      *会员注册
      * @param Request $request
      * @throws \think\db\exception\DataNotFoundException
@@ -185,13 +371,9 @@ class Wechat extends Controller
      */
     public function member_register(Request $request)
     {
-        if(Session::has("openid")){
-            $openid=Session::get("openid");
-        }else{
-            $this->get_code();
-            $openid=Session::get("openid");
-        }
-//        $openid=1;
+        $this->get_code();die;
+       $openid=$request->param('openid');
+        $openid=1;//测试
 //        echo 1;
         $data=$request->post();
         $data['openid'] = $openid;
@@ -364,7 +546,7 @@ class Wechat extends Controller
     public function qrcode($member_id)
     {
 
-        $url="http://47.92.212.66/index.php/merchant/proceeds/member_income?member_id=$member_id";
+        $url="http://merc.hzyspay.com/index.php/merchant/proceeds/member_income?member_id=$member_id";
         header("content-type:text/html;charset=utf-8");
 //        Vendor('phpqrcode.phpqrcode');  //引入的phpqrcode类
         import('phpqrcode.phpqrcode', EXTEND_PATH,'.php');
@@ -413,12 +595,8 @@ class Wechat extends Controller
      */
     public function get_qrcode()
     {
-        if(Session::has("openid")){
-            $openid=Session::get("openid");
-        }else{
-            $this->get_code();
-            $openid=Session::get("openid");
-        }
+        //        $openid=$this->get_openid();
+        $openid=1;//测试
 //        $openid="oFQ1K09QyKH8qENIxUnhWIGUnPG8";
         //取出会员卡信息
         $data=MerchantMember::field('member_qrcode')->where('openid',$openid)->find();
@@ -433,12 +611,8 @@ class Wechat extends Controller
     public function wx_member_card()
     {
         //获取用户appid
-        if(Session::has("openid")){
-            $openid=Session::get("openid");
-        }else{
-            $this->get_code();
-            $openid=Session::get("openid");
-        }
+        //        $openid=$this->get_openid();
+        $openid=1;//测试
 
 //        $openid=1;//测试
         //取出会员信息

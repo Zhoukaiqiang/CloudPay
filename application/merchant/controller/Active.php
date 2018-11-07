@@ -364,8 +364,12 @@ class Active extends Common
                     }else{
                         $res[] = 400;
                     }
-                    //发送到公众号中
-                    $this->send_msg($v);
+                    if(isset($data['lowest_consump'])){
+                        //发送到公众号中
+                        $this->send_msg($v,$data['money'],$data['lowest_consump']);
+                    }else{
+                        $this->send_msg($v,$data['money']);
+                    }
                 }
                 if(in_array(400,$res)){
                     return_msg(400,'操作失败');
@@ -439,20 +443,21 @@ class Active extends Common
     /**
      *发送模板消息
      */
-    public function send_msg($shop_id)
+    public function send_msg($shop_id,$money,$lowest_consump='null')
     {
         //获取所有会员openid
         $openid=MerchantMember::field('openid')->where('shop_id',$shop_id)->select();
 
         $access_token=$this->get_access();
         //获取门店名
-        $shop_name=MerchantShop::field('shop_name')->where('id',$shop_id)->find();
+        $shop_name=MerchantShop::field('shop_name,merchant_id')->where('id',$shop_id)->find();
+        $merchant_id=$shop_name['merchant_id'];
         $url="https://api.weixin.qq.com/cgi-bin/message/template/send?access_token=".$access_token;
       foreach($openid as $v){
           $arr=array(
               "touser"=>$v['openid'],
               "template_id"=>"Jo5aZi-6uWfA7Vl_gTGqsaABqeIfuJIzrXBRe3cDOIg",
-              "url"=>"http://47.92.212.66:8080/share?shop_name=".$shop_name['shop_name'],
+              "url"=>"http://pay.hzyspay.com/incom/share?money=$money&lowest_consump=$lowest_consump&merchant_id=$merchant_id&shop_name=".$shop_name['shop_name'],
               "data"=>array(
                   'first'=>array('value'=>'点击获取更多优惠'),
                   'keyword1'=>array('value'=>date("Y-m-d H:i:s"),'color'=>'#173177'),

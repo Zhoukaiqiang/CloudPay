@@ -6,7 +6,7 @@ use think\Controller;
 use think\Request;
 use think\Session;
 
-class Common extends Login
+class Common extends Controller
 {
     protected $merchant_id;
     protected $user_id;
@@ -22,7 +22,7 @@ class Common extends Login
                 $this->user_id = Session::get("username_","app")["id"];
             }
         }else {
-            return_msg(400, "请登录");
+            return_msg(400, "请登录!");
         }
     }
 }

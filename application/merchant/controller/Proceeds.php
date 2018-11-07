@@ -17,6 +17,7 @@ use app\merchant\model\TotalMerchant;
 use think\Controller;
 use think\Db;
 use think\Request;
+use think\Session;
 
 class Proceeds extends Scancode
 {
@@ -79,7 +80,7 @@ class Proceeds extends Scancode
            ->update(['money'=>['dec',$money],'consumption_time'=>time(),'consump_number'=>['inc',1]]);
         if($resu){
             //获取商户id
-            $merchant=Db::name('merchant_member')->where('id',$member_id)->field('merchant_id')->find();
+            $merchant=Db::name('merchant_member,shop_id')->where('id',$member_id)->field('merchant_id')->find();
             //生成订单
             $arr=[
                 'status'=>1,
@@ -93,6 +94,7 @@ class Proceeds extends Scancode
                 'person_info_id'=>$this->id,
                 'user_id'=>$this->id,
                 'member_id'=>$member_id,
+                'shop_id'=>$merchant['shop_id']
             ];
             Db::name('order')->insert($arr);
             return_msg(200,'会员支付成功');
@@ -148,6 +150,7 @@ class Proceeds extends Scancode
         $data=$request->post();
         $data['amount']=$data['amount']*100;
         $data['total_amount']=$data['total_amount']*100;
+        $data['user_id']=$this->id;
         //如果是商户收款
         if($this->role==-1){
             $shop=MerchantShop::where('merchant_id',$this->id)->field('id')->find();

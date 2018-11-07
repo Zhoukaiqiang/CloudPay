@@ -55,23 +55,37 @@ class Login extends Controller
     {
         if (request()->isPost()) {
             $data = \request()->post();
+
             /** 检验参数 */
             check_params("merchant_login", $data);
             $this->check_exist($data['phone'], 'phone', 1);
-            $db_res = MerchantUser::where("phone", $data["phone"])->field("shop_id,id,name,phone,role,password")->find();
+
+            $db_res=MerchantUser::alias('a')
+                ->field('a.shop_id,a.id,a.name,a.phone,a.role,a.password,b.shop_name')
+                ->join('cloud_merchant_shop b','a.shop_id=b.id','left')
+                ->where('a.phone',$data['phone'])
+                ->find();
+
             if (!$db_res) {
                 $Merc = new TotalMerchant();
-                $db_res = $Merc::get(["phone" => $data['phone']])->alias("merc")
+                $db_res = $Merc::alias("merc")
                     ->join("cloud_merchant_shop ms" ,"ms.merchant_id = merc.id")
                     ->field("merc.id, merc.name, merc.phone, merc.password, merc.status, ms.id as shop_id")
+                    ->where('merc.phone',$data['phone'])
                     ->find();
             }
-
+            if($db_res==null){
+                return_msg(400, '用户名或密码不正确！');
+            }
             $res = $db_res->toArray();
+//            halt($res);
             $shopName = MerchantShop::get($res["shop_id"])["shop_name"];
-            Session::set("shop_name", $shopName,'app');
 
-            if ($db_res['password'] !== encrypt_password($data['password'], $data["phone"])) {
+            Session::set("shop_name", $shopName,'app');
+            $user_pwd = encrypt_password($data['password'], $data["phone"]);
+
+            if ($db_res['password'] !== $user_pwd ) {
+
                 return_msg(400, '用户密码不正确！');
             } else {
 
@@ -85,7 +99,7 @@ class Login extends Controller
                 if (!isset($res['role'])) {
                     $res["role"] = -1;
                 }
-
+                $res['shop_name']=Session::get('shop_name','app');
                 return_msg(200, '登录成功！', $res);
             }
         }
@@ -112,24 +126,25 @@ class Login extends Controller
             }
             $this->check_exist($data['phone'], 'phone', 1);
 
-            $db_res = TotalMerchant::alias("merc")->where("merc.phone", $data['phone'])
+            $db_res = TotalMerchant::alias("merc")
                 ->join("cloud_merchant_shop ms" ,"ms.merchant_id = merc.id")
                 ->field("merc.id, merc.name, merc.phone, merc.password, merc.status, ms.id as shop_id")
+                ->where("merc.phone", $data['phone'])
                 ->find();
 
             $res = $db_res->toArray();
 
-                /** 登录成功设置session */
-                if (empty($res['role'])) {
-                    Session::set("username_", ["id" => $res['id'], "role" => -1], 'app');
-                } else {
-                    Session::set("username_", ["id" => $res['id'], "role" => $res["role"]], 'app');
-                }
-                if (!isset($res['role'])) {
-                    $res["role"] = -1;
-                }
+            /** 登录成功设置session */
+            if (empty($res['role'])) {
+                Session::set("username_", ["id" => $res['id'], "role" => -1], 'app');
+            } else {
+                Session::set("username_", ["id" => $res['id'], "role" => $res["role"]], 'app');
+            }
+            if (!isset($res['role'])) {
+                $res["role"] = -1;
+            }
 
-                return_msg(200, '登录成功！', $res);
+            return_msg(200, '登录成功！', $res);
 
         }
     }
