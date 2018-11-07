@@ -23,8 +23,11 @@ class Ordermeals extends Controller
 {
     public function returntime()
     {
-        $mid = \request()->param("merchant_id");
+//        $mid = \request()->param("merchant_id");
+
         $shop_id=\request()->param('shop_id');
+        $mid=MerchantShop::field('merchant_id')->where('id',$shop_id)->find();
+        $mid=$mid['merchant_id'];
         $name=\request()->param('name');
         Session::set("merchant_id", $mid, "_app");
         return_msg(200,'success',['shop'=>$shop_id,'name'=>$name]);
@@ -195,32 +198,46 @@ class Ordermeals extends Controller
     {
         $shop_id=$request->param('shop_id');
 //        $shop_id=1;
-        if($request->isPost()){
-            $norm_id=$request->param('norm_id');
-            $data=MerchantDish::where(['shop_id'=>$shop_id,'norm_id'=>$norm_id])->select();
-            //属性
-            foreach($data as &$v){
-                $arr=ltrim($v['dish_attr'],'[');
-                $arr=rtrim($arr,']');
-                $arr=explode(',',$arr);
-                $v['dish_attr']=$arr;
-                $v['count']=0;
-                $v['amount']=0;
-            }
-            check_data($data);
-        }else{
+//        if($request->isPost()){
+//            $norm_id=$request->param('norm_id');
+//            $data=MerchantDish::where(['shop_id'=>$shop_id,'norm_id'=>$norm_id])->select();
+//            //属性
+//            foreach($data as &$v){
+//                $arr=ltrim($v['dish_attr'],'[');
+//                $arr=rtrim($arr,']');
+//                $arr=explode(',',$arr);
+//                $v['dish_attr']=$arr;
+//                $v['count']=0;
+//                $v['amount']=0;
+//            }
+//            check_data($data);
+//        }else{
             //取出所有分类
-            $data=MerchantDish::alias('a')
-                ->field('a.dish_img,a.dish_describe,a.norm_id,b.dish_norm')
+            $data['list']=MerchantDish::alias('a')
+                ->field('a.norm_id,b.dish_norm')
                 ->join('cloud_merchant_dish_norm b','a.norm_id=b.id','left')
-                ->where(['a.shop_id'=>$shop_id])
+                ->where(['a.shop_id'=>$shop_id,'a.status'=>1])
                 ->group('a.norm_id')
                 ->select();
-            foreach($data as &$v){
-                $v['count']=0;
+//            halt($data);
+            $res=[];
+            foreach($data['list'] as $v){
+                $info=MerchantDish::where(['shop_id'=>$shop_id,'norm_id'=>$v['norm_id']])->select();
+//                halt($data['info']);
+//                $arr=[];
+                foreach($info as &$s){
+                    $arr=ltrim($s['dish_attr'],'[');
+                    $arr=rtrim($arr,']');
+                    $arr=explode(',',$arr);
+                    $s['dish_attr']=$arr;
+                }
+                $res[]=$info;
             }
+            $data['info']=$res;
+            $data['count']=0;
+            $data['amount']=0;
             check_data($data);
-        }
+//        }
     }
 
     /**
@@ -234,7 +251,7 @@ class Ordermeals extends Controller
     {
         $shop_id=$request->param('shop_id');
         $name=$request->param('name');
-        $data=MerchantDish::where(['dish_name'=>['like',$name.'%'],'shop_id'=>$shop_id])->select();
+        $data=MerchantDish::where(['dish_name'=>['like',$name.'%'],'shop_id'=>$shop_id,'status'=>1])->select();
         //属性
         foreach($data as &$v){
             $arr=ltrim($v['dish_attr'],'[');
@@ -419,11 +436,41 @@ class Ordermeals extends Controller
     public function continue_order()
     {
         $info=request()->post();
-        $data=MerchantDishCart::alias('a')
+//        halt($info);
+        $data['cart']=MerchantDishCart::alias('a')
             ->field('a.id,a.dish_number,b.dish_name,b.money')
             ->join('cloud_merchant_dish b','a.dish_id=b.id','left')
             ->where(['a.table_number'=>$info['table_name'],'a.shop_id'=>$info['shop_id']])
             ->select();
+//        halt($data);
+        $total_money=0;
+        foreach($data['cart'] as $v){
+            $total_money+=$v['dish_number']*$v['money'];
+        }
+        $data['total_money']=$total_money;
+
+        //取出所有分类
+        $data['list']=MerchantDish::alias('a')
+            ->field('a.norm_id,b.dish_norm')
+            ->join('cloud_merchant_dish_norm b','a.norm_id=b.id','left')
+            ->where(['a.shop_id'=>$info['shop_id'],'a.status'=>1])
+            ->group('a.norm_id')
+            ->select();
+//            halt($data);
+        $res=[];
+        foreach($data['list'] as $v){
+            $re=MerchantDish::where(['shop_id'=>$info['shop_id'],'norm_id'=>$v['norm_id']])->select();
+//                halt($info);
+//                $arr=[];
+            foreach($re as &$s){
+                $arr=ltrim($s['dish_attr'],'[');
+                $arr=rtrim($arr,']');
+                $arr=explode(',',$arr);
+                $s['dish_attr']=$arr;
+            }
+            $res[]=$re;
+        }
+        $data['info']=$res;
         check_data($data);
      }
 

@@ -10,6 +10,7 @@ namespace app\merchant\controller;
 
 
 use app\agent\model\Order;
+use app\merchant\model\MerchantDishCart;
 use app\merchant\model\MerchantDishNorm;
 use app\merchant\model\MerchantShop;
 use app\merchant\model\MerchantUser;
@@ -108,6 +109,65 @@ class Waiter extends Commonality
     }
 
     /**
+     *菜品设置
+     * @param Request $request
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function get_category(Request $request)
+    {
+        $shop_id=$request->param('shop_id');
+        //取出所有分类
+        $data['list']=MerchantDish::alias('a')
+            ->field('a.norm_id,b.dish_norm')
+            ->join('cloud_merchant_dish_norm b','a.norm_id=b.id','left')
+            ->where(['a.shop_id'=>$shop_id,'a.status'=>1])
+            ->group('a.norm_id')
+            ->select();
+//            halt($data);
+        $res=[];
+        foreach($data['list'] as $v){
+            $info=MerchantDish::where(['shop_id'=>$shop_id,'norm_id'=>$v['norm_id']])->select();
+//                halt($data['info']);
+//                $arr=[];
+            /*foreach($info as &$s){
+                $arr=ltrim($s['dish_attr'],'[');
+                $arr=rtrim($arr,']');
+                $arr=explode(',',$arr);
+                $s['dish_attr']=$arr;
+            }*/
+            $res[]=$info;
+        }
+        $data['info']=$res;
+
+        check_data($data);
+//        }
+    }
+
+    /**
+     *菜品搜索
+     * @param Request $request
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function dish_search(Request $request)
+    {
+        $shop_id=$request->param('shop_id');
+        $name=$request->param('name');
+        $data=MerchantDish::where(['dish_name'=>['like',$name.'%'],'shop_id'=>$shop_id,'status'=>1])->select();
+        //属性
+        /*foreach($data as &$v){
+            $arr=ltrim($v['dish_attr'],'[');
+            $arr=rtrim($arr,']');
+            $arr=explode(',',$arr);
+            $v['dish_attr']=$arr;
+        }*/
+        check_data($data);
+    }
+
+    /**
      * 新增菜品
      * @param Request $request
      * @return string
@@ -122,16 +182,17 @@ class Waiter extends Commonality
             //取出所有属性
             $shop_id=$request->param('shop_id');
             $data=[];
-            //取出推荐 和特色标签
-            $data['data']=Db::name('merchant_dish_norm')->where(['parent_id'=>['in',[1,2]]])->select();
+            //菜品分类
+            $data['data']=Db::name('merchant_dish_norm')->where('shop_id',$shop_id)->select();
 //            $data['type']=Db::name('merchant_dish_norm')->where('shop_id',$shop_id)->field('id,dish_norm')->select();
             $data['shop_id']=$shop_id;
-            return json_encode(200,'success',$data);
-        }else if(Request::instance()->isPost()){
+            check_data($data);
+        }elseif(Request::instance()->isPost()){
             //新增菜品
             $data=$request->post();
             //标签 []
-
+            //验证
+            check_params('add_cuisine',$data,'MerchantValidate');
 //            $data['dish_label']=explode(',',$data['dish_label']);
 //            $data['dish_attr']=explode(',',$data['dish_attr']);
 //            dump($data['dish_attr']);die;
@@ -143,8 +204,9 @@ class Waiter extends Commonality
             }
 //            var_dump($file);die;
             //原图
-            $file=$this->upload_picspay($file);
-           $file=$tailor.','.$file;
+
+           $file=$tailor;
+
             $data['dish_img']=$file;
             $dish=Db::name('merchant_dish')->insert($data);
 
@@ -166,27 +228,48 @@ class Waiter extends Commonality
 
     public function edit_cuisine(Request $request)
     {
+
         //菜品id
         $id=$request->param('id');
-        $post=$request->post();
-        //判断是否修改图片
-        if($request->file('dish_img')){
-            $file=$request->file('dish_img');
-            //裁剪200*200图
-            $tailor=$this->tailor_img($file);
-            if(!$tailor){
-                return_msg(400,'success','图片格式不正确');
-            }
-            $file=$this->upload_picspay($request->file('dish_img'));
-            $file=$tailor.','.$file;
-            $data['dish_img']=$file;
-        }
+        $shop_id=$request->param('shop_id');
+        if($request->isPost()){
 
-        $data=MerchantDish::where('id',$id)->update($post);
-        if($data){
-            return_msg(200,'success','修改菜品成功');
+            $post=$request->post();
+            //验证
+            check_params('edit_cuisine',$post,'MerchantValidate');
+            //判断是否修改图片
+            if($request->file('dish_img')){
+
+                $file=$request->file('dish_img');
+                //裁剪200*200图
+                $tailor=$this->tailor_img($file);
+                if(!$tailor){
+                    return_msg(400,'success','图片格式不正确');
+                }
+
+                $post['dish_img']=$tailor;
+            }
+
+            $data=MerchantDish::where('id',$id)->update($post);
+            if($data){
+                return_msg(200,'success','修改菜品成功');
+            }else{
+                return_msg(400,'success','修改菜品失败');
+            }
         }else{
-            return_msg(400,'success','修改菜品失败');
+            //取出菜品信息
+            $data['list']=MerchantDish::where('id',$id)->select();
+            //属性
+            foreach($data['list'] as &$v){
+                $arr=ltrim($v['dish_attr'],'[');
+                $arr=rtrim($arr,']');
+                $arr=explode(',',$arr);
+                $v['dish_attr']=$arr;
+            }
+
+            //菜品分类
+            $data['attr']=MerchantDishNorm::field('id,dish_norm')->where('shop_id',$shop_id)->select();
+            check_data($data);
         }
 
     }
@@ -339,6 +422,34 @@ class Waiter extends Commonality
     }
 
     /**
+     *已下架菜品
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function dish_soldout()
+    {
+        $shop_id=request()->param('shop_id');
+        $data=MerchantDish::where(['shop_id'=>$shop_id,'status'=>0])->select();
+        check_data($data);
+    }
+
+    /**
+     *菜品上架
+     */
+    public function dish_shelf()
+    {
+        $id=request()->param('id');
+        $data=MerchantDish::where('id',$id)->update(['status'=>1]);
+        if($data){
+            return_msg(200,'操作成功');
+        }else{
+            return_msg(200,'操作失败');
+
+        }
+    }
+
+    /**
      * 管理分类
      * @param Request $request
      * @return string
@@ -351,7 +462,7 @@ class Waiter extends Commonality
         $shop_id=$request->param('shop_id');
         $data=MerchantDishNorm::where('shop_id',$shop_id)->select();
 
-        return json_encode($data);
+        check_data($data);
     }
 
     /**

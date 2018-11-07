@@ -17,7 +17,9 @@ use think\Db;
 use think\Request;
 use think\Session;
 
-class Pay
+
+class Pay extends Login
+
 {
 
     protected $merchant_id;

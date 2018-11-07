@@ -37,7 +37,7 @@ class MerchantValidate extends Validate
         ['order_money', 'require|number', '请输入订单金额|订单金额必须为数字'],
 
         //分享红包
-        ['money', 'require|number', '请输入红包金额|红包金额必须为数字 '],
+        ['money', 'require|number', '请输入金额|金额必须为数字 '],
         ['lowest_consump', 'number', '最低消费必须为数字  '],
 
         //设置会员卡
@@ -81,6 +81,14 @@ class MerchantValidate extends Validate
 
         //台牌码支付
         ["mid", "require", "商户ID必填"],
+
+        //新增菜品
+        ["dish_name", "require", "请输入菜品名称"],
+        ["norm_id", "require", "请输入菜品分类"],
+        ["dish_describe", "require", "请输入菜品描述"],
+        ["dish_attr", "require", "请输入属性"],
+        ["dish_img", "require", "请选择菜品图片"],
+
 
     ];
 
@@ -140,6 +148,16 @@ class MerchantValidate extends Validate
 
         //台牌码 --支付
         "tag_pay" => ["amount", "mid"],
+
+        //菜品新增
+        "add_cuisine"=>[
+            'dish_name','norm_id','dish_describe','dish_attr','money','dish_img'
+        ],
+
+        //编辑菜品
+        "edit_cuisine"=>[
+            'dish_name','norm_id','dish_describe','dish_attr','money'
+        ],
     ];
 
 }

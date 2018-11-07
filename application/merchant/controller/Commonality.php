@@ -51,7 +51,7 @@ class Commonality extends Common
     function upload_picspay($file)
     {
         //移动图片
-        $info = $file->validate(['size' => 500 * 1024 * 1024, 'ext' => 'jpg,jpeg,gif,png'])->move(ROOT_PATH . 'public' . DS . 'uploads');
+        $info = $file->validate(['size' => 500 * 1024 * 1024, 'ext' => 'jpg,jpeg,gif,png'])->move(ROOT_PATH . 'public' . DS . 'uploads'.DS);
 
         if ($info) {
             //文件上传成功,生成缩略图
@@ -80,7 +80,7 @@ class Commonality extends Common
 
         //判断是否是图片格式
         if (in_array($type, ['jpg', 'jpeg', 'png'])) {
-            $date_path = 'uploads/thumb/' . date('Ymd');
+            $date_path = './uploads/thumb/' . date('Ymd');
 
             if (!file_exists($date_path)) {
                 mkdir($date_path, 0777, true);
@@ -91,6 +91,7 @@ class Commonality extends Common
             $thumb_path = $date_path . '/' . $times . '.' . $type;
 
             $image->thumb($width, $height, \think\Image::THUMB_CENTER)->save($thumb_path);
+            $thumb_path=substr($thumb_path,'1');
             return $thumb_path;
         } else {
             return 0;
@@ -123,7 +124,9 @@ class Commonality extends Common
      */
     public function qrcode($url=null, $shop_id=null, $name = null)
     {
-        $url=$url ? $url : "http://47.92.212.66/merchant/Ordermeals/returntime?shop_id=$shop_id&name=$name";
+
+        $url=$url ? $url : "http://api.hzyspay.com/index.php/merchant/Ordermeals/returntime?shop_id=$shop_id&name=$name";
+
         header("content-type:text/html;charset=utf-8");
         Vendor('phpqrcode.phpqrcode');  //引入的phpqrcode类
         import('phpqrcode.phpqrcode', EXTEND_PATH,'.php');
