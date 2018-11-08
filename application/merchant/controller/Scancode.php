@@ -222,7 +222,7 @@ class Scancode extends Commonality
     {
         $url = $this->url."sdkBarcodePosPay.json";
 
-        //获取返回结果 */
+        //获取返回结果
         $par = curl_request($url, true, $data, true);
         // json转成数组
 
@@ -377,50 +377,26 @@ class Scancode extends Commonality
     public function  member_recharge($data,$par)
     {
         //获取当前商户的当前有效时间的优惠活动   	recharge_money	充值金额   give_money 赠送金额
-        //获取支付金额
-        //取出所有活动
         $data['amount']=$data['amount']/100;
-        $check=$this->get_recharge();
-        $check=collection($check)->toArray();
-        //按键值升序排序
-        array_multisort($check);
-//            halt($check);
-        for($i=0;$i<count($check);$i++){
-            if($i==(count($check)-1)){
-                if($check[$i]['recharge_money']<=$data['amount']){
-                    //充值金额
-                    $data['money']=$data['amount']+$check[$i]['give_money'];
-                    //优惠金额
-                    $data['discount_amount']=$check[$i]['give_money'];
-                }elseif($check[0]['recharge_money']>$data['amount']){
-                    //没有优惠
-                    $data['money']=$data['amount'];
-                    $data['discount_amount']=0;
-                }
-            }else{
-                if($check[$i]['recharge_money']<=$data['amount'] && $data['amount']<=$check[$i+1]['recharge_money']){
-                    //充值金额
-                    $data['money']=$data['amount']+$check[$i]['give_money'];
-                    //优惠金额
-                    $data['discount_amount']=$check[$i]['give_money'];
-                }elseif($check[0]['recharge_money']>$data['amount']){
-                    //没有优惠
-                    $data['money']=$data['amount'];
-                    $data['discount_amount']=0;
-                }
+        $aumen=ShopActiveRecharge::where(['merchant_id'=>$this->id,'start_time'=>['<',time()],'end_time'=>['>',time()]])->field('recharge_money,give_money')->order('recharge_money asc')->select();
+        $money=0;
+//        return_msg($aumen);
+        foreach ($aumen as $k=>$v){
+            if($v['recharge_money']<=$data['amount']){
+                $money=$v['give_money'];
             }
         }
 
         //订单号
         $order_no=generate_order_no();
         //创建会员充值订单
-        $resuoo=MemberRecharge::insert(['recharge_time' => time(),'member_id'=>$data['member_id'],'order_money'=>$data['money'],'shop_id'=>$data['shop_id'],'order_no'=>$par['orderNo'],'pay_type'=>$data['payChannel'],'merchant_id'=>$data['merchant_id'],'amount'=>$par['amount'], 'status' => 1, 'logNo' => $par[ 'logNo' ],'user_id'=>$data['user_id'],'order_number'=>generate_order_no(),'discount_amount'=>$data['discount_amount']]);
+        $resuoo=MemberRecharge::insert(['recharge_time' => time(),'member_id'=>$data['member_id'],'order_money'=>$data['total_amount'],'shop_id'=>$data['shop_id'],'order_no'=>$par['orderNo'],'pay_type'=>$data['payChannel'],'merchant_id'=>$data['merchant_id'],'amount'=>$par['amount'], 'status' => 1, 'logNo' => $par[ 'logNo' ],'user_id'=>$data['user_id'],'order_number'=>generate_order_no()]);
         if (!$resuoo){
             return false;
         }
-        $money=$data['money'];
+        $money=$data['amount']+$money;
         //更新会员余额
-        $member=MerchantMember::where('id',$data['member_id'])->update(['recharge_money'=>$money,'recharge_time'=>time(),'money'=>['inc',$money]]);
+        $member=MerchantMember::where('id',$data['member_id'])->update(['recharge_money'=>$data['amount'],'recharge_time'=>time(),'money'=>['inc',$money]]);
         if (!$member){
             return false;
         }else{
