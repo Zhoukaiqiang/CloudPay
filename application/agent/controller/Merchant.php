@@ -39,13 +39,17 @@ class Merchant extends Incom
         $data['pages']=$pages;
         return_msg(200,'success',$data);
     }
+
     /**
      * 显示当前代理商下所有商户列表
+     * @throws Exception
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
      */
     public function index()
     {
         $agent_id=Session::get("username_")["id"];
-
         //获取总行数
         $total=TotalMerchant::where('agent_id',$agent_id)->count('id');
         $rows=TotalMerchant::alias('a')
@@ -54,10 +58,10 @@ class Merchant extends Incom
             ->where('a.agent_id',$agent_id)
             ->count('a.id');
         $pages=page($rows);
-
         $data['list']=TotalMerchant::alias('a')
-            ->field('a.id,a.name,a.phone,a.address,a.contact,a.channel,a.opening_time,a.status,a.review_status,b.partner_name')
-            ->join('cloud_agent_partner b','a.partner_id=b.id','left')
+            ->field('a.id,a.name,a.phone,ag.agent_area as address,a.contact,a.channel,a.opening_time,a.status,a.review_status,b.partner_name')
+            ->join('cloud_agent_partner b','a.partner_id = b.id','left')
+            ->join("cloud_total_agent ag", "ag.id = a.agent_id")
             ->where('a.agent_id',$agent_id)
             ->limit($pages['offset'],$pages['limit'])
             ->select();
@@ -68,13 +72,7 @@ class Merchant extends Incom
         $data['partner']=$arr;
         $data['pages']['rows'] = $rows;
         $data['pages']['total_row'] = $total;
-        if (count($data['list'])  > 0 ) {
-            return_msg(200,'success',$data) ;
-        } else {
-            return_msg(400, '没有数据');
-        }
-
-
+        check_data($data['list'], $data);
     }
     /**
      * 启用商户

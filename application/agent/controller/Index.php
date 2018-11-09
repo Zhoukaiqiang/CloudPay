@@ -131,7 +131,7 @@ class Index extends Controller
         if ($request->isGet()) {
             $id = Session::get("username_")["id"];
             /** 当前代理商下所有直属商户交易额 --  微信/支付宝/银行卡  */
-            $time = $request->param("time") ? $request->param("time") : 0;
+            $time = $request->param("time");
             $data["ali_amount"] = $this->get_type_amount($id, 'alipay', $time);
             $data["wx_amount"] = $this->get_type_amount($id, 'wxpay', $time);
             $data["bank_amount"] = $this->get_type_amount($id, 'etc', $time);
@@ -224,7 +224,7 @@ class Index extends Controller
             $data["active_mer"] = Db::name("total_merchant")->alias("mer")
                 ->join("cloud_order o", "o.merchant_id = mer.id", "RIGHT")
                 ->where("mer.agent_id = $id")
-                ->whereTime("pay_time", "yesterday")
+                ->whereTime("pay_time", "yesterday" )
                 ->group("o.merchant_id")
                 ->count("o.id");
 
@@ -260,14 +260,13 @@ class Index extends Controller
      */
     protected function get_type_amount($id, $type, $time = 0)
     {
-        $time_flag = ">";
+        $time = intval($time);
         if ($time == 7) {
             $time = strtotime("-7 days");
         } elseif ($time == 30) {
             $time = strtotime("-30 days");
-        } elseif ($time != 0) {
-            $time = [$time];
-            $time_flag = "between";
+        } elseif ($time == 0) {
+            $time = "yesterday";
         }
         $res = TotalMerchant::alias("mer")
             ->join("cloud_order o", "o.merchant_id = mer.id")
@@ -275,7 +274,7 @@ class Index extends Controller
                 "mer.agent_id" => $id,
                 "o.pay_type" => $type
             ])
-            ->whereTime("pay_time", $time_flag, $time)
+            ->whereTime("pay_time" , $time)
             ->sum("o.received_money");
         return $res;
     }
@@ -705,6 +704,7 @@ class Index extends Controller
      * @throws \think\db\exception\DataNotFoundException
      * @throws \think\db\exception\ModelNotFoundException
      * @throws \think\exception\DbException
+     * @throws Exception
      */
     public function merchant_trade(Request $request)
     {
@@ -810,27 +810,30 @@ class Index extends Controller
             $create_f = ">";
             $create_time = -2;
         }
+        $where["a.status"] = [$status_f, $status];
+        $where["a.partner_id"] = [$partner_f, $partner_id];
+        $where["a.agent_id"] = ["eq", $agent_id];
+        $where["ag.agent_area"] = [$address_f, $address];
+        $where["a.abbreviation|a.contact|a.phone|a.name"] = [$name_f, $name];
 
         $total = Db::name('total_merchant')->where("agent_id", $agent_id)->count('id');
         $rows = TotalMerchant::alias('a')
             ->join('cloud_order', 'cloud_order.merchant_id = a.id')
             ->join('cloud_agent_partner', ' cloud_agent_partner.id = a.partner_id')
-            ->where('a.abbreviation|a.contact|a.phone|a.name', $name_f, $name)
-            ->where('a.partner_id', $partner_f, $partner_id)
-            ->where(['a.status' => [$status_f, $status], 'a.agent_id' => ['eq', $agent_id], 'a.address' => [$address_f, $address]])
-            ->whereTime('a.opening_time', $create_f, $create_time)
+            ->join("cloud_total_agent ag", "ag.id = a.agent_id")
+            ->where($where)
+            ->whereTime('opening_time', $create_f, $create_time)
             ->group('a.id')
             ->count('a.id');
         $pages = page($rows);
 
         $data['list'] = TotalMerchant::alias('a')
-            ->field('a.channel,a.address,a.name,a.id,a.contact,a.phone,a.status,a.opening_time,a.review_status,a.abbreviation,a.contact,a.phone,cloud_order.received_money,cloud_order.cashier,cloud_agent_partner.partner_name')
+            ->field('a.channel,ag.agent_area as address,a.name,a.id,a.contact,a.phone,a.status,a.opening_time,a.review_status,a.abbreviation,a.contact,a.phone,cloud_order.received_money,cloud_order.cashier,cloud_agent_partner.partner_name')
             ->join('cloud_order', 'a.id=cloud_order.merchant_id')
+            ->join("cloud_total_agent ag", "ag.id = a.agent_id")
             ->join('cloud_agent_partner', 'a.partner_id=cloud_agent_partner.id')
-            ->where('a.abbreviation|a.contact|a.phone|a.name', $name_f, $name)
-            ->where('a.partner_id', $partner_f, $partner_id)
-            ->where(['a.status' => [$status_f, $status], 'a.agent_id' => ['eq', $agent_id], 'a.address' => [$address_f, $address]])
-            ->whereTime('a.opening_time', $create_f, $create_time)
+            ->where($where)
+            ->whereTime('opening_time', $create_f, $create_time)
             ->group('a.id')
             ->limit($pages['offset'], $pages['limit'])
             ->select();
@@ -1116,14 +1119,14 @@ class Index extends Controller
      */
     protected function get_type_num($id, $type, $time = 0)
     {
-        $time_flag = ">";
+        $time = intval($time);
         if ($time == 7) {
             $time = strtotime("-7 days");
         } elseif ($time == 30) {
             $time = strtotime("-30 days");
-        } elseif ($time != 0) {
-            $time = [$time];
-            $time_flag = "between";
+        } elseif ($time == 0) {
+
+            $time = "yesterday";
         }
         $res = TotalMerchant::alias("mer")
             ->join("cloud_order o", "o.merchant_id = mer.id")
@@ -1131,7 +1134,7 @@ class Index extends Controller
                 "mer.agent_id" => $id,
                 "o.pay_type" => $type
             ])
-            ->whereTime("pay_time", $time_flag, $time)
+            ->whereTime("pay_time", $time)
             ->count("o.id");
         return $res;
     }
