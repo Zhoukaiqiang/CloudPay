@@ -3,6 +3,7 @@
 namespace app\merchant\controller;
 
 use app\admin\model\MerchantIncom;
+use app\agent\model\MerchantGroup;
 use app\merchant\model\MemberRecharge;
 use app\merchant\model\MerchantMember;
 use app\merchant\model\MerchantMemberCard;
@@ -536,6 +537,7 @@ class Member extends Common
     {
         //取出商户下所有会员
         $row=MerchantMember::where('merchant_id',$this->merchant_id)->count();
+        //查看当前商户是否有会员互通
         $pages=page($row);
         $data['list']=MerchantMember::field("id,member_name,money,member_phone,register_time,member_birthday")
             ->where('merchant_id',$this->merchant_id)

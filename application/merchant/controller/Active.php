@@ -679,6 +679,7 @@ class Active extends Common
     public function exclusive_stop(Request $request)
     {
         $result=ShopActiveExclusive::where('merchant_id',$this->merchant_id)->delete();
+        MemberExclusive::where('merchant_id',$this->merchant_id)->delete();
         if($result){
             return_msg(200,'操作成功');
         }else{

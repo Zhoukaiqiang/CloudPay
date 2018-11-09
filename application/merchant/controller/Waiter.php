@@ -450,6 +450,21 @@ class Waiter extends Commonality
     }
 
     /**
+     *删除菜品
+     */
+    public function dish_del()
+    {
+        $id=request()->param('id');
+        $data=MerchantDish::where('id',$id)->delete();
+        if($data){
+            return_msg(200,'操作成功');
+        }else{
+            return_msg(200,'操作失败');
+
+        }
+    }
+
+    /**
      * 管理分类
      * @param Request $request
      * @return string

@@ -206,9 +206,14 @@ class User extends Common
             if (isset($data["password"])) {
                 $data['password'] = addslashes(encrypt_password($data['password'], $data['phone']));
             }
-            $result = MerchantUser::update($data);
+//            halt($data);
+            $result = MerchantUser::where('id',$data['id'])->update($data);
 
-            check_data($result, $result, 0);
+            if($result){
+                return_msg(200,'操作成功');
+            }else{
+                return_msg(400,'操作失败');
+            }
         } else {
             $id = $request->param('id');
 
@@ -242,6 +247,20 @@ class User extends Common
 
         }
 
+    }
+
+    /**
+     *删除员工
+     */
+    public function del()
+    {
+        $id=request()->param('id');
+        $res=MerchantUser::where('id',$id)->destroy();
+        if($res){
+            return_msg(200,'删除成功');
+        }else{
+            return_msg(400,'删除失败');
+        }
     }
 
     /**

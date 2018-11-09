@@ -21,21 +21,23 @@ class Wechat extends Controller
 {
     protected $appid;
     protected $secret;
-    protected $redirect_uri;
-
+    protected $openid;
     public function _initialize()
     {
+//        echo 1;
+//        echo $_SERVER['SERVER_NAME'];die;
+//        Session::clear();
         parent::_initialize();
         $WxQuery = "pubSigQry";
         $WxPay = "pubSigPay";
         $this->appid = 'wx1aeeaac161a210df';//appid
         $this->secret = '0b1ddf2e988b7d05e4e775cc8bdfc831'; //secrect
-        $this->redirect_uri = 'http://pay.hzyspay.com/index.php/merchant/wechat/get_code';//返回的域名网址
-//        $this->appid="wx193727ba2313b0d8";
-//        $this->secret="fe7c3669faec17d3e681c4c938af12a6";
-//        $this->redirect_uri = 'http://47.92.212.66/index.php/merchant/wechat/back_url';//返回的域名网址
+        $this->openid=Session::get('openid');
+        if(!$this->openid){
+            $path=$_SERVER['REQUEST_URI'];
 
-        $url = "http://gateway.starpos.com.cn/adpweb/ehpspos3/{$WxQuery}.json";
+            $this->get_code($path);
+        }
     }
 
     /**
@@ -45,69 +47,32 @@ class Wechat extends Controller
      * @throws \think\db\exception\ModelNotFoundException
      * @throws \think\exception\DbException
      */
-    public function get_code()
+    protected function get_code($path)
     {
         $data=request()->param();
         if(!isset($data['code'])){
+            //回调地址
+            $redirect_uri = urlencode('http://'.$_SERVER['HTTP_HOST'].'/index.php/merchant/wechat/get_code');
 
-            $code = "https://open.weixin.qq.com/connect/oauth2/authorize?appid=".$this->appid."&redirect_uri=".urlencode($this->redirect_uri)."&response_type=code&scope=snsapi_userinfo&state=202#wechat_redirect";
+            $code = "https://open.weixin.qq.com/connect/oauth2/authorize?appid=".$this->appid."&redirect_uri=".$redirect_uri."&response_type=code&scope=snsapi_base&state=".$path."#wechat_redirect";
 
             header("Location:".$code);
         }else{
-            if (isset($data['code']) || (int)$data['state'] == 202) {
-//            halt($data['code']);
+            if (isset($data['code'])){
+
+                $path=$data['state'];
                 Session::set("code", $data['code']);
 
                 $userinfo = $this->get_user_info($data['code']);
-//                halt($userinfo);
+
                 Session::set('openid',$userinfo['openid']);
-//                halt($access_token);
-                $access_token=Session::get('access_token');
-//                return array('access_token'=>$access_token,'openid'=>$userinfo['openid'],'code'=>$data['code']);
-                $arr=[
-                    'access_token'=>$access_token,
-                    'code'=>$data['code'],
-                    'openid'=>$userinfo['openid']
-                ];
-                halt($arr);
-                $arr=json_encode($arr);
-                return $arr;
+
+                $this->redirect('http://'.$_SERVER['HTTP_HOST'].$path);
+
             } else {
                 return_msg(400, "fail");
             }
         }
-    }
-
-    public function getin()
-    {
-        $code=request()->param();
-        if(isset($code['code'])){
-            Session::set('code',$code['code'],'app');
-            $this->back_url();
-        }else{
-            $this->get_code();
-        }
-    }
-
-    /**
-     * 回调地址
-     * @param Request $request
-     * @throws \think\db\exception\DataNotFoundException
-     * @throws \think\db\exception\ModelNotFoundException
-     * @throws \think\exception\DbException
-     */
-    public function back_url()
-    {
-        if(Session::has('code','app')){
-            $code=Session::get('code','app');
-        }else{
-            $this->getin();
-        }
-            $userinfo = $this->get_user_info($code);
-//            halt($userinfo);
-//            return $userinfo['openid'];
-            Session::set('openid',$userinfo['openid']);
-
     }
 
 
@@ -124,7 +89,7 @@ class Wechat extends Controller
         $access_token_json = $this->https_request($access_token_url);//自定义函数
 //        halt($access_token_json);
         $access_token_array = json_decode($access_token_json, true);
-//        halt($access_token_array);
+//        halt($access_token_array["access_token"]);
         $access_token = $access_token_array["access_token"];
         Session::set('access_token',$access_token);
 //        halt($access_token);
@@ -269,7 +234,7 @@ class Wechat extends Controller
 
         $res = json_decode(urldecode($res), true);
 
-            /** 如果查询成功请求公众号支付否则返回错误信息 */
+        /** 如果查询成功请求公众号支付否则返回错误信息 */
         if ($res["returnCode"] == "000000") {
 
             /** [array] 成功存入数据库 $data */
@@ -301,8 +266,9 @@ class Wechat extends Controller
      */
     public function get_exclusive()
     {
+
 //        $openid=$this->get_openid();
-        $openid=1;//测试
+        $openid=$this->openid;
         $join=[
             ['cloud_shop_active_exclusive b','a.exclusive_id=b.id','left'],
             ['cloud_merchant_member c','a.member_id=c.id','left']
@@ -371,9 +337,7 @@ class Wechat extends Controller
      */
     public function member_register(Request $request)
     {
-        $this->get_code();die;
-       $openid=$request->param('openid');
-        $openid=1;//测试
+        $openid=$this->openid;
 //        echo 1;
         $data=$request->post();
         $data['openid'] = $openid;
@@ -596,7 +560,7 @@ class Wechat extends Controller
     public function get_qrcode()
     {
         //        $openid=$this->get_openid();
-        $openid=1;//测试
+        $openid=$this->openid;
 //        $openid="oFQ1K09QyKH8qENIxUnhWIGUnPG8";
         //取出会员卡信息
         $data=MerchantMember::field('member_qrcode')->where('openid',$openid)->find();
@@ -612,7 +576,7 @@ class Wechat extends Controller
     {
         //获取用户appid
         //        $openid=$this->get_openid();
-        $openid=1;//测试
+        $openid=$this->openid;
 
 //        $openid=1;//测试
         //取出会员信息
