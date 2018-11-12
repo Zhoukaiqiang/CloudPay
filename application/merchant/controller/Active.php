@@ -735,7 +735,6 @@ class Active extends Common
      */
     public function pc_cancel_record()
     {
-
         $where=[
             ['cloud_merchant_member b','a.member_id=b.id','left'],
             ['cloud_merchant_user c','a.user_id=c.id','left'],

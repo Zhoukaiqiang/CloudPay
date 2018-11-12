@@ -254,12 +254,23 @@ class Partner extends Agent
 
         if(is_numeric($search)){
             //电话搜索
-            $data=AgentPartner::where('partner_phone','like',$search.'%')
+            $rows=AgentPartner::where('partner_phone','like',$search.'%')
+                ->count();
+            $page=page($rows);
+            $data['list']=AgentPartner::where('partner_phone','like',$search.'%')
+                ->limit($page['offset'],$page['limit'])
                 ->select();
+            $data['pages']=$page;
+
         }else{
             //姓名搜索
-            $data=AgentPartner::where('partner_name','like',$search.'%')
+            $rows=AgentPartner::where('partner_name','like',$search.'%')
+                ->count();
+            $page=page($rows);
+            $data['list']=AgentPartner::where('partner_name','like',$search.'%')
+                ->limit($page['offset'],$page['limit'])
                 ->select();
+            $data['pages']=$page;
         }
         if (count($data)) {
             return_msg(200,'success',$data);
@@ -365,6 +376,24 @@ class Partner extends Agent
                     $this->get_search($query['month'],$sort);
                     break;
             }
+        }elseif(!empty($query['status'])){
+            switch($query['status']){
+                case 1:
+                    //商户新增磅
+                    $sort="new_count";
+                    $this->get_search('month',$sort);
+                    break;
+                case 2:
+                    //商户总磅
+                    $sort="count";
+                    $this->get_search('month',$sort);
+                    break;
+                case 3:
+                    //佣金磅
+                    $sort="money";
+                    $this->get_search('month',$sort);
+                    break;
+            }
         }
     }
 
@@ -379,13 +408,16 @@ class Partner extends Agent
 
         $res = TotalAgent::where('id',$id)->field("agent_rate")->find();
         $agent_rate = intval($res->agent_rate);
+
         $data=AgentPartner::field(['id,partner_name,partner_phone,create_time,model,proportion,rate'])
             ->where('agent_id',$id)
             ->select();
+
 //取出负责商户数
         $flag=array();
         foreach($data as &$v){
             $count=TotalMerchant::where('partner_id',$v['id'])->count();
+
             $v['count']=$count;
             //根据合伙人id取出新增商户数
             $new_count=TotalMerchant::whereTime('opening_time',$param,$time)->where('partner_id',$v['id'])->count();
@@ -409,6 +441,29 @@ class Partner extends Agent
         $this->check_empty($data);
 
     }
+
+    public function search_list()
+    {
+        $status=request()->param('status') ? request()->param('status') : '';
+        switch($status){
+            case 1:
+                //商户新增磅
+                $sort="new_count";
+                $this->get_search('month',$sort);
+                break;
+            case 2:
+                //商户总磅
+                $sort="count";
+                $this->get_search('month',$sort);
+                break;
+            case 3:
+                //佣金磅
+                $sort="money";
+                $this->get_search('month',$sort);
+                break;
+        }
+    }
+
 
     public function check_empty(Array $d) {
         if (count($d)) {
