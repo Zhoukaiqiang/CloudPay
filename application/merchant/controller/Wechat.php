@@ -25,19 +25,19 @@ class Wechat extends Controller
     public function _initialize()
     {
 //        echo 1;
-//        echo $_SERVER['SERVER_NAME'];die;
-//        Session::clear();
+//        echo $_SERVER['PHP_SELF'];die;
+        Session::clear();
         parent::_initialize();
         $WxQuery = "pubSigQry";
         $WxPay = "pubSigPay";
         $this->appid = 'wx1aeeaac161a210df';//appid
         $this->secret = '0b1ddf2e988b7d05e4e775cc8bdfc831'; //secrect
         $this->openid=Session::get('openid');
-        if(!$this->openid){
+        /*if(!$this->openid){
             $path=$_SERVER['REQUEST_URI'];
 
             $this->get_code($path);
-        }
+        }*/
     }
 
     /**
@@ -59,7 +59,7 @@ class Wechat extends Controller
             header("Location:".$code);
         }else{
             if (isset($data['code'])){
-
+//                echo $data['code'];die;
                 $path=$data['state'];
                 Session::set("code", $data['code']);
 
@@ -134,12 +134,13 @@ class Wechat extends Controller
         $ticket_url = "https://api.weixin.qq.com/cgi-bin/ticket/getticket?access_token=".$access_token."&type=jsapi";
         $ticket=$this->https_request($ticket_url);
         $ticket=json_decode($ticket,true);
+//        halt($ticket);
         return $ticket['ticket'];
     }
 
     public function getRandChar()
     {
-        $ticket=get_ticket();
+        $ticket=$this->get_ticket();
         $noncestr=$this->getstr(16);
         $timestamp = time();
         if ($_SERVER['QUERY_STRING']){
@@ -160,6 +161,16 @@ class Wechat extends Controller
         }
         $string1 = substr($string1,0,-1);
         $signature = sha1($string1);
+
+        $signPackge=array(
+            "appId"     => $this->appid,
+            "nonceStr"  => $noncestr,
+            "timestamp" => $timestamp,
+            "url"       => $url,
+            "signature" => $signature,
+        );
+//        halt($signPackge);
+        return_msg(200,'success',$signPackge);
     }
 
     public function getstr($len)
@@ -266,9 +277,9 @@ class Wechat extends Controller
      */
     public function get_exclusive()
     {
-
 //        $openid=$this->get_openid();
         $openid=$this->openid;
+//        echo $openid;die;
         $join=[
             ['cloud_shop_active_exclusive b','a.exclusive_id=b.id','left'],
             ['cloud_merchant_member c','a.member_id=c.id','left']
@@ -310,24 +321,7 @@ class Wechat extends Controller
         }
     }
 
-    /**
-     *获取openid
-     * @return mixed
-     * @throws \think\db\exception\DataNotFoundException
-     * @throws \think\db\exception\ModelNotFoundException
-     * @throws \think\exception\DbException
-     */
-    public function get_openid()
-    {
-        Session::clear();
-        if(Session::has("openid")){
-            $openid=Session::get("openid");
-            return $openid;
-        }else{
 
-            $openid=$this->get_code();
-        }
-    }
     /**
      *会员注册
      * @param Request $request
@@ -338,7 +332,7 @@ class Wechat extends Controller
     public function member_register(Request $request)
     {
         $openid=$this->openid;
-//        echo 1;
+
         $data=$request->post();
         $data['openid'] = $openid;
 
@@ -459,7 +453,7 @@ class Wechat extends Controller
                 }
             }
         }else{
-//            echo 1;die;
+
             //查看是否有新会员注册活动
             $res=ShopActiveExclusive::field('id,register_status')->where('merchant_id',$info['merchant_id'])->find();
 //            halt($res['register_status']);
@@ -577,7 +571,6 @@ class Wechat extends Controller
         //获取用户appid
         //        $openid=$this->get_openid();
         $openid=$this->openid;
-
 //        $openid=1;//测试
         //取出会员信息
         $data['list']=MerchantMember::field('id,merchant_id,shop_id,money,member_phone')->where('openid',$openid)->select();
@@ -751,6 +744,102 @@ class Wechat extends Controller
         $data['review_merchant']=TotalMerchant::where(['review_status'=>['<',2]])->count();
 
         check_data($data);
+    }
+
+    /**
+     * 微信公众号查询
+     * @description 连贯操作
+     */
+    public function wx_query()
+    {
+        $param = [
+            "orgNo" => "27573",
+            "mercId" => "800332000002146",
+            "trmNo" => "95445645",
+            "txnTime" => (string)date("YmdHis", time()),
+            "signType" => 'MD5',
+            "version" => 'V1.0.0',
+        ];
+        $key = "0FF9606C39C2CCF1515E5CE108B506F0";
+        $param["signValue"] = sign_ature(0000, $param, $key);
+        $url = "http://gateway.starpos.com.cn/adpweb/ehpspos3/pubSigQry.json";
+        $res = curl_request($url, true, $param, true);
+        $res = json_decode(urldecode($res), true);
+//        halt($res);
+        /** 如果查询成功请求公众号支付否则返回错误信息 */
+        if ($res["returnCode"] == "000000") {
+            $this->wxpay($res);
+        } else {
+            return_msg(400, "微信查询失败：".$res["message"]);
+        }
+    }
+
+    /**微信公众号支付
+     * @param Request $request
+     * @param $mid $amount $t_amount $code;
+     * @throws Exception
+     */
+    public function wxpay()
+    {
+//        $query = $request->param();
+
+        $query["mid"] = 87;
+        /*$data = Db::name("merchant_incom")->where("merchant_id", $query["mid"])->find();*/
+//        $this->wx_query($data);
+        /** 查询 -> 支付 */
+        /*$trms = json_decode($data["rec"], true);
+        if (count($trms)) {
+            $trmNo = $trms[0]["trmNo"];
+        } else {
+            $trmNo = $trms;
+        }*/
+
+        $param["orgNo"] = "27573";
+        $param["trmNo"] = "95445645";
+        $param["txnTime"] = (string)date("YmdHis");
+        $param["version"] = "V1.0.0";
+        $param["mercId"] = "800332000002146";
+        $param["amount"] = (string)1; //金额
+        $param["total_amount"] = (string)1;  //总金额
+        $param["code"] = "081i97cW12Wy1V0cDsaW1VcxcW1i97c0";  //授权码 未使用的话，5分钟后过期
+//        $param['appid']="wx5b32bce922c2ac7c";
+        $key = "0FF9606C39C2CCF1515E5CE108B506F0";
+        $param["signValue"] = sign_ature(0000, $param, $key);
+
+        $url = "http://gateway.starpos.com.cn/adpweb/ehpspos3/pubSigPay.json";
+        $res = curl_request($url, true, $param, true);
+        $res = json_decode(urldecode($res), true);
+        halt($res);
+        /** 如果查询成功请求公众号支付否则返回错误信息 */
+        if ($res["returnCode"] == "000000") {
+            /** [array] 成功存入数据库 $data */
+            $data = [
+                "order_no" => $res["orderNo"],
+                "order_number" => $res["LogNo"],
+                "order_money" => $res["total_amount"],
+                "received_money" => $res["amount"],
+                "pay_time" => $res["apiTimestamp"],
+                "payer" => $res["PrepayId"],
+                "order_remark" => $res["attach"],
+                "pay_type" => "wxpay",
+                "merchant_id" => $query["mid"],
+            ];
+            $query = Db::name("order")->insertGetId($data);
+            return_msg(200, $query);
+        } else {
+            return_msg(400, $res["message"]);
+        }
+    }
+
+    public function getCode($res)
+    {
+        //回调地址
+
+        $redirect_uri = urlencode('http://pay.hzyspay.com/index.php/merchant/wechat/wxpay');
+//        halt($redirect_uri);
+        $code = "https://open.weixin.qq.com/connect/oauth2/authorize?appid=".$this->appid."&redirect_uri=".$redirect_uri."&response_type=code&scope=snsapi_base&state=202#wechat_redirect";
+
+        header("Location:".$code);
     }
 
 }

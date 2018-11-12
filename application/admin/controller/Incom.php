@@ -669,6 +669,7 @@ class Incom extends Controller
         //向新大陆接口发送请求信息
         $par = curl_request($this->url, true, $data, true);
         $par = json_decode($par, true);
+//        halt($par);
         if ($par['msg_cd'] == '000000') {
             if ($par['check_flag'] == 1) {
                 MerchantIncom::where('merchant_id', $id)->update([

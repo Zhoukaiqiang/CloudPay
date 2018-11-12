@@ -16,8 +16,8 @@ use think\Request;
 class Capital extends Common
 {
 
-//    public $url = 'https://gateway.starpos.com.cn/emercapp';//正式
-     public $url = 'http://sandbox.starpos.com.cn/emercapp';//测试
+    public $url = 'https://gateway.starpos.com.cn/emercapp';//正式
+//     public $url = 'http://sandbox.starpos.com.cn/emercapp';//测试
 
     /**
      * 结算列表
@@ -300,9 +300,9 @@ class Capital extends Common
      * @return [bool / string] msg
      */
 
-    public function commercial_edit($arg)
+    public function commercial_edit()
     {
-//        $arg=request()->post();
+        $arg=request()->post();
         $del['serviceId'] = '6060604';
         $del['version'] = 'V1.0.4';
         $data = Db::name('merchant_incom')->where('merchant_id', $arg['id'])->field('log_no,mercId,stoe_id,status,fee_rat1_scan,fee_rat3_scan,fee_rat_scan, incom_type,stl_typ,stl_sign,bus_lic_no,bse_lice_nm,crp_nm,mercAdds,bus_exp_dt,crp_id_no,crp_exp_dt,stoe_nm,stoe_area_cod,stoe_adds,trm_rec,mailbox,yhkpay_flg,alipay_flg,orgNo,cardTyp,suptDbfreeFlg,tranTyps,crp_exp_dt_tmp,fee_rat,max_fee_amt,fee_rat1,ysfcreditfee,ysfdebitfee')->find();
@@ -314,14 +314,16 @@ class Capital extends Common
         $del['stoe_cnt_tel']=$arg['mobile'];
         $del['stoe_cnt_nm']=$arg['account_name'];
         $data['orgNo']=ORG_NO;
-//        halt($data);
-        if ($data['status'] == 2) {
+        //halt($data);
+
+        if ($data['status'] == 2){
+
             $aa = [];
             foreach ($data as $k => $v) {
                 $aa[$k] = $v;
             }
             $dells = $del + $aa;
-//                halt($dells);
+                halt($dells);
             //mark 调试到这里 by--端木
             $sign_ature = sign_ature(0000, $dells);
 //                die;
