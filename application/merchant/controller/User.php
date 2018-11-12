@@ -4,11 +4,9 @@ namespace app\merchant\controller;
 
 use app\merchant\model\MerchantShop;
 use app\merchant\model\MerchantUser;
-use think\Controller;
+use think\Db;
 use think\Exception;
-use think\Loader;
 use think\Request;
-use think\Session;
 
 class User extends Common
 {
@@ -267,15 +265,21 @@ class User extends Common
      * PC端--员工列表
      * @method GET
      * @param Request $request
+     * @throws Exception
      */
     public function pc_staff_list(Request $request)
     {
         if ($request->isGet()) {
+            if (empty($this->merchant_id)) {
+                $user = Db::name("merchant_user")->where("id",$this->user_id)->field("merchant_id")->find()["merchant_id"];
+            }else {
+                $user = $this->merchant_id;
+            }
             $where = [
-                "merchant_id" => $this->merchant_id
+                "merchant_id" => $user
             ];
             $where2 = [
-                "mu.merchant_id" => $this->merchant_id
+                "mu.merchant_id" => $user
             ];
             $rows = MerchantUser::where($where)->count("id");
             $pages = page($rows);
@@ -321,18 +325,10 @@ class User extends Common
             }
         } else {
             $id = $request->param('id');
-            $where = [
-                "a.merchant_id" =>  2,
-                "a.id"  => $id
-            ];
             //获取员工信息
-            $data['list'] = MerchantUser::alias('a')
-                ->field('a.id,a.name,a.phone,a.role,b.shop_name, a.create_time, a.shop_id')
-                ->join('cloud_merchant_shop b', 'a.shop_id=b.id', 'left')
-                ->where($where)
-                ->find();
+            $data["list"] = Db::name("merchant_user")->where("id",$id)->find();
 
-            check_data($data);
+            check_data($data["list"], $data);
 
         }
 
@@ -403,24 +399,29 @@ class User extends Common
         if ($param["keyword"]) {
             $param["keyword_flag"] = "LIKE";
         }else {
-            $param["keyword"] = -2;
-            $param["keyword_flag"] = "<>";
+            $param["keyword"] = "-2";
+            $param["keyword_flag"] = "NOT LIKE";
         }
 
+        if (empty($this->merchant_id)) {
+            $user = Db::name("merchant_user")->where("id",$this->user_id)->field("merchant_id")->find()["merchant_id"];
+        }else {
+            $user = $this->merchant_id;
+        }
         $where = [
-            "mu.merchant_id|ms.merchant_id"  => ["=", $this->merchant_id],
+            "mu.merchant_id"  => ["eq", $user],
             "mu.name" => [$param["keyword_flag"], $param["keyword"]."%"],
             "ms.shop_name" => [$param["shop_flag"], $param["shop"]."%"],
         ];
 
         $rows = MerchantUser::alias("mu")
-            ->join("cloud_merchant_shop ms", "ms.id = mu.shop_id", "LEFT")
+            ->join("cloud_merchant_shop ms", "ms.id = mu.shop_id")
             ->where($where)
             ->count("mu.id");
 
         $pages = page($rows);
         $data["list"] = MerchantUser::alias("mu")
-            ->join("cloud_merchant_shop ms", "ms.id = mu.shop_id", "LEFT")
+            ->join("cloud_merchant_shop ms", "ms.id = mu.shop_id")
             ->where($where)
             ->field("mu.name,mu.phone,mu.role, mu.create_time, ms.shop_name")
             ->select();

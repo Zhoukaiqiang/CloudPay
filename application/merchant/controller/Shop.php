@@ -6,14 +6,11 @@ use app\agent\model\MerchantIncom;
 use app\merchant\model\MerchantShop;
 
 use app\merchant\model\SubBranch;
-use think\Controller;
 use think\Db;
 use think\Exception;
 use think\exception\DbException;
 use think\Request;
 use think\Session;
-use app\admin\controller\Incom;
-use app\admin\model\IncomImg;
 
 
 class Shop extends Commonality
@@ -34,7 +31,7 @@ class Shop extends Commonality
         //bnk_acnm 户名  wc_lbnk_no 开户行  stl_sign 结算标志  stl_oac结算账户 icrp_id_no 结算人身份证号    crp_exp_dt_tmp结算人身份证有限期
         $data = MerchantIncom::where('merchant_id', $merchant_id)->field('icrp_id_no,crp_exp_dt_tmp,stl_oac,bnk_acnm,wc_lbnk_no,stl_sign')->find();
 
-        if (!$data->stl_sign) {
+        if (!$data['stl_sign']) {
             $name = SubBranch::where('lbnk_no', $data['wc_lbnk_no'])->field('lbnk_nm')->find();
             $data['lbnk_nm'] = $name['lbnk_nm'];
         }
@@ -97,7 +94,7 @@ class Shop extends Commonality
         /** 如果错误则返回 */
         if ($res['msg_cd'] != "000000") {
             return_msg(400, $res["msg_dat"]);
-        }else {
+        } else {
             Db::name("merchant_incom")->where("merchant_id", $this->merchant_id)->update([
                 "status" => 2,  //商户为  ·修改未完成· 状态
                 "log_no" => $res["log_no"], // 操作完修改流水号
@@ -113,15 +110,15 @@ class Shop extends Commonality
         $data['stl_typ'] = $Merc["stl_typ"];
         $data['orgNo'] = $Merc["orgNo"];
         $data['stoe_nm'] = $data['shop_name'];
-        check_params("add_store", $data,'MerchantValidate');
+        check_params("add_store", $data, 'MerchantValidate');
         //签名域
         $data['signValue'] = sign_ature(0000, $data);
         //向新大陆接口发送请求信息
         $shop_api = curl_request($this->url, true, $data, true);
         $shop_api = json_decode($shop_api, true);
         if ($shop_api["msg_cd"] != "000000") {
-            return_msg(400,$shop_api["msg_dat"]);
-        }else {
+            return_msg(400, $shop_api["msg_dat"]);
+        } else {
             //mark 新增门店成功返回的数据还待确认
             /** 成功把返回的门店信息存入数据库 */
             $data["merchant_id"] = $this->merchant_id;
@@ -156,7 +153,7 @@ class Shop extends Commonality
         $res = json_decode($res, true);
         if ($res["msg_cd"] != "000000") {
             return_msg(400, $res["msg_dat"]);
-        }else {
+        } else {
             /** $data 组合返回数据并入库 */
             $data["check_msg"] = $res["check_msg"];
             $data["key"] = $res["key"];
@@ -164,14 +161,15 @@ class Shop extends Commonality
             $data["merchant_id"] = $this->merchant_id;
             $result = Db::name("merchant_shop")->where($param["shop_id"])->update($data);
             if ($result) {
-                return_msg(200, "操作成功！",$param["shop_id"]);
-            }else {
+                return_msg(200, "操作成功！", $param["shop_id"]);
+            } else {
                 return_msg(400, "操作失败");
             }
             //生成门店二维码
             $this->qrcode();
         }
     }
+
     /**
      * 上传图片
      * imgTyp   图片类型    6 - 门头照  7 - 场景照   8 - 收银台照
@@ -531,7 +529,12 @@ class Shop extends Commonality
      */
     public function pc_myShop()
     {
-        $merchant_id = $this->id;
+
+        if ($this->name == "user_id") {
+            $merchant_id = Db::name("merchant_user")->where("id",$this->id)->find()["merchant_id"];
+        }else {
+            $merchant_id = $this->id;
+        }
         $rows = MerchantShop::where('merchant_id', $merchant_id)->field('id')->count('id');
         $pages = page($rows);
         $res['list'] = MerchantShop::where('merchant_id', $merchant_id)
@@ -541,12 +544,7 @@ class Shop extends Commonality
 
         $res['pages']['rows'] = $rows;
         $res['pages'] = $pages;
-        if (count($res['list']) < 1) {
-
-            return_msg(400, 'error', '此商户没有添加门店');
-        } else {
-            return_msg(200, 'success', $res);
-        }
+        check_data($res["list"], $res);
     }
 
     /**
@@ -560,29 +558,56 @@ class Shop extends Commonality
      */
     public function pc_myShopQuery(Request $request)
     {
-        $merchant_id = $this->id;
-        //门店名称
-        $shop_name = $request->param('shop_name') ? $request->param('shop_name') : '0';
-        $shopsymbol = $shop_name ? 'like' : '<>';
 
-        //付款顺序   1先上菜后付款   2先付款后上菜
-        $paymentorder = $request->param('paymentorder') ? $request->param('paymentorder') : 0;
-        $paysymbol = $paymentorder ? '=' : '<>';
-        $rows = MerchantShop::where(['merchant_id' => $merchant_id, 'shop_name' => [$shopsymbol, "$shop_name%"], 'paymentorder' => [$paysymbol, $paymentorder]])
-            ->field('id')->count('id');
-        $pages = page($rows);
-        $res['list'] = MerchantShop::where(['merchant_id' => $merchant_id, 'shop_name' => [$shopsymbol, "$shop_name%"], 'paymentorder' => [$paysymbol, $paymentorder]])
-            ->limit($pages['offset'], $pages['limit'])
-            ->field('shop_name,stoe_cnt_nm,id,stoe_adds,stoe_cnt_tel')
-            ->select();
-
-        $res['pages']['rows'] = $rows;
-        $res['pages'] = $pages;
-        if (count($res['list']) < 1) {
-            return_msg(400, 'error', '没有满足条件的门店');
-        } else {
-            return_msg(200, 'success', $res);
+        $ky = $request->param("shop_name");
+        if ($ky) {
+            $k_f = "LIKE";
+            $ky = $ky."%";
+        }else {
+            $k_f = "NOT LIKE";
+            $ky = "-2";
         }
+        if ($this->name == "user_id") {
+            $user = Db::name("merchant_user")->where("id", $this->id)->find();
+            $user = $user["merchant_id"];
+        }else {
+            $user = $this->id;
+        }
+        $where = [
+            "merchant_id" => ["eq", $user],
+            "shop_name"  => [$k_f, $ky],
+        ];
+        $row = Db::name("merchant_shop")->where($where)->count();
+
+        $pages = page($row);
+        $shop["list"] = Db::name("merchant_shop")->where($where)->limit($pages["offset"], $pages["limit"])->select();
+
+        $shop["pages"] = $pages;
+        check_data($shop["list"], $shop);
+
+//        $merchant_id = $this->id;
+//        //门店名称
+//        $shop_name = $request->param('shop_name') ? $request->param('shop_name') : '0';
+//        $shopsymbol = $shop_name ? 'like' : '<>';
+//
+//        //付款顺序   1先上菜后付款   2先付款后上菜
+//        $paymentorder = $request->param('paymentorder') ? $request->param('paymentorder') : 0;
+//        $paysymbol = $paymentorder ? '=' : '<>';
+//        $rows = MerchantShop::where(['merchant_id' => $merchant_id, 'shop_name' => [$shopsymbol, "$shop_name%"], 'paymentorder' => [$paysymbol, $paymentorder]])
+//            ->field('id')->count('id');
+//        $pages = page($rows);
+//        $res['list'] = MerchantShop::where(['merchant_id' => $merchant_id, 'shop_name' => [$shopsymbol, "$shop_name%"], 'paymentorder' => [$paysymbol, $paymentorder]])
+//            ->limit($pages['offset'], $pages['limit'])
+//            ->field('shop_name,stoe_cnt_nm,id,stoe_adds,stoe_cnt_tel')
+//            ->select();
+//
+//        $res['pages']['rows'] = $rows;
+//        $res['pages'] = $pages;
+//        if (count($res['list']) < 1) {
+//            return_msg(400, 'error', '没有满足条件的门店');
+//        } else {
+//            return_msg(200, 'success', $res);
+//        }
 
 
     }

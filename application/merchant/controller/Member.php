@@ -17,6 +17,7 @@ use app\merchant\model\ShopActiveRecharge;
 use app\merchant\model\ShopActiveShare;
 use app\merchant\model\TotalMerchant;
 use think\Controller;
+use think\Exception;
 use think\Request;
 
 class Member extends Common
@@ -620,40 +621,40 @@ class Member extends Common
     }
 
     /**
-     *会员详情搜索
+     * 会员详情搜索
      * @param Request $request
      * @throws \think\db\exception\DataNotFoundException
      * @throws \think\db\exception\ModelNotFoundException
      * @throws \think\exception\DbException
+     * @throws Exception
      */
     public function pc_member_detail_search(Request $request)
     {
         //获取会员id
-        $member_id=$request->param('id');
-        $query['start_time']=$request->param('start_time') ? $request->param('start_time') : '';
-        if(!empty($query['start_time'])) {
-            $query['end_time'] = $request->param('end_time') ? $request->param('end_time') : '';
-            if (empty($query['end_time'])) {
-                return_msg(400, '请选择结束时间');
-            }
-            if (time() - $query['start_time'] > 5604000) {
-                return_msg(400, '您选择的时间大于两个月，请重新选择！');
-            }
-            $time=[$query['start_time'],$query['end_time']];
-            $row = MemberRecharge::where('member_id',$member_id)
-                ->whereTime('recharge_time','between',$time)
-                ->count();
-            $pages=page($row);
-
-            $data['list'] = MemberRecharge::field('order_no,recharge_time,pay_type,order_money,discount_amount,amount')
-                ->where('member_id',$member_id)
-                ->whereTime('recharge_time','between',$time)
-                ->limit($pages['offset'],$pages['limit'])
-                ->order('recharge_time desc')
-                ->select();
-            $data['page'] = $pages;
-            check_data($data);
+        $member_id = $request->param('id');
+        $time = $request->param("time");
+        if (!$time) {
+            $t_f = ">=";
+            $time = -2;
+        }else {
+            $t_f = "between";
+            $night = strtotime(date("Y-m-d 24:59:59", (int)$time));
+            $time = [$time, $night];
         }
+
+        $row = MemberRecharge::where('member_id',$member_id)
+            ->whereTime('recharge_time',"between",$time)
+            ->count();
+        $pages = page($row);
+
+        $data['list'] = MemberRecharge::field('order_no,recharge_time,pay_type,order_money,discount_amount,amount')
+            ->where('member_id',$member_id)
+            ->whereTime('recharge_time',$t_f,$time)
+            ->limit($pages['offset'],$pages['limit'])
+            ->order('recharge_time desc')
+            ->select();
+        $data['page'] = $pages;
+        check_data($data["list"], $data);
     }
 
     /**

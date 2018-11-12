@@ -12,7 +12,6 @@ namespace app\merchant\controller;
 use app\merchant\model\MerchantShop;
 use app\merchant\model\MerchantUser;
 use app\merchant\model\Order;
-use app\merchant\model\TotalMerchant;
 use think\Db;
 use think\Request;
 use think\Session;
@@ -31,23 +30,23 @@ class Index extends Common
     public function index(Request $request)
     {
         //role 1服务员 2店长 3收银员 -1商户
-        $role = Session::get("username_","app")["role"];
+        $role = Session::get("username_", "app")["role"];
         //用户ID
-        $id = Session::get("username_","app")["id"];
+        $id = Session::get("username_", "app")["id"];
         //获取门店ID
         $k = MerchantUser::where('id', $id)->field('shop_id')->find();
-        $data[ 'shop_id' ] = $k->shop_id;
+        $data['shop_id'] = $k->shop_id;
         if ($role == 1) {
             $name = 'user_id';
-        }elseif($role == 3){
+        } elseif ($role == 3) {
             $name = 'person_info_id';
-        }elseif($role == 2) {
-            $id=$k->shop_id;
-            $name='shop_id';
-        }else{
-            $k=MerchantShop::where('merchant_id',$id)->field('id')->find();
-            $data['shop_id']=$k['id'];
-            $name='merchant_id';
+        } elseif ($role == 2) {
+            $id = $k->shop_id;
+            $name = 'shop_id';
+        } else {
+            $k = MerchantShop::where('merchant_id', $id)->field('id')->find();
+            $data['shop_id'] = $k['id'];
+            $name = 'merchant_id';
         }
 
 
@@ -82,30 +81,35 @@ class Index extends Common
                 $time = strtotime("today");
                 $time_flag = ">=";
             }
-            $result = Order::where("merchant_id" , $this->merchant_id)
+            if ($this->merchant_id) {
+                $mid = $this->merchant_id;
+            } else {
+                $mid = Db::name("merchant_user")->where("id", $this->user_id)->find()["merchant_id"];
+            }
+            $result = Order::where("merchant_id", $mid)
                 ->whereTime("pay_time", $time_flag, $time)
                 ->select();
 
             check_data($result, '', 0);
             /** 实收金额 */
-            $data[ "count" ][ 'true_money' ] = 0;
+            $data["count"]['true_money'] = 0;
             /** 交易金额 */
-            $data[ "count" ][ 'trad_money' ] = 0;
+            $data["count"]['trad_money'] = 0;
             /** 优惠金额 */
-            $data[ "count" ][ 'discount' ] = 0;
+            $data["count"]['discount'] = 0;
 
             foreach ($result as $k => &$v) {
-                $data[ "count" ][ 'true_money' ] += $v[ "received_money" ];
+                $data["count"]['true_money'] += $v["received_money"];
 
-                $data[ "count" ][ 'trad_money' ] += $v[ "order_money" ];
+                $data["count"]['trad_money'] += $v["order_money"];
 
-                $data[ "count" ][ 'trad_num' ] = $k;
+                $data["count"]['trad_num'] = $k;
 
-                $data[ "count" ][ 'discount' ] += $v[ "discount" ];
+                $data["count"]['discount'] += $v["discount"];
 
             }
             $where = [
-                "merchant_id" => $this->merchant_id,
+                "merchant_id" => $mid,
                 "pay_time" => [$time_flag, $time]
             ];
 
@@ -121,7 +125,6 @@ class Index extends Common
             $data["received"]["ali_num"] = Order::where($where)->where(["pay_type" => "alipay"])->count("id");
             $data["received"]["cash_money"] = Order::where($where)->where(["pay_type" => "cash"])->sum("received_money");
             $data["received"]["cash_num"] = Order::where($where)->where(["pay_type" => "cash"])->count("id");
-
 
             check_data($data);
         }
@@ -147,13 +150,18 @@ class Index extends Common
                 $time_flag = ">=";
             }
             /** @var [Array] 条件 $where */
+            if ($this->merchant_id) {
+                $mid = $this->merchant_id;
+            } else {
+                $mid = Db::name("merchant_user")->where("id", $this->user_id)->find()["merchant_id"];
+            }
             $where = [
-                "merchant_id" => $this->merchant_id,
+                "merchant_id" => $mid,
                 "pay_time" => [$time_flag, $time]
             ];
 
             $where_join = [
-                "o.merchant_id" => $this->merchant_id,
+                "o.merchant_id" => $mid,
                 "o.pay_time" => [$time_flag, $time],
             ];
 
@@ -174,20 +182,20 @@ class Index extends Common
     public function pc_diagram(Request $request)
     {
         if ($request->get()) {
-            $shop_id =  $request->param("shop_id");
+            $shop_id = $request->param("shop_id");
 
-            if(!empty($shop_id)) {
+            if (!empty($shop_id)) {
                 $shop_flag = "eq";
-            }else {
+            } else {
                 $shop_flag = "<>";
                 $shop_id = -2;
             }
 
             $i = -7;
             /** 默认展示7天数据 */
-            while($i < 0) {
-                $morning = strtotime(date('Y-m-d 00:00:00', strtotime($i .' days')));
-                $night = strtotime(date('Y-m-d 23:59:59', strtotime($i .' days')));
+            while ($i < 0) {
+                $morning = strtotime(date('Y-m-d 00:00:00', strtotime($i . ' days')));
+                $night = strtotime(date('Y-m-d 23:59:59', strtotime($i . ' days')));
                 $date = [$morning, $night];
 
                 $data['chartData'][] = Order::where("merchant_id", $this->merchant_id)
@@ -198,13 +206,13 @@ class Index extends Common
                 $i++;
             }
 
-            check_data(collection($data["chartData"])->toArray(), '',false);
-            foreach($data["chartData"] as $k => $v) {
+            check_data(collection($data["chartData"])->toArray(), '', false);
+            foreach ($data["chartData"] as $k => $v) {
 
                 $filted_data[] = [
                     "amount" => $v["received_money"],
-                    "count"    => $v["num"],
-                    "average" =>  (int)$v["num"] ? (int)$v["received_money"] / (int)$v["num"] : 0,
+                    "count" => $v["num"],
+                    "average" => (int)$v["num"] ? (int)$v["received_money"] / (int)$v["num"] : 0,
                     "pay_time" => date('Y-m-d', strtotime($i + $k . ' days')),
                 ];
             }
@@ -276,6 +284,23 @@ class Index extends Common
     }
 
 
+    public function pc_search_it(Request $request)
+    {
+        if ($request->isGet()) {
+            if ($this->merchant_id) {
+                $mid = $this->merchant_id;
+            } else {
+                $mid = Db::name("merchant_user")->where("id", $this->user_id)->find()["merchant_id"];
+            }
+            /** 搜索可选项--------- 返回所有门店 */
+            $data["shop_list"] = MerchantShop::where(["merchant_id" => $mid])->field("shop_name,id")->select();
+
+            /** 搜索可选项--------- 返回所有收银员 */
+            $data["cashier_list"] = MerchantUser::where(["merchant_id" => ["eq", $mid], "role" => ["eq", 1]])->field("name,id")->select();
+
+            check_data($data);
+        }
+    }
     /**
      * 返回列表数据
      * @param $where
@@ -288,33 +313,24 @@ class Index extends Common
     {
         $Order = new Order();
 
-        /** 搜索可选项--------- 返回所有门店 */
-        $data[ "shop_list" ] = MerchantShop::where(["merchant_id" => $this->merchant_id])->field("shop_name,id")->select();
-
-        /** 搜索可选项--------- 返回所有收银员 */
-        $data[ "cashier_list" ] = MerchantUser::where(["merchant_id" => ["eq", $this->merchant_id], "role" => ["eq", 1]])->field("name,id")->select();
-
         /** 默认展示今天的 门店数据 */
         $rows = $Order::where($where)->count("id");
         $pages = page($rows);
-        $field = ['o.id','o.order_number', 'o.pay_time', "shop.shop_name", "o.cashier", "o.pay_type", "o.received_money", "o.order_money", "o.discount", "o.status","c.name"];
+        $field = ['o.id', 'o.order_number', 'o.pay_time', "shop.shop_name", "o.cashier", "o.pay_type", "o.received_money", "o.order_money", "o.discount", "o.status", "c.name"];
 
-        $data[ "list" ] = $Order::where($where_join)
+        $data["list"] = $Order::where($where_join)
             ->alias("o")
             ->field($field)
-            ->join("cloud_merchant_shop shop", "o.shop_id","left")
-            ->join('cloud_merchant_user c','o.user_id=c.id',"left")
+            ->join("cloud_merchant_shop shop", "o.shop_id", "left")
+            ->join('cloud_merchant_user c', 'o.user_id=c.id', "left")
             ->group("o.id")
-            ->limit($pages[ "offset" ], $pages[ "limit" ])->field($field)->select();
-        $data[ "pages" ] = $pages;
-        $data[ "pages" ][ "rows" ] = $rows;
+            ->limit($pages["offset"], $pages["limit"])->field($field)->select();
+        $data["pages"] = $pages;
+        $data["pages"]["rows"] = $rows;
 
 
-        check_data($data["list"], $data, 1);
+        check_data($data["list"], $data);
     }
-
-
-
 
 
 }

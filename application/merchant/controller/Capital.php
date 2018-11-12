@@ -126,6 +126,9 @@ class Capital extends Common
     public function pc_profile()
     {
         if (\request()->isGet()) {
+            if (empty($this->merchant_id)) {
+                $this->merchant_id = Db::name("merchant_user")->where("id",$this->user_id)->field("merchant_id")->find()["merchant_id"];
+            }
             $res = TotalMerchant::get($this->merchant_id);
 
             $amount = Order::where(["merchant_id" => $this->merchant_id, "pay_time" => [">", 0]])->sum("received_money");
@@ -423,6 +426,7 @@ class Capital extends Common
      * @throws \think\db\exception\DataNotFoundException
      * @throws \think\db\exception\ModelNotFoundException
      * @throws \think\exception\DbException
+     * @throws Exception
      */
     public function pc_bill(Request $request)
     {
@@ -468,11 +472,10 @@ class Capital extends Common
                         ->join("cloud_order o", "o.shop_id = ms.id", "RIGHT")
                         ->where("ms.id", $i)
                         ->where($where)
-                        //mark
-//                        ->whereTime("pay_time", "today")
+                        ->whereTime("pay_time", "today")
                         ->where("o.pay_type", $type)
                         ->field($field)
-//                        ->group("o.id")
+                        ->group("o.id")
                         ->find();
 
 
