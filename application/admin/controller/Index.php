@@ -28,10 +28,10 @@ class Index extends Admin
 
     /**
      *  获取首页统计数据
-     *  @param $start_time [int][string] 开始时间 时间戳
-     *  @param $end_time  [int]  结束时间 时间戳
-     *  @return $data     [json] 筛选后的数据
-     *  @throws Exception
+     * @param $start_time [int][string] 开始时间 时间戳
+     * @param $end_time [int]  结束时间 时间戳
+     * @return $data     [json] 筛选后的数据
+     * @throws Exception
      */
     public function index(Request $request)
     {
@@ -50,14 +50,16 @@ class Index extends Admin
             $Mea = (int)$member[0]['amount'];
             $member_wx = MemberRecharge::whereTime("recharge_time", "yesterday")->where("pay_type", "wxpay")->field("sum(amount) amount, count(id) id")->select();
             $member_ali = MemberRecharge::whereTime("recharge_time", "yesterday")->where("pay_type", "alipay")->field("sum(amount) amount, count(id) id")->select();
-            $member_wx = collection($member_wx)->toArray();$member_ali = collection($member_ali)->toArray();
-            $meWx = (int)$member_wx[0]['amount'];$meAli = (int)$member_ali[0]["amount"];
+            $member_wx = collection($member_wx)->toArray();
+            $member_ali = collection($member_ali)->toArray();
+            $meWx = (int)$member_wx[0]['amount'];
+            $meAli = (int)$member_ali[0]["amount"];
             $total = Db::name('order')->whereTime('pay_time', "yesterday")->sum('received_money') + $Mea;
             $total_num = Db::name('order')->whereTime('pay_time', "yesterday")->count('id') + $member[0]['id'];
             $wxpay = Db::name('order')->whereTime('pay_time', "yesterday")->where(['pay_type' => 'wxpay'])->sum('received_money') + $meWx;
-            $wxpay_num = Db::name('order')->whereTime('pay_time', "yesterday")->where(['pay_type' => 'wxpay'])->count('id')  + $member_wx[0]['id'];
+            $wxpay_num = Db::name('order')->whereTime('pay_time', "yesterday")->where(['pay_type' => 'wxpay'])->count('id') + $member_wx[0]['id'];
             $alipay = Db::name('order')->whereTime('pay_time', "yesterday")->where(['pay_type' => 'alipay',])->sum('received_money') + $meAli;
-            $alipay_num = Db::name('order')->whereTime('pay_time', "yesterday")->where(['pay_type' => 'alipay'])->count('id')  + $member_ali[0]['id'];
+            $alipay_num = Db::name('order')->whereTime('pay_time', "yesterday")->where(['pay_type' => 'alipay'])->count('id') + $member_ali[0]['id'];
 
             /** @var [int] 其他类交易 $etc */
             $mEtc = $Mea - $meWx - $meAli;
@@ -73,8 +75,10 @@ class Index extends Admin
             $Mea = (int)$member[0]['amount'];
             $member_wx = MemberRecharge::whereTime("recharge_time", $time_flag, [$past, $present])->where("pay_type", "wxpay")->field("sum(amount) amount, count(id) id")->select();
             $member_ali = MemberRecharge::whereTime("recharge_time", $time_flag, [$past, $present])->where("pay_type", "alipay")->field("sum(amount) amount, count(id) id")->select();
-            $member_wx = collection($member_wx)->toArray();$member_ali = collection($member_ali)->toArray();
-            $meWx = (int)$member_wx[0]['amount'];$meAli = (int)$member_ali[0]["amount"];
+            $member_wx = collection($member_wx)->toArray();
+            $member_ali = collection($member_ali)->toArray();
+            $meWx = (int)$member_wx[0]['amount'];
+            $meAli = (int)$member_ali[0]["amount"];
 
             $total = Db::name('order')->whereTime('pay_time', $time_flag, [$past, $present])->sum('received_money') + $Mea;;
             $total_num = Db::name('order')->whereTime('pay_time', $time_flag, [$past, $present])->count('id') + $member[0]['id'];
@@ -87,8 +91,8 @@ class Index extends Admin
             $mEtc = $Mea - $meWx - $meAli;
             $mEtc_num = $member[0]["id"] - $member_wx[0]["id"] - $member_ali[0]["id"];
 
-            $etc = Db::name('order')->whereTime('pay_time', $time_flag, [$past, $present])->where('pay_type' , 'etc')->sum('received_money');
-            $etc_num = Db::name('order')->whereTime('pay_time', $time_flag, [$past, $present])->where('pay_type','etc')->count('id') ;
+            $etc = Db::name('order')->whereTime('pay_time', $time_flag, [$past, $present])->where('pay_type', 'etc')->sum('received_money');
+            $etc_num = Db::name('order')->whereTime('pay_time', $time_flag, [$past, $present])->where('pay_type', 'etc')->count('id');
 
         }
 
@@ -193,11 +197,8 @@ class Index extends Admin
 
     /**
      * 运营后台代理商管理搜索
-     * @param Request $request [array]
-     * @param  name  [string] 模糊关键字
-     * @param contract_time [int]  例： 合同有限期选择为 30天内 传来 现在的时间戳+30天的时间戳
-     * @param channel [int]  如果直联间联都选择，传——3，直联——1，间连——2
-     * @description 联系人/商户名称/联系电话
+     * @param Request $request
+     * @throws Exception
      * @throws \think\db\exception\DataNotFoundException
      * @throws \think\db\exception\ModelNotFoundException
      * @throws \think\exception\DbException
@@ -206,68 +207,42 @@ class Index extends Admin
     {
         /* 搜索条件项 */
 
-        $this->query['keywords'] = $request->param('keywords');
-        $this->query['status'] = $request->param('status');
-        $this->query['agent_area'] = $request->param('agent_area');
-        $this->query['contract_time'] = $request->param('contract_time');
+        $ky = $request->param('keywords');
+        $status = $request->param('status');
+        $agent_area = $request->param('agent_area');
+//        $contract_time = $request->param('contract_time');
         /* 传入参数并返回数据 */
-        $this->get_search_result($this->query);
-
-    }
-
-
-    /**
-     * @param $db [string] 要查找的数据表
-     * @param array $param [搜索参数]
-     * @throws \think\db\exception\DataNotFoundException
-     * @throws \think\db\exception\ModelNotFoundException
-     * @throws \think\exception\DbException
-     * @return [json] 搜索结果
-     */
-    public function get_search_result(Array $param)
-    {
         /* 判断参数是否为默认，默认则不进入查询 */
-        if (empty($param['keywords'])) {
+        if (empty($ky)) {
             $param['keywords_flag'] = 'NOT LIKE';
             $param['keywords'] = '-2';
         } else {
             $param['keywords_flag'] = 'LIKE';
-            $param['keywords'] = $param['keywords'] . "%";
+            $param['keywords'] = $ky . "%";
         }
-
-        if (empty($param['status'])) {
-            $param['status_flag'] = '<>';
-            $param['status'] = -2;
-        } else {
+        if ($status == "-1") {
+            $param['status_flag'] = "eq";
+            $param["status"] = 0;
+        } elseif ($status == "1") {
             $param['status_flag'] = 'eq';
-        }
-
-        if (empty($param['agent_area'])) {
-            $param['agent_area_flag'] = 'not like';
-            $param['agent_area'] = '-2';
+            $param["status"] = 1;
         } else {
-            $param['agent_area_flag'] = 'like';
+            $param['status'] = -2;
+            $param['status_flag'] = '>';
         }
 
-        switch ($param['contract_time']) {
-            case -2:
-                $param['contract_time_flag'] = '>';
-                break;
-            case 'expired':
-                $param['contract_time_flag'] = '<';
-                $param['contract_time'] = time();
-                break;
-            default:
-                $param['contract_time_flag'] = '>=';
-                $param['contract_time'] = -2;
+        if (!$agent_area) {
+            $param['agent_area_flag'] = 'not like';
+            $param['agent_area'] = "-2";
+        } else {
+            $param['agent_area_flag'] = "LIKE";
         }
-
 
         $total = Db::name('total_agent')->count('id');
         //查询有多少条数据
         $rows = Db::name('total_agent')
             ->where([
-                'agent_name|contact_person|agent_phone' => [$param['keywords_flag'], $param['keywords'] ],
+                'agent_name|contact_person|agent_phone' => [$param['keywords_flag'], $param['keywords']],
                 'status' => [$param['status_flag'], $param['status']],
                 'agent_area' => [$param['agent_area_flag'], $param['agent_area']],
             ])
@@ -289,11 +264,7 @@ class Index extends Admin
         $res['pages'] = $pages;
 
         $res['pages']['total_row'] = $total;
-        if ($rows !== 0) {
-            $this->return_msg(200, '搜索结果', $res);
-        } else {
-            $this->return_msg(400, '没有数据');
-        }
+        check_data($res["data"], $res);
 
     }
 
@@ -521,10 +492,11 @@ class Index extends Admin
             $pay_type_flag = "eq";
         }
 
-        $i = -7; $sum = [];
+        $i = -7;
+        $sum = [];
         //make
-        while($i < 0) {
-            $past = date('Y-m-d', strtotime($i .' days'));
+        while ($i < 0) {
+            $past = date('Y-m-d', strtotime($i . ' days'));
             $data['chartData'][] = Db::name('order')
                 ->where("pay_type", $pay_type_flag, $pay_type)
                 ->whereTime('pay_time', $past)
@@ -536,10 +508,10 @@ class Index extends Admin
 
             $i++;
         }
-        foreach($data["chartData"] as $k => $v) {
+        foreach ($data["chartData"] as $k => $v) {
             $filted_data[] = [
                 "amount" => $v,
-                "count"    => $sum[$k],
+                "count" => $sum[$k],
                 "pay_time" => date('Y-m-d', strtotime(-7 + $k . ' days')),
             ];
         }
@@ -630,7 +602,6 @@ class Index extends Admin
     }
 
 
-
     public function return_msg($code, $msg = '', $data = [])
     {
         /* 组合数据 */
@@ -667,12 +638,12 @@ class Index extends Admin
      */
     public function callback($param = null)
     {
-        $Order =new Order();
+        $Order = new Order();
         if (empty($param)) {
             return_msg(400, "fail");
         }
         /** @var [array] 接收参数 $data */
-        if (isset($param["TxnCode"]) && ($param["TxnCode"] == "L020" || $param["TxnCode"] == "L030") ) {
+        if (isset($param["TxnCode"]) && ($param["TxnCode"] == "L020" || $param["TxnCode"] == "L030")) {
             /** 银行卡消费 */
             $data["pay_type"] = "etc";
         } elseif (isset($param["PayChannel"])) {
@@ -687,12 +658,12 @@ class Index extends Admin
         }
         $data = [
             "pay_time" => strtotime($param["TxnDate"] + $param["TxnTime"]),    //结算日期
-            "merId"  =>        $param["AgentId"],    // 合作商号
-            "orderNo"  =>   $param["logNo"],  //交易流水号
+            "merId" => $param["AgentId"],    // 合作商号
+            "orderNo" => $param["logNo"],  //交易流水号
             "received_money" => $param["TxnAmt"],  //实际金额
             "order_money" => $param["TxnAmt"],  //交易金额
-            "status"      => $param["TxnStatus"], //交易状态
-            "order_remark"    => $param["attach"],  //附加信息
+            "status" => $param["TxnStatus"], //交易状态
+            "order_remark" => $param["attach"],  //附加信息
         ];
 
         /** 根据流水号，判断要更新哪个订单 */
@@ -701,7 +672,7 @@ class Index extends Admin
         $res = $Order->where("LogNo", $param["logNo"])->save($data);
         if ($res) {
             return_msg(200, "success");
-        }else {
+        } else {
             return_msg(400, "fail");
         }
 

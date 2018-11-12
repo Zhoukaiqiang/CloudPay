@@ -13,6 +13,7 @@ use app\merchant\model\ShopActiveShare;
 use Endroid\QrCode\QrCode;
 use think\Controller;
 use think\Db;
+use think\Exception;
 use think\Request;
 use think\Session;
 
@@ -732,6 +733,7 @@ class Active extends Common
      * @throws \think\db\exception\DataNotFoundException
      * @throws \think\db\exception\ModelNotFoundException
      * @throws \think\exception\DbException
+     * @throws Exception
      */
     public function pc_cancel_record()
     {
@@ -760,10 +762,11 @@ class Active extends Common
     }
 
     /**
-     *发放记录
+     * 发放记录
      * @throws \think\db\exception\DataNotFoundException
      * @throws \think\db\exception\ModelNotFoundException
      * @throws \think\exception\DbException
+     * @throws Exception
      */
     public function pc_issue_record()
     {
@@ -787,6 +790,7 @@ class Active extends Common
      * @throws \think\db\exception\DataNotFoundException
      * @throws \think\db\exception\ModelNotFoundException
      * @throws \think\exception\DbException
+     * @throws Exception
      */
     public function pc_cancel_record_search(Request $request)
     {
@@ -812,8 +816,8 @@ class Active extends Common
                 ->whereTime('a.cancel_time','between',$time)
                 ->count();
             $pages=page($row);
-            $data['list']=MemberExclusive::alias('a')
-                ->field('a.id,a.cancel_time,a.order_number,a.status,b.member_phone,c.name user_name,d.name active_name,d.coupons_money,d.order_money')
+            $data['list'] = MemberExclusive::alias('a')
+                ->field('a.id,a.cancel_time,a.order_number,a.status,b.member_phone,c.name user_name,d.coupons_title active_name,d.coupons_money,d.order_money,d.consump_number,d.last_consump,d.recharge_total,d.consump_total,d.register_status')
                 ->join($where)
                 ->where(['a.merchant_id'=>$this->merchant_id,'a.status'=>0])
                 ->whereTime('a.cancel_time','between',$time)
@@ -821,7 +825,7 @@ class Active extends Common
                 ->select();
             $data['page']=$pages;
 
-            check_data($data);
+            check_data($data["list"], $data);
         }
     }
 
@@ -832,7 +836,7 @@ class Active extends Common
      * @throws \think\db\exception\ModelNotFoundException
      * @throws \think\exception\DbException
      */
-    public function pc_issue_record_search(Request $request)
+    public function pc_is(Request $request)
     {
         $query['start_time']=$request->param('start_time') ? $request->param('start_time') : '';
         if(!empty($query['start_time'])) {
@@ -849,15 +853,12 @@ class Active extends Common
                 ->whereTime('create_time','between',$time)
                 ->count();
             $pages=page($row);
-            $data['list']=ShopActiveExclusive::field('create_time,coupons_title,coupons_money,order_money')
-                ->where('merchant_id',$this->merchant_id)
+            $data['list']=ShopActiveExclusive::where('merchant_id',$this->merchant_id)
                 ->whereTime('create_time','between',$time)
                 ->limit($pages['offset'],$pages['limit'])
                 ->select();
             $data['page'] = $pages;
-            check_data($data);
+            check_data($data["list"], $data);
         }
     }
-
-
 }

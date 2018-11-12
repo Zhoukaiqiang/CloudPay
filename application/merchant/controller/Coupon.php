@@ -26,7 +26,6 @@ class Coupon extends Commonality
         //核销优惠券id
         $id=$request->param('id');
 
-
         //查询优惠券
         if($sncode){
             //优惠券查询     状态 0已核销 1进行中

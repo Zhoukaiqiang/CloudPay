@@ -194,8 +194,6 @@ class Index extends Controller
 
                 $i++;
             }
-
-
             foreach ($data["chartData"] as $k => $v) {
                 $filted_data[] = [
                     "amount" => $v,
@@ -203,8 +201,6 @@ class Index extends Controller
                     "pay_time" => date('Y-m-d', strtotime($i + $k . ' days')),
                 ];
             }
-
-
             check_data($filted_data);
         }
     }
@@ -286,19 +282,32 @@ class Index extends Controller
      * @return \think\Response
      * @throws Exception
      */
-    public function trad()
+    public function trad(Request $request)
     {
         //获取当前代理商id
         $agent_id = session('username_')["id"];
 
+        $ky = $request->param("ky");
+        $deal = $request->param("deal");
+        if ($ky) {
+            $k_f = "LIKE";
+            $ky = $ky . "%";
+        }else {
+            $k_f = "NOT LIKE";
+            $ky = "-2";
+        }
+
+        halt(1);
+        $where = ["name", $k_f, $ky];
         //获取总行数
         $rows = TotalMerchant::alias('a')
             ->join('cloud_order c', 'c.merchant_id=a.id', 'left')
             ->where('a.agent_id', $agent_id)
-            ->whereTime('pay_time', '>=', 'yesterday')
+            ->where($where)
+            ->whereTime('pay_time',  'yesterday')
             ->group('a.id')
             ->count();
-        //分页
+
         $pages = page($rows);
         //根据代理商id查询昨日交易商户
         $data['list'] = TotalMerchant::alias('a')
@@ -306,7 +315,8 @@ class Index extends Controller
             ->join('cloud_agent_partner b', 'a.partner_id=b.id', 'left')
             ->join('cloud_order c', 'c.merchant_id=a.id', 'left')
             ->where('a.agent_id', $agent_id)
-            ->whereTime('pay_time', '>=', 'yesterday')
+            ->where($where)
+            ->whereTime('pay_time', 'yesterday')
             ->group('a.id')
             ->limit($pages['offset'], $pages['limit'])
             ->select();
@@ -336,18 +346,13 @@ class Index extends Controller
             $v['wxpay_number'] = $wxpay_number;
         }
         $data['pages'] = $pages;
-        if (count($data['list'])) {
-            return_msg(200, 'success', $data);
-        } else {
-            return_msg(400, "没有数据");
-        }
-
+        check_data($data["list"], $data);
     }
 
     /**
      * 变更员工
      *
-     * @param  id 商户id
+     * @param  [int] id 商户id
      * @return \think\Response
      */
     public function change_partner(Request $request)
@@ -856,7 +861,6 @@ class Index extends Controller
     {
         $name = $request->param('keyword');
         //获取合伙人id
-        $partner_id = $request->param('partner_id');
         $deal = $request->param('deal');
         $create_time = $request->param('opening_time');
 
@@ -867,12 +871,6 @@ class Index extends Controller
             $deal = -2;
         }
 
-        if ($partner_id) {
-            $partner_f = "eq";
-        } else {
-            $partner_f = "neq";
-            $partner_id = -2;
-        }
         if ($name) {
             $name_f = "LIKE";
             $name = $name . "%";
@@ -896,7 +894,6 @@ class Index extends Controller
             ->join('cloud_order', 'a.id=cloud_order.merchant_id')
             ->join('cloud_agent_partner', 'cloud_agent_partner.id=a.partner_id')
             ->where('a.name', $name_f, $name)
-            ->where('a.partner_id', $partner_f, $partner_id)
             ->where('a.agent_id', Session::get("username_")['id'])
             ->whereTime('cloud_order.pay_time', $create_f, $create_time)
             ->group('a.id')

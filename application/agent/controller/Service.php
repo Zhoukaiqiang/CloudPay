@@ -22,10 +22,10 @@ class Service extends Agent
         $id = Session::get("username_")['id'];
         $status = $request->param("status");
         $ky = $request->param("ky");
-        if ($status) {
+        if ($status !== null) {
             $status_f = "eq";
         } else {
-            $status_f = "neq";
+            $status_f = ">";
             $status = -2;
         }
         if ($ky) {
@@ -51,11 +51,7 @@ class Service extends Agent
             ->limit($pages['offset'], $pages['limit'])->select();
         $data['pages'] = $pages;
 
-        if (count($data['list'])) {
-            return_msg(200, 'success', $data);
-        } else {
-            return_msg(400, "没有数据");
-        }
+        check_data($data["list"], $data);
     }
 
     /**

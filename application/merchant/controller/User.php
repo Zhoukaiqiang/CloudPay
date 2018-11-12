@@ -134,8 +134,7 @@ class User extends Common
                 //检查手机号是否存在
                 check_phone_exists("cloud_merchant_user", $data['phone'], 0);
 
-
-                $data['password'] = addslashes(encrypt_password($data['password'], $data['phone']));
+                $data['password'] = encrypt_password($data['password'], $data['phone']);
 
                 $result = new MerchantUser();
 
@@ -158,7 +157,7 @@ class User extends Common
                 //查询手机号是否存在
                 check_phone_exists("cloud_merchant_user", $data["phone"], 0);
 
-                $data['password'] = addslashes(encrypt_password($data['password'], $data['phone']));
+                $data['password'] = encrypt_password($data['password'], $data['phone']);
                 $result = new MerchantUser($data);
 
                 if ($result->save()) {
