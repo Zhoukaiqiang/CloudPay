@@ -453,20 +453,20 @@ class Active extends Common
         $shop_name=MerchantShop::field('shop_name,merchant_id')->where('id',$shop_id)->find();
         $merchant_id=$shop_name['merchant_id'];
         $url="https://api.weixin.qq.com/cgi-bin/message/template/send?access_token=".$access_token;
-      foreach($openid as $v){
-          $arr=array(
-              "touser"=>$v['openid'],
-              "template_id"=>"Jo5aZi-6uWfA7Vl_gTGqsaABqeIfuJIzrXBRe3cDOIg",
-              "url"=>"http://pay.hzyspay.com/incom/share?money=$money&lowest_consump=$lowest_consump&merchant_id=$merchant_id&shop_name=".$shop_name['shop_name'],
-              "data"=>array(
-                  'first'=>array('value'=>'点击获取更多优惠'),
-                  'keyword1'=>array('value'=>date("Y-m-d H:i:s"),'color'=>'#173177'),
-              ),
-          );
+        foreach($openid as $v){
+            $arr=array(
+                "touser"=>$v['openid'],
+                "template_id"=>"Jo5aZi-6uWfA7Vl_gTGqsaABqeIfuJIzrXBRe3cDOIg",
+                "url"=>"http://pay.hzyspay.com/incom/share?money=$money&lowest_consump=$lowest_consump&merchant_id=$merchant_id&shop_name=".$shop_name['shop_name'],
+                "data"=>array(
+                    'first'=>array('value'=>'点击获取更多优惠'),
+                    'keyword1'=>array('value'=>date("Y-m-d H:i:s"),'color'=>'#173177'),
+                ),
+            );
 //        $postjson=json_encode($arr);
-          $res=curl_request($url,true,$arr,true);
+            $res=curl_request($url,true,$arr,true);
 
-      }
+        }
     }
 
     /**
@@ -735,12 +735,14 @@ class Active extends Common
      */
     public function pc_cancel_record()
     {
+
         $where=[
             ['cloud_merchant_member b','a.member_id=b.id','left'],
             ['cloud_merchant_user c','a.user_id=c.id','left'],
             ['cloud_shop_active_exclusive d','a.exclusive_id=d.id','left']
         ];
         $row=MemberExclusive::alias('a')
+
             ->join($where)
             ->where(['a.merchant_id'=>$this->merchant_id,'a.status'=>0])
             ->count();
@@ -766,7 +768,7 @@ class Active extends Common
     public function pc_issue_record()
     {
         $row=ShopActiveExclusive::
-            where('merchant_id',$this->merchant_id)
+        where('merchant_id',$this->merchant_id)
             ->count();
 
         $pages=page($row);
