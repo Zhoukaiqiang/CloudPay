@@ -11,7 +11,7 @@ class TotalAdmin extends Model
     public function getRoleIdAttr($value)
     {
         //0 运营人员 1运营总监
-        return $value ? '运营总监':'运营人员';
+        return $value ? '运营总监':'运营专员';
     }
 
     /**
