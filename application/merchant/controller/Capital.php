@@ -258,10 +258,10 @@ class Capital extends Common
      * @throws \think\exception\DbException
      * @throws \think\exception\PDOException
      */
-    protected function merchant_edit($param)
+    public function merchant_edit()
     {
-        $id = $param['id'];
-//        $id = 87; //mark
+//        $id = $param['id'];
+        $id = 87; //mark
         $data["serviceId"] = "6060605";
         $data["version"] =  "V1.0.1";
 
@@ -272,10 +272,12 @@ class Capital extends Common
         $data["orgNo"] = $res["orgNo"];
 
         $data["signValue"] = sign_ature(0000, $data);
+//        halt($data);
         //向新大陆接口发送信息验证
         $par = curl_request($this->url, true, $data, true);
 
         $bbntu = json_decode($par, true);
+        halt($bbntu);
         $bbntu["status"] = 2;
         $return_sign = sign_ature(1111, $data);
 
@@ -284,7 +286,7 @@ class Capital extends Common
             if ($return_sign == $bbntu['signValue']) {
                 //商户状态修改为修改未完成
                 Db::name('merchant_incom')->where('merchant_id', $id)->update($bbntu);
-                $this->commercial_edit($param);
+                $this->commercial_edit();
 
             } else {
                 return_msg(400, 'error', $bbntu['msg_dat']);
@@ -308,7 +310,7 @@ class Capital extends Common
         $arg=request()->post();
         $del['serviceId'] = '6060604';
         $del['version'] = 'V1.0.4';
-        $data = Db::name('merchant_incom')->where('merchant_id', $arg['id'])->field('log_no,mercId,stoe_id,status,fee_rat1_scan,fee_rat3_scan,fee_rat_scan, incom_type,stl_typ,stl_sign,bus_lic_no,bse_lice_nm,crp_nm,mercAdds,bus_exp_dt,crp_id_no,crp_exp_dt,stoe_nm,stoe_area_cod,stoe_adds,trm_rec,mailbox,yhkpay_flg,alipay_flg,orgNo,cardTyp,suptDbfreeFlg,tranTyps,crp_exp_dt_tmp,fee_rat,max_fee_amt,fee_rat1,ysfcreditfee,ysfdebitfee')->find();
+        $data = Db::name('merchant_incom')->where('merchant_id', "87")->field('log_no,mercId,stoe_id,status,fee_rat1_scan,fee_rat3_scan,fee_rat_scan, incom_type,stl_typ,stl_sign,bus_lic_no,bse_lice_nm,crp_nm,mercAdds,bus_exp_dt,crp_id_no,crp_exp_dt,stoe_nm,stoe_area_cod,stoe_adds,trm_rec,mailbox,yhkpay_flg,alipay_flg,orgNo,cardTyp,suptDbfreeFlg,tranTyps,crp_exp_dt_tmp,fee_rat,max_fee_amt,fee_rat1,ysfcreditfee,ysfdebitfee')->find();
         //商户为未完成状态才可以修改
         $del['stl_oac']=$arg['account_no'];
         $del['bnk_acnm']=$arg['account_name'];
@@ -317,28 +319,28 @@ class Capital extends Common
         $del['stoe_cnt_tel']=$arg['mobile'];
         $del['stoe_cnt_nm']=$arg['account_name'];
         $data['orgNo']=ORG_NO;
-        //halt($data);
+//        halt($data);
 
-        if ($data['status'] == 2){
+        if ($data['status'] != 2){
 
             $aa = [];
             foreach ($data as $k => $v) {
                 $aa[$k] = $v;
             }
             $dells = $del + $aa;
-                halt($dells);
+
             //mark 调试到这里 by--端木
             $sign_ature = sign_ature(0000, $dells);
 //                die;
             $dells['signValue'] = $sign_ature;
-//                halt($del);
+//                halt($dells);
             //向新大陆接口发送信息验证
 
             $par = curl_request($this->url, true, $dells, true);
 
             $par = json_decode($par, true);
             //返回数据的签名域
-//            halt($par);
+            halt($par);
             $return_sign = sign_ature(1111, $par);
 
             if ($par['msg_cd'] == 000000) {
@@ -510,6 +512,41 @@ class Capital extends Common
 
             check_data($data["list"], $data);
         }
+    }
+
+    public function pc_bill_list(Request $request)
+    {
+        echo strtotime('-1 month');die;
+        $pay_type = ["wxpay", "alipay", "etc", "cash"];
+        //默认一月1s
+        $start_time=$request->param('start_time') ? $request->param('start_time') : strtotime('-1 week');
+        $end_time = $request->param('end_time') ? $request->param('end_time') : time();
+
+        for($i=0;$i<count($pay_type);$i++){
+            $this->search($pay_type[$i],'between',[$start_time,$end_time]);
+        }
+    }
+
+    public function search($pay_type,$param,$time)
+    {
+        $data[$pay_type][] = Order::where(['merchant_id'=>$this->merchant_id,'pay_type'=>$pay_type])->whereTime('pay_time',$param,$time)->count();
+
+        $data[$pay_type][] = Order::where(['merchant_id'=>$this->merchant_id,'pay_type'=>$pay_type])->whereTime('pay_time',$param,$time)->sum('order_money');
+
+        $data[$pay_type][] = Order::where(['merchant_id'=>$this->merchant_id,'pay_type'=>$pay_type])->whereTime('pay_time',$param,$time)->sum('discount');
+        //实收金额
+        $data[$pay_type][] = Order::where(['merchant_id'=>$this->merchant_id,'pay_type'=>$pay_type])->whereTime('pay_time',$param,$time)->sum('received_money');
+
+        //退款笔数
+        $data[$pay_type][] = Order::where(['merchant_id'=>$this->merchant_id,'pay_type'=>$pay_type,'status'=>2])->whereTime('pay_time',$param,$time)->count();
+        //退款金额
+        $data[$pay_type][] = Order::where(['merchant_id'=>$this->merchant_id,'pay_type'=>$pay_type,'status'=>2])->whereTime('pay_time',$param,$time)->sum('received_money');
+        //费率
+        $merchant_rate=TotalMerchant::field('merchant_rate')->where('id',$this->merchant_id)->find();
+        $data[$pay_type][] = $merchant_rate['merchant_rate'];
+        //实际到账金额
+        $received_money = Order::where(['merchant_id'=>$this->merchant_id,'pay_type'=>$pay_type])->whereTime('pay_time',$param,$time)->sum('received_money');
+        $data[$pay_type][] = $received_money * $merchant_rate['merchant_rate'];
     }
 
 }

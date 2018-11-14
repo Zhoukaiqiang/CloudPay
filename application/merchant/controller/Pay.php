@@ -393,7 +393,7 @@ class Pay extends Login
         $param["mercId"] = $data["mercId"];
         $param["amount"] = (string)1; //金额
         $param["total_amount"] = (string)1;  //总金额
-        $param["code"] = "071qUnwD0UAzAd2MRTtD0209wD0qUnwi";  //授权码 未使用的话，5分钟后过期
+        $param["code"] = "061n89fc1EK98u0HFbfc1qHYec1n89fO";  //授权码 未使用的话，5分钟后过期
         $key = $data["key"];
         $param["signValue"] = sign_ature(0000, $param, $key);
 

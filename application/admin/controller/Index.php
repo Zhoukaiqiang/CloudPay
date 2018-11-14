@@ -45,6 +45,7 @@ class Index extends Admin
 
         /* 获取昨日全部的交易总额 */
         if ($past == "yesterday") {
+
             $member = MemberRecharge::whereTime("recharge_time", "yesterday")->field("sum(amount) amount, count(id) id")->select();
             $member = collection($member)->toArray();
             $Mea = (int)$member[0]['amount'];
@@ -69,8 +70,10 @@ class Index extends Admin
             $etc_num = Db::name('order')->whereTime('pay_time', "yesterday")->where(['pay_type' => 'etc'])->count('id') + $mEtc_num;
 
         } else {
+
             $time_flag = "between";
             $member = MemberRecharge::whereTime("recharge_time", $time_flag, [$past, $present])->field("sum(amount) amount, count(id) id")->select();
+
             $member = collection($member)->toArray();
             $Mea = (int)$member[0]['amount'];
             $member_wx = MemberRecharge::whereTime("recharge_time", $time_flag, [$past, $present])->where("pay_type", "wxpay")->field("sum(amount) amount, count(id) id")->select();
