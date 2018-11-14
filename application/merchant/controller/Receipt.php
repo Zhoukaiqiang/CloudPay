@@ -273,6 +273,7 @@ class Receipt extends Common
      */
     public function search(Request $request)
     {
+
         $data['shop_id']=$request->param('shop_id') ? $request->param('shop_id') : null;
 
         $data['status']=$request->param('status');
