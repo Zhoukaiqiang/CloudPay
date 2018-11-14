@@ -15,7 +15,22 @@ return [
     // +----------------------------------------------------------------------
 
     // 应用调试模式
-
+    'session'                 => [
+        'id'             => '',
+        // SESSION_ID的提交变量,解决flash上传跨域
+        'var_session_id' => '',
+        // SESSION 前缀
+        'prefix'         => '',
+        // 驱动方式 支持redis memcache memcached
+        'type'           => '',
+        // 是否自动开启 SESSION
+        'auto_start'     => true,
+        //是否使用cookie
+        'use_cookies'    => true,
+        //设置过期时间  单位秒
+        'path'           => TEMP_PATH,//表示session保存在自己网站根目录中的runtime/temp/目录中
+        'expire'         => 3600*24,       //设置该值后，请务必进行线上、本地缓存删除、ctrl+F5强制刷新浏览器
+    ],
     'msg'=>[
         'gateway'=>'',
         'appkey'=>''

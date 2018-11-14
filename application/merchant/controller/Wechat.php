@@ -801,7 +801,7 @@ class Wechat extends Controller
         $param["mercId"] = "800332000002146";
         $param["amount"] = (string)1; //金额
         $param["total_amount"] = (string)1;  //总金额
-        $param["code"] = "081i97cW12Wy1V0cDsaW1VcxcW1i97c0";  //授权码 未使用的话，5分钟后过期
+        $param["code"] = "061n89fc1EK98u0HFbfc1qHYec1n89fO";  //授权码 未使用的话，5分钟后过期
 //        $param['appid']="wx5b32bce922c2ac7c";
         $key = "0FF9606C39C2CCF1515E5CE108B506F0";
         $param["signValue"] = sign_ature(0000, $param, $key);

@@ -344,6 +344,7 @@ class Incom extends Controller
     public function merchant_create(Request $request)
     {
         $merchant_id = $request->param('merchant_id');
+
         //取出数据表中数据
 
         $data = MerchantIncom::where('merchant_id', $merchant_id)->field('mercId,orgNo,log_no')->find();
@@ -672,14 +673,15 @@ class Incom extends Controller
 //        halt($par);
         if ($par['msg_cd'] == '000000') {
             if ($par['check_flag'] == 1) {
+
                 MerchantIncom::where('merchant_id', $id)->update([
                     'check_flag' => $par['check_flag'],
                     'key' => $par["key"],
-                    'rec' => $par['REC']['trmNo'],
-                    'stoe_id' => $par['REC']['stoe_id'],
+                    'rec' => json_encode($par['REC']),
+                    'stoe_id' => $par['REC'][0]['stoe_id'],
                     "status" => 0,
                 ]);
-                $this->qrcode($id);
+//                $this->qrcode($id);
                 return_msg(200, 'success', $par);
             } elseif($par['check_flag'] == 2) {
                 return_msg(400, '驳回', $par["merc_remark"]);

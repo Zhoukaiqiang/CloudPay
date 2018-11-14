@@ -9,9 +9,9 @@ class AgentPartner extends Model
 {
     use SoftDelete;
     protected $deleteTime="delete_time";
-//    public function getModelAttr($value)
-//    {
-////        账号状态 0开启 1关闭
-//        return $value ? '按费率':'按比例';
-//    }
+    /*public function getModelAttr($value)
+    {
+//        账号状态 0开启 1关闭
+        return $value ? '按费率':'按比例';
+    }*/
 }

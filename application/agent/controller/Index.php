@@ -275,6 +275,70 @@ class Index extends Controller
         return $res;
     }
 
+    /**
+     *首页选择时间搜索
+     * @param Request $request
+     */
+    public function index_search(Request $request)
+    {
+
+        $query['start_time']=$request->param('start_time') ? $request->param('start_time') : '';
+        if(!empty($query['start_time'])) {
+            $query['end_time'] = $request->param('end_time') ? $request->param('end_time') : '';
+            if (empty($query['end_time'])) {
+                return_msg(400, '请选择结束时间');
+            }
+            $param="between";
+            $time=[$query['start_time'],$query['end_time']];
+
+            $this->search($param,$time);
+        }
+    }
+
+    public function search($param,$time)
+    {
+        $agent_id=Session::get("username_")["id"];
+        //取出当前代理商下所有商户
+        $merchant_count=TotalMerchant::field('id,name')->where(['agent_id'=>$agent_id])->select();
+
+        $total_money=0;
+        $total_number=0;
+        $wxpay=0;
+        $wxpay_number=0;
+        $alipay=0;
+        $alipay_number=0;
+        $etc=0;
+        $etc_number=0;
+        $data=[];
+        foreach($merchant_count as $v){
+            $total_money+= Order::where(['merchant_id'=>$v['id']])->whereTime('pay_time',$param,$time)->sum('received_money');
+
+            $total_number+= Order::where('merchant_id',$v['id'])->whereTime('pay_time',$param,$time)->count();
+
+            //微信交易额
+            $wxpay += Order::where(['merchant_id'=>$v['id'],'pay_type'=>'wxpay'])->whereTime('pay_time',$param,$time)->sum('received_money');
+            //微信交易量
+            $wxpay_number += Order::where(['merchant_id'=>$v['id'],'pay_type'=>'wxpay'])->whereTime('pay_time',$param,$time)->count();
+            //支付宝交易额
+            $alipay += Order::where(['merchant_id'=>$v['id'],'pay_type'=>'alipay'])->whereTime('pay_time',$param,$time)->sum('received_money');
+            //支付宝交易量
+            $alipay_number += Order::where(['merchant_id'=>$v['id'],'pay_type'=>'alipay'])->whereTime('pay_time',$param,$time)->count();
+            //银联
+            $etc += Order::where(['merchant_id'=>$v['id'],'pay_type'=>'etc'])->whereTime('pay_time',$param,$time)->sum('received_money');
+
+            $etc_number +=Order::where(['merchant_id'=>$v['id'],'pay_type'=>'etc'])->whereTime('pay_time',$param,$time)->count();
+        }
+        $data['total_money']=$total_money;
+        $data['total_number']=$total_number;
+        $data['wxpay']=$wxpay;
+        $data['wxpay_number']=$wxpay_number;
+        $data['alipay']=$alipay;
+        $data['alipay_number']=$alipay_number;
+        $data['etc']=$etc;
+        $data['etc_number']=$etc_number;
+        check_data($data);
+    }
+
 
     /**
      * 显示交易数据

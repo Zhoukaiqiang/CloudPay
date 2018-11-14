@@ -52,6 +52,26 @@ class Member extends Common
     }
 
     /**
+     *会员总数
+     * @throws Exception
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function member_total()
+    {
+        if(!empty($this->merchant_id)){
+            $total = MerchantMember::where('merchant_id',$this->merchant_id)->count();
+            check_data($total);
+        }elseif(empty($this->merchant_id) && !empty($this->user_id)){
+            //获取商户id
+            $merchant = MerchantUser::field('merchant_id')->where('id',$this->user_id)->find();
+            $total = MerchantMember::where('merchant_id',$merchant['merchant_id'])->count();
+            check_data($total);
+        }
+    }
+
+    /**
      * 会员搜索
      *
      * @return \think\Response

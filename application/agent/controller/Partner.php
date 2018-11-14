@@ -291,7 +291,7 @@ class Partner extends Agent
         //获取搜索条件
         $query['start_time']=$request->param('start_time') ? $request->param('start_time') : '';
         //默认商户新增磅
-        $query['status']=$request->param('status') ? $request->param('status') : 1;
+        $query['status']=$request->param('status') ? $request->param('status') : '';
         $query['yesterday']=$request->param('yesterday') ? $request->param('yesterday') : '';
         $query['week']=$request->param('week') ? $request->param('week') : '';
         $query['month']=$request->param('month') ? $request->param('month') : '';
@@ -377,6 +377,7 @@ class Partner extends Agent
                     break;
             }
         }elseif(!empty($query['status'])){
+
             switch($query['status']){
                 case 1:
                     //商户新增磅
@@ -412,15 +413,89 @@ class Partner extends Agent
         $data=AgentPartner::field(['id,partner_name,partner_phone,create_time,model,proportion,rate'])
             ->where('agent_id',$id)
             ->select();
-
+//        halt($data);
 //取出负责商户数
         $flag=array();
         foreach($data as &$v){
             $count=TotalMerchant::where('partner_id',$v['id'])->count();
 
             $v['count']=$count;
+
             //根据合伙人id取出新增商户数
             $new_count=TotalMerchant::whereTime('opening_time',$param,$time)->where('partner_id',$v['id'])->count();
+            $v['new_count']=$new_count;
+            //计算佣金
+            $sum=TotalMerchant::alias('a')
+                ->join('cloud_agent_partner b','a.partner_id=b.id')
+                ->join('cloud_order c','c.merchant_id=a.id')
+                ->where(['a.partner_id'=>$v['id'],'b.agent_id'=>$id])
+                ->sum('c.received_money');
+//            echo $sum;die;
+            if($v['model']=="按比例"){
+
+                //安比例
+                $v['money']=$sum*$v['proportion']/100;
+            }elseif($v['model']=="按费率"){
+
+                //按费率
+                $v['money']=$sum * abs( $v['rate'] - $agent_rate )/100;
+            }
+
+            $flag[]=$v[$sort];
+//            dump($flag);
+        }
+//        halt($flag);
+        array_multisort($flag, SORT_DESC, $data);
+
+        $this->check_empty($data);
+
+    }
+
+    public function search_list()
+    {
+        $status=request()->param('status') ? request()->param('status') : '';
+        switch($status){
+            case 1:
+                //商户新增磅
+                $sort="new_count";
+                $where=[
+
+                ];
+                $this->set_search('month',$sort);
+                break;
+            case 2:
+                //商户总磅
+                $sort="count";
+                $this->set_search('month',$sort);
+                break;
+            case 3:
+                //佣金磅
+                $sort="money";
+                $this->set_search('month',$sort);
+                break;
+        }
+    }
+
+    public function set_search($time,$sort)
+    {
+        //获取当前代理商id
+        $id= Session::get("username_")['id'];
+        // test mark
+
+        /** 代理商费率   */
+        $res = TotalAgent::where('id',$id)->field("agent_rate")->find();
+        $agent_rate = intval($res->agent_rate);
+        $data['list']=AgentPartner::field(['id,partner_name,partner_phone,create_time,model,proportion,rate'])
+            ->where('agent_id',$id)
+            ->select();
+
+        //取出负责商户数
+        $flag=array();
+        foreach($data['list'] as &$v){
+            $count=TotalMerchant::where('partner_id',$v['id'])->count();
+            $v['count']=$count;
+            //根据合伙人id取出昨天新增商户数
+            $new_count=TotalMerchant::whereTime('opening_time','yesterday')->where('partner_id',$v['id'])->count();
             $v['new_count']=$new_count;
             //计算佣金
             $sum=TotalMerchant::alias('a')
@@ -435,33 +510,11 @@ class Partner extends Agent
                 //按费率
                 $v['money']=$sum * abs( $v['rate'] - $agent_rate )/100;
             }
-            $flag[]=$v[$sort];
+            $flag[] = $v['new_count'];
         }
-        array_multisort($flag, SORT_DESC, $data);
-        $this->check_empty($data);
-
-    }
-
-    public function search_list()
-    {
-        $status=request()->param('status') ? request()->param('status') : '';
-        switch($status){
-            case 1:
-                //商户新增磅
-                $sort="new_count";
-                $this->get_search('month',$sort);
-                break;
-            case 2:
-                //商户总磅
-                $sort="count";
-                $this->get_search('month',$sort);
-                break;
-            case 3:
-                //佣金磅
-                $sort="money";
-                $this->get_search('month',$sort);
-                break;
-        }
+        //按照新增商户数降序排列
+        //array_multisort($flag, SORT_DESC, $data);
+        return_msg(200,'success',$data);
     }
 
 

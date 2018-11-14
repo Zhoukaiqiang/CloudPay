@@ -274,34 +274,52 @@ class Receipt extends Common
     public function search(Request $request)
     {
         $data['shop_id']=$request->param('shop_id') ? $request->param('shop_id') : null;
+
         $data['status']=$request->param('status');
+
         if(!empty($data['shop_id']) && $data['status']===""){
             //显示当前门店下所有账单
-            $data=Order::field('id,status,order_money,pay_type,create_time')
+            $data = Order::field('id,status,order_money,pay_type,create_time')
                 ->where('shop_id',$data['shop_id'])
                 ->order('create_time desc')
                 ->select();
             check_data($data);
         }elseif(!empty($data['shop_id']) && $data['status']!==""){
-            //取出当前门店下所有状态
-            $data=Order::field('id,status,order_money,pay_type,create_time')
-                ->where(['shop_id'=>$data['shop_id'],'status'=>$data['status']])
-                ->order('create_time desc')
-                ->select();
-            check_data($data);
+            if($data['status'] != 3){
+                //取出当前门店下所有状态
+                $data = Order::field('id,status,order_money,pay_type,create_time')
+                    ->where(['shop_id'=>$data['shop_id'],'status'=>$data['status']])
+                    ->order('create_time desc')
+                    ->select();
+                check_data($data);
+
+            }else{
+                //会员消费
+                $data = Order::field('id,status,order_money,pay_type,create_time')
+                    ->where(['shop_id'=>$data['shop_id'],'status'=>$data['status'],'member_id'=>['>',0]])
+                    ->order('create_time desc')
+                    ->select();
+
+                check_data($data);
+            }
         }elseif(empty($data['shop_id']) && $data['status']!==""){
-            //当前商户下所有状态
-            $data=Order::field('id,status,order_money,pay_type,create_time')
-                ->where(['merchant_id'=>$this->merchant_id,'status'=>$data['status']])
-                ->order('create_time desc')
-                ->select();
-            check_data($data);
-        }elseif(empty($data['shop_id']) && $data['status']==0){
-            $data=Order::field('id,status,order_money,pay_type,create_time')
-                ->where(['merchant_id'=>$this->merchant_id,'status'=>$data['status']])
-                ->order('create_time desc')
-                ->select();
-            check_data($data);
+            if($data['status']!=3){
+                //当前商户下所有状态
+                $data=Order::field('id,status,order_money,pay_type,create_time')
+                    ->where(['merchant_id'=>$this->merchant_id,'status'=>$data['status']])
+                    ->order('create_time desc')
+                    ->select();
+
+                check_data($data);
+            }else{
+                //会员消费
+                $data=Order::field('id,status,order_money,pay_type,create_time')
+                    ->where(['merchant_id'=>$this->merchant_id,'status'=>'1','member_id'=>['>',0]])
+                    ->order('create_time desc')
+                    ->select();
+
+                check_data($data);
+            }
         }
     }
 
