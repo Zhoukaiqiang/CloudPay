@@ -20,6 +20,11 @@ class Member extends Incom
     public function index()
     {
         $agent_id=Session::get("username_")["id"];
+        $start_time=request()->param('start_time') ? request()->param('start_time') : strtotime('-1 month');
+        $end_time=request()->param('end_time') ? request()->param('end_time') : time();
+
+        $time=[$start_time,$end_time];
+        $param="between";
 //        echo $agent_id;die;
         //统计商户下所有会员总数
         $merchant_count=TotalMerchant::field('id,name')->where(['agent_id'=>$agent_id])->select();
@@ -33,23 +38,23 @@ class Member extends Incom
             foreach ($merchant_count as $k=>$v) {
                 $member_count += MerchantMember::where('merchant_id', $v['id'])->count();
 //        die;
-                $recharge_money += MemberRecharge::where('merchant_id', $v['id'])->field('amount')->sum('amount');
+                $recharge_money += MemberRecharge::where('merchant_id', $v['id'])->field('amount')->whereTime('recharge_time',$param,$time)->sum('amount');
 
-                $discount_money += MemberRecharge::where('merchant_id', $v['id'])->field('discount_amount')->sum('discount_amount');
+                $discount_money += MemberRecharge::where('merchant_id', $v['id'])->field('discount_amount')->whereTime('recharge_time',$param,$time)->sum('discount_amount');
 
                 $total_money += MerchantMember::field('money')->where('merchant_id', $v['id'])->sum('money');
 
-                $data[$k]['id'] = $v['id'];
+                $data['list'][$k]['id'] = $v['id'];
                 //商户名
-                $data[$k]['merchant_name'] = $v['name'];
+                $data['list'][$k]['merchant_name'] = $v['name'];
 
-                $data[$k]['member'] = MerchantMember::where('merchant_id', $v['id'])->count();
+                $data['list'][$k]['member'] = MerchantMember::where('merchant_id', $v['id'])->count();
 
-                $data[$k]['recharge'] = MemberRecharge::where('merchant_id', $v['id'])->field('amount')->sum('amount');
+                $data['list'][$k]['recharge'] = MemberRecharge::where('merchant_id', $v['id'])->whereTime('recharge_time',$param,$time)->field('amount')->sum('amount');
 
-                $data[$k]['discount'] = MemberRecharge::where('merchant_id', $v['id'])->field('discount_amount')->sum('discount_amount');
+                $data['list'][$k]['discount'] = MemberRecharge::where('merchant_id', $v['id'])->field('discount_amount')->whereTime('recharge_time',$param,$time)->sum('discount_amount');
 
-                $data[$k]['money'] = MerchantMember::field('money')->where('merchant_id', $v['id'])->sum('money');
+                $data['list'][$k]['money'] = MerchantMember::field('money')->where('merchant_id', $v['id'])->sum('money');
             }
 
 
@@ -71,13 +76,16 @@ class Member extends Incom
     public function merchant_member()
     {
         $merchant_id=request()->param('id');
+        $start_time=request()->param('start_time') ? request()->param('start_time') : strtotime('-1 month');
+        $end_time=request()->param('start_time') ? request()->param('start_time') : time();
+        $time=[$start_time,$end_time];
+        $param="between";
+        $data['list'] = MerchantMember::field('id,member_name,member_phone,money,member_birthday')->where('merchant_id',$merchant_id)->select();
 
-        $data = MerchantMember::field('id,member_name,member_phone,money,member_birthday')->where('merchant_id',$merchant_id)->select();
+        foreach($data['list'] as &$v){
+            $v['recharge_money'] = MemberRecharge::where(['merchant_id'=>$merchant_id,'member_id'=>$v['id']])->whereTime('recharge_time',$param,$time)->sum('amount');
 
-        foreach($data as &$v){
-            $v['recharge_money'] = MemberRecharge::where(['merchant_id'=>$merchant_id,'member_id'=>$v['id']])->sum('amount');
-
-            $v['discount_money'] = MemberRecharge::where(['merchant_id'=>$merchant_id,'member_id'=>$v['id']])->sum('discount_amount');
+            $v['discount_money'] = MemberRecharge::where(['merchant_id'=>$merchant_id,'member_id'=>$v['id']])->whereTime('recharge_time',$param,$time)->sum('discount_amount');
 
          }
         $data['member_count'] = MerchantMember::where('merchant_id', $merchant_id)->count();  //会员总数
@@ -88,5 +96,57 @@ class Member extends Incom
 
         $data['total_money'] = MerchantMember::field('money')->where('merchant_id', $merchant_id)->sum('money');          //账户余额
          check_data($data);
+    }
+
+    /**
+     *商户名称搜索
+     * @throws \think\Exception
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function search()
+    {
+        $name=request()->param('name') ? request()->param('name') : '';
+        $merchant=TotalMerchant::where(['name'=>['like',$name."%"]])->find();
+        $data['list'][0]['id'] = $merchant['id'];
+        //商户名
+        $data['list'][0]['merchant_name'] = $merchant['name'];
+
+        $data['list'][0]['member'] = MerchantMember::where('merchant_id', $merchant['id'])->count();
+
+        $data['list'][0]['recharge'] = MemberRecharge::where('merchant_id', $merchant['id'])->field('amount')->sum('amount');
+
+        $data['list'][0]['discount'] = MemberRecharge::where('merchant_id', $merchant['id'])->field('discount_amount')->sum('discount_amount');
+
+        $data['list'][0]['money'] = MerchantMember::field('money')->where('merchant_id', $merchant['id'])->sum('money');
+        check_data($data);
+    }
+
+    /**
+     *会员手机搜索
+     * @throws \think\Exception
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function detail_search()
+    {
+        $merchant_id=request()->param('id');
+        $phone=request()->param('phone');
+        $data['list']=MerchantMember::where(['member_phone'=>['like',$phone."%"],'merchant_id'=>$merchant_id])->select();
+        foreach($data['list'] as &$v){
+            $v['recharge_money'] = MemberRecharge::where(['member_id'=>$v['id']])->sum('amount');
+
+            $v['discount_money'] = MemberRecharge::where(['member_id'=>$v['id']])->sum('discount_amount');
+        }
+        $data['member_count'] = MerchantMember::where('merchant_id', $merchant_id)->count();  //会员总数
+
+        $data['recharge_money'] = MemberRecharge::where('merchant_id', $merchant_id)->field('amount')->sum('amount');  //充值总额
+
+        $data['discount_money'] = MemberRecharge::where('merchant_id', $merchant_id)->field('discount_amount')->sum('discount_amount'); //优惠总额
+
+        $data['total_money'] = MerchantMember::field('money')->where('merchant_id', $merchant_id)->sum('money');          //账户余额
+    check_data($data);
     }
 }

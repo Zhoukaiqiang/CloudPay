@@ -19,11 +19,11 @@ class Member extends Admin
      */
     public function index()
     {
-        $start_time = request()->param('start_time') ? request()->param('start_time') : strtotime('-1 month');
-        $end_time = request()->param('end_time') ? request()->param('end_time') : time();
+        $start_time=request()->param('start_time') ? request()->param('start_time') : strtotime('-1 month');
+        $end_time=request()->param('end_time') ? request()->param('end_time') : time();
 
-        $time = [$start_time, $end_time];
-        $param = "between";
+        $time=[$start_time,$end_time];
+        $param="between";
 
         $role = $this->role_id;
         $admin_id = $this->admin_id;
@@ -39,12 +39,12 @@ class Member extends Admin
                 //取出代理商下所有商户数
                 $merchant_count = TotalMerchant::field('id,name')->where(['agent_id' => $s['id']])->select();
 
-                foreach ($merchant_count as $k => $v) {
-                    $member_count += MerchantMember::where('merchant_id', $v['id'])->count();
+                foreach ($merchant_count as $k=>$v) {
+                    $member_count += MerchantMember::where('merchant_id', $v['id'])->whereTime('register_time',$param,$time)->count();
 //        die;
-                    $recharge_money += MemberRecharge::where('merchant_id', $v['id'])->field('amount')->whereTime('recharge_time', $param, $time)->sum('amount');
+                    $recharge_money += MemberRecharge::where('merchant_id', $v['id'])->field('amount')->whereTime('recharge_time',$param,$time)->sum('amount');
 
-                    $discount_money += MemberRecharge::where('merchant_id', $v['id'])->field('discount_amount')->whereTime('recharge_time', $param, $time)->sum('discount_amount');
+                    $discount_money += MemberRecharge::where('merchant_id', $v['id'])->field('discount_amount')->whereTime('recharge_time',$param,$time)->sum('discount_amount');
 
                     $total_money += MerchantMember::field('money')->where('merchant_id', $v['id'])->sum('money');
 
@@ -52,11 +52,11 @@ class Member extends Admin
                     //商户名
                     $data['list'][$k]['merchant_name'] = $v['name'];
 
-                    $data['list'][$k]['member'] = MerchantMember::where('merchant_id', $v['id'])->count();
+                    $data['list'][$k]['member'] = MerchantMember::where('merchant_id', $v['id'])->whereTime('register_time',$param,$time)->count();
 
-                    $data['list'][$k]['recharge'] = MemberRecharge::where('merchant_id', $v['id'])->field('amount')->whereTime('recharge_time', $param, $time)->sum('amount');
+                    $data['list'][$k]['recharge'] = MemberRecharge::where('merchant_id', $v['id'])->field('amount')->whereTime('recharge_time',$param,$time)->sum('amount');
 
-                    $data['list'][$k]['discount'] = MemberRecharge::where('merchant_id', $v['id'])->whereTime('recharge_time', $param, $time)->field('discount_amount')->sum('discount_amount');
+                    $data['list'][$k]['discount'] = MemberRecharge::where('merchant_id', $v['id'])->whereTime('recharge_time',$param,$time)->field('discount_amount')->sum('discount_amount');
 
                     $data['list'][$k]['money'] = MerchantMember::field('money')->where('merchant_id', $v['id'])->sum('money');
                 }
@@ -80,12 +80,12 @@ class Member extends Admin
                 //取出代理商下所有商户数
                 $merchant_count = TotalMerchant::field('id,name')->where(['agent_id' => $s['id']])->select();
 
-                foreach ($merchant_count as $k => $v) {
-                    $member_count += MerchantMember::where('merchant_id', $v['id'])->count();
+                foreach ($merchant_count as $k=>$v) {
+                    $member_count += MerchantMember::where('merchant_id', $v['id'])->whereTime('register_time',$param,$time)->count();
 //        die;
-                    $recharge_money += MemberRecharge::where('merchant_id', $v['id'])->field('amount')->whereTime('recharge_time', $param, $time)->sum('amount');
+                    $recharge_money += MemberRecharge::where('merchant_id', $v['id'])->field('amount')->whereTime('recharge_time',$param,$time)->sum('amount');
 
-                    $discount_money += MemberRecharge::where('merchant_id', $v['id'])->field('discount_amount')->whereTime('recharge_time', $param, $time)->sum('discount_amount');
+                    $discount_money += MemberRecharge::where('merchant_id', $v['id'])->field('discount_amount')->whereTime('recharge_time',$param,$time)->sum('discount_amount');
 
                     $total_money += MerchantMember::field('money')->where('merchant_id', $v['id'])->sum('money');
 
@@ -95,9 +95,9 @@ class Member extends Admin
 
                     $data[$k]['member'] = MerchantMember::where('merchant_id', $v['id'])->count();
 
-                    $data[$k]['recharge'] = MemberRecharge::where('merchant_id', $v['id'])->field('amount')->whereTime('recharge_time', $param, $time)->sum('amount');
+                    $data[$k]['recharge'] = MemberRecharge::where('merchant_id', $v['id'])->field('amount')->whereTime('recharge_time',$param,$time)->sum('amount');
 
-                    $data[$k]['discount'] = MemberRecharge::where('merchant_id', $v['id'])->field('discount_amount')->whereTime('recharge_time', $param, $time)->sum('discount_amount');
+                    $data[$k]['discount'] = MemberRecharge::where('merchant_id', $v['id'])->field('discount_amount')->whereTime('recharge_time',$param,$time)->sum('discount_amount');
 
                     $data[$k]['money'] = MerchantMember::field('money')->where('merchant_id', $v['id'])->sum('money');
                 }
@@ -135,6 +135,7 @@ class Member extends Admin
 
             $v['discount_money'] = MemberRecharge::where(['merchant_id' => $merchant_id, 'member_id' => $v['id']])->whereTime('recharge_time', $param, $time)->sum('discount_amount');
 
+            $v['discount_money'] = MemberRecharge::where(['member_id'=>$v['id']])->sum('discount_amount');
         }
         $data['member_count'] = MerchantMember::where('merchant_id', $merchant_id)->count();  //会员总数
 

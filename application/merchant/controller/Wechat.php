@@ -787,10 +787,10 @@ class Wechat extends Controller
         $url = "http://gateway.starpos.com.cn/adpweb/ehpspos3/pubSigQry.json";
         $res = curl_request($url, true, $param, true);
         $res = json_decode(urldecode($res), true);
-//        halt($res);
+        halt($res);
         /** 如果查询成功请求公众号支付否则返回错误信息 */
         if ($res["returnCode"] == "000000") {
-            $this->wxpay($res);
+            $this->wxpay();
         } else {
             return_msg(400, "微信查询失败：".$res["message"]);
         }
