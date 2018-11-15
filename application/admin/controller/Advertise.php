@@ -69,10 +69,58 @@ class Advertise extends Admin
         }
     }
 
+
+    /**
+     * 广告曝光次数 --- 扫码进入页面次数+1
+     * @param Request $request
+     * @throws \think\Exception
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function adSetInc(Request $request)
+    {
+        if ($request->isPost()) {
+            $msg = Session::get("username_", "app");
+            if ($msg["role"] !== -1) {
+                $mid = Db::name("merchant_user")->where("id",$msg["id"])->find()["id"];
+            }else {
+                $mid = $msg["id"];
+            }
+            $state = Db::name("total_merchant")->where("id",$mid)->find()["bg"];
+            if ($state) {
+                $res = Db::name("total_merchant")->where("id",$mid)->setInc("bg",1);
+            }else {
+                $res = Db::name("total_merchant")->where("id",$mid)->setField("bg",1);
+            }
+
+            check_data($res);
+        }
+    }
+
+
+    /**
+     * 获取广告曝光
+     * @param Request $request
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function getBg(Request $request)
+    {
+        if ($request->isGet()) {
+            $res = Db::name("total_agent")->field("agent_name,bg, agent_area")->find();
+            check_data($res);
+        }
+    }
     /**
      * 删除广告
-     * @param [id]  图片;
-     * @return [json] 返回信息
+     * @param Request $request
+     * @throws \think\Exception
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     * @throws \think\exception\PDOException
      */
     public function delete(Request $request)
     {

@@ -239,7 +239,7 @@ class Pay extends Login
     {
         $mid = $this->merchant_id;
         $shop_name = Session::get("shop_name", "app");
-        $url = "http://pay.hzyspay.com/incom/index.php?merchant_id=$mid&shop_name=$shop_name";
+        $url = "http://pay.hzyspay.com/incom/index.html?merchant_id=$mid&shop_name=$shop_name";
         $qrCode = new QrCode($url);
         $filename = md5($qrCode->getText()) . ".png";
         $root = "uploads/";

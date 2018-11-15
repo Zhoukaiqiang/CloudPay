@@ -216,8 +216,8 @@ class Member extends Admin
             if ($phone) {
                 $nf = "eq";
             } else {
-                $nf = ">";
-                $phone = -2;
+                $nf = "<>";
+                $phone = 2;
             }
             if ($time) {
                 $tf = "between";
@@ -228,18 +228,21 @@ class Member extends Admin
             }
             $where = [
                 "mm.merchant_id" => ["eq", $mid],
-                "mm.register_time" => [ $tf, $time],
+                "mm.register_time" => [$tf, $time],
                 "mm.member_phone"  => [$nf , $phone]
             ];
 
-            $rows = Db::name("merchant_member")->where('merchant_id',$mid)->where('member_phone',$phone)->count("id");
+            $rows = Db::name("merchant_member")->where('merchant_id',$mid)->where('member_phone', $nf,$phone)->count("id");
+
             $pages = page($rows);
             $res["list"] = Db::name("merchant_member")->alias("mm")
-                ->join("member_recharge mr", "mr.member_id = mm.id")
                 ->field("mm.member_name , mm.member_phone, sum(mr.order_money) re_money, sum(mr.discount_amount) discount, sum(mm.money) money, member_birthday mb")
-                ->limit($pages["offset"], $pages["limit"])
+                ->join("member_recharge mr", "mr.member_id = mm.id")
                 ->where($where)
+                ->limit($pages["offset"], $pages["limit"])
+                ->group("mm.id")
                 ->select();
+
 
             $res["pages"] = $pages;
             check_data($res["list"], $res);

@@ -91,27 +91,29 @@ class Agent extends Admin
 
     /**
      * 新增代理商
-     * @param  $contract_time 合同有效期
-     * @param  $contract_picture 合同图片
+     * @param  $contract_time []合同有效期
+     * @param  $contract_picture []合同图片
      * @return \think\Response
      */
-    public function add()
+    public function add(Request $request)
     {
-        if (request()->isPost()) {
-            $data = request()->post();
-            $data['password']  = make_code(6);
+        if ($request->isPost()) {
+            //mark
+            $data = $request->post();
+            $data['password']  = encrypt_password(123456, $data["agent_phone"]);
+            $data['contract_time'] = time();
+
             //发送密码到代理商
-            $check_send = send_msg_to_phone($data['phone'], $data['password']);
-            if (!$check_send) {
-                return_msg(400, "短信发送失败");
-            }
+//            $check_send = send_msg_to_phone($data['phone'], $data['password']);
+//            if (!$check_send) {
+//                return_msg(400, "短信发送失败");
+//            }
             //验证
 
             $validate = Loader::Validate('AdminValidate');
-            if ($validate->scene('add')->check($data)) {
-                //            $data['contract_time']=strtotime($data['contract_time']);
+            if ($validate) {
                 //保存到数据表
-                $info = TotalAgent::create($data, true);
+                $info = Db::name("total_agent")->insertGetId($data);
                 if ($info) {
                     //保存成功
                     return_msg('200', '保存成功', $info);
@@ -119,9 +121,10 @@ class Agent extends Admin
                     //保存失败
                     return_msg('400', '保存失败');
                 }
+
             } else {
                 $error = $validate->getError();
-                return_msg(400, $error);
+                return_msg(400, "Error");
             }
         } else {
             //取出所有人员信息
@@ -147,11 +150,11 @@ class Agent extends Admin
         if (request()->isPost()) {
             $data = $request->post();
             //验证
-            $validate = Loader::validate('AdminValidate');
-            if (!$validate->scene('detail')->check($data)) {
-                $error = $validate->getError();
-                return_msg(400,  $error);
-            }
+//            $validate = Loader::validate('AdminValidate');
+//            if (!$validate->scene('detail')->check($data)) {
+//                $error = $validate->getError();
+//                return_msg(400,  $error);
+//            }
             //上传图片
             //如果没有上传图片用原来的图片
             $file = $request->file('contract_picture');
@@ -159,10 +162,8 @@ class Agent extends Admin
                 $data['contract_picture'] = $this->upload_img();
                 $data['contract_picture'] = json_encode($data['contract_picture']);
             }
-
             //保存到数据表
-
-            $info =TotalAgent::where('id', 'eq', $data['id'])->update($data, true);
+            $info =Db::name("total_agent")->where('id', 'eq', $data['id'])->update($data, true);
             if ($info) {
                 //保存成功
                 return_msg('200', '修改成功', $info);
@@ -172,19 +173,14 @@ class Agent extends Admin
             }
         } else {
             $id = request()->param('id');
-            $data = TotalAgent::where('id', $id)->find();
-
-            $pic_list = json_decode($data->toArray()['contract_picture']);
-
-            $data['contract_picture'] = $pic_list;
             //取出所有人员信息
             $admin = TotalAdmin::field(['id', 'name', 'role_id'])->select();
             //取出所有一级代理
-            $info = TotalAgent::where('parent_id', 0)->field(['id','agent_name'])->select();
+            $info = Db::name("total_agent")->where('id', $id)->find();
             $data['admin'] = $admin;
             $data['agent'] = $info;
-//            dump($data);die;
-            return_msg(200, 'success', $data);
+
+            check_data($data);
         }
     }
 

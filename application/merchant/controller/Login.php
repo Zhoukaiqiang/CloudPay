@@ -305,11 +305,11 @@ class Login extends Controller
         curl_setopt($curl, CURLOPT_POST, 1);
         //配置submail
         $data = [
-            'appid' => '27075', //应用id
+            'appid' => '29499', //应用id
             'to' => $phone,     //要接受短信的电话
-            'project' => 'Jaayb', //模板标识
+            'project' => "8hBHG4", //模板标识
             'vars' => "{'code': '" . $msg . "'}",
-            'signature' => '5ac305ef38fb126d2a0ec5304040ab7d', //应用签名
+            'signature' => '759a042683c8fe0160f069c8dd8d577d', //应用签名
         ];
 
         curl_setopt($curl, CURLOPT_POSTFIELDS, $data);

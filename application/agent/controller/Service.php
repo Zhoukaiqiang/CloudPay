@@ -5,6 +5,7 @@ namespace app\agent\controller;
 use app\agent\model\TotalAgent;
 use app\agent\model\TotalMerchant;
 use think\Controller;
+use think\Db;
 use think\Exception;
 use think\Request;
 use think\Session;
@@ -136,7 +137,7 @@ class Service extends Agent
             //获取子代id
             $id = request()->param('id');
             //通过子代id查询子代信息
-            $data = TotalAgent::where('id', $id)->find();
+            $data = Db::name("total_merchant")->where("id", $id)->find();
 //            $data = collection($data['data'])->toArray();
             $data['json'] = json_decode($data['json']);
             //解析图片
