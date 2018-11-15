@@ -40,7 +40,7 @@ class Member extends Admin
                 $merchant_count=TotalMerchant::field('id,name')->where(['agent_id'=>$s['id']])->select();
 
                 foreach ($merchant_count as $k=>$v) {
-                    $member_count += MerchantMember::where('merchant_id', $v['id'])->count();
+                    $member_count += MerchantMember::where('merchant_id', $v['id'])->whereTime('register_time',$param,$time)->count();
 //        die;
                     $recharge_money += MemberRecharge::where('merchant_id', $v['id'])->field('amount')->whereTime('recharge_time',$param,$time)->sum('amount');
 
@@ -52,7 +52,7 @@ class Member extends Admin
                     //商户名
                     $data['list'][$k]['merchant_name'] = $v['name'];
 
-                    $data['list'][$k]['member'] = MerchantMember::where('merchant_id', $v['id'])->count();
+                    $data['list'][$k]['member'] = MerchantMember::where('merchant_id', $v['id'])->whereTime('register_time',$param,$time)->count();
 
                     $data['list'][$k]['recharge'] = MemberRecharge::where('merchant_id', $v['id'])->field('amount')->whereTime('recharge_time',$param,$time)->sum('amount');
 
@@ -81,7 +81,7 @@ class Member extends Admin
                 $merchant_count=TotalMerchant::field('id,name')->where(['agent_id'=>$s['id']])->select();
 
                 foreach ($merchant_count as $k=>$v) {
-                    $member_count += MerchantMember::where('merchant_id', $v['id'])->count();
+                    $member_count += MerchantMember::where('merchant_id', $v['id'])->whereTime('register_time',$param,$time)->count();
 //        die;
                     $recharge_money += MemberRecharge::where('merchant_id', $v['id'])->field('amount')->whereTime('recharge_time',$param,$time)->sum('amount');
 

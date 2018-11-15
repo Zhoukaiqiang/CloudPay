@@ -514,9 +514,12 @@ class Capital extends Common
         }
     }
 
+    /*
+     *
+     */
     public function pc_bill_list(Request $request)
     {
-        echo strtotime('-1 month');die;
+
         $pay_type = ["wxpay", "alipay", "etc", "cash"];
         //默认一月1s
         $start_time=$request->param('start_time') ? $request->param('start_time') : strtotime('-1 week');
