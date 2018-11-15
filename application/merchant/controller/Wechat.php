@@ -19,25 +19,76 @@ use think\Session;
 
 class Wechat extends Controller
 {
-    protected $appid;
-    protected $secret;
+    protected $appid = "wx1aeeaac161a210df";
+    protected $secret= "0b1ddf2e988b7d05e4e775cc8bdfc831";
     protected $openid;
     public function _initialize()
     {
-//        echo 1;
-//        echo $_SERVER['PHP_SELF'];die;
+
         Session::clear();
         parent::_initialize();
         $WxQuery = "pubSigQry";
         $WxPay = "pubSigPay";
-        $this->appid = 'wx1aeeaac161a210df';//appid
-        $this->secret = '0b1ddf2e988b7d05e4e775cc8bdfc831'; //secrect
         $this->openid=Session::get('openid');
         /*if(!$this->openid){
             $path=$_SERVER['REQUEST_URI'];
 
             $this->get_code($path);
         }*/
+    }
+
+    /**
+     *验证token
+     * @return bool
+     */
+    public function checkSignature()
+    {
+        // you must define TOKEN by yourself
+        //判断TOKEN常量是否定义
+
+        $signature = $_GET["signature"];
+        $timestamp = $_GET["timestamp"];
+        $nonce = $_GET["nonce"];
+
+        $token = "weixin";
+        $tmpArr = array($token, $timestamp, $nonce);
+        // use SORT_STRING rule
+        sort($tmpArr);
+        $tmpStr = implode( '',$tmpArr );
+        $tmpStr = sha1( $tmpStr );
+
+        if( $tmpStr == $signature ){
+            echo $_GET['echostr'];
+        }else{
+            return false;
+        }
+    }
+    /**
+     * 获取公众号调用接口的 access_token
+     */
+    public function get_token(Request $request)
+    {
+        if ($request->isGet()) {
+            //mark
+
+            $time = time();
+            $exp = Session::get("token_expire");
+            if ($exp && $time < $exp) {
+                return_msg(400, "不合法请求！");
+            }
+            $url = "https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid={$this->appid}&secret={$this->secret}";
+            $res = curl_request($url,'false','',true);
+            $res = json_decode($res, true);
+
+            if (in_array("errcode", $res)) {
+                return_msg(400, $res["errmsg"]);
+            }else {
+                Session::set("access_token", $res["access_token"]);
+                Session::set("token_expire", time() + (int)$res["expires_in"]);
+            }
+        }
+
+
     }
 
     /**
@@ -87,12 +138,12 @@ class Wechat extends Controller
     {
         $access_token_url = "https://api.weixin.qq.com/sns/oauth2/access_token?appid=" . $this->appid . "&secret=" . $this->secret . "&code=" . $code . "&grant_type=authorization_code";
         $access_token_json = $this->https_request($access_token_url);//自定义函数
-//        halt($access_token_json);
+
         $access_token_array = json_decode($access_token_json, true);
-//        halt($access_token_array["access_token"]);
+
         $access_token = $access_token_array["access_token"];
         Session::set('access_token',$access_token);
-//        halt($access_token);
+
         $openid = $access_token_array['openid'];
         $userinfo_url = "https://api.weixin.qq.com/sns/userinfo?access_token=$access_token&openid=$openid&lang=zh_CN";
         $userinfo_json = $this->https_request($userinfo_url);
@@ -290,35 +341,6 @@ class Wechat extends Controller
             ->where(['b.end_time'=>['>',time()],'c.openid'=>$openid])
             ->select();
         check_data($data);
-    }
-
-
-
-    /**
-     *验证token
-     * @return bool
-     */
-    public function checkSignature()
-    {
-        // you must define TOKEN by yourself
-        //判断TOKEN常量是否定义
-
-        $signature = $_GET["signature"];
-        $timestamp = $_GET["timestamp"];
-        $nonce = $_GET["nonce"];
-
-        $token = "weixin";
-        $tmpArr = array($token, $timestamp, $nonce);
-        // use SORT_STRING rule
-        sort($tmpArr);
-        $tmpStr = implode( '',$tmpArr );
-        $tmpStr = sha1( $tmpStr );
-
-        if( $tmpStr == $signature ){
-            echo $_GET['echostr'];
-        }else{
-            return false;
-        }
     }
 
 
