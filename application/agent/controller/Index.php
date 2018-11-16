@@ -6,97 +6,14 @@ use app\agent\model\AgentPartner;
 use app\agent\model\Order;
 use app\agent\model\TotalAgent;
 use app\agent\model\TotalMerchant;
-use Phinx\Seed\SeedInterface;
-use think\Controller;
 use think\Db;
 use think\Exception;
 use think\exception\DbException;
 use think\Request;
 use think\Session;
-use think\Validate;
-use Zxing\Qrcode\Decoder\DataBlock;
 
-class Index extends Controller
+class Index extends Agent
 {
-
-
-    /**
-     * 用户登录
-     * @param [strin]   user_name 用户名（电话）
-     * @param [stirng]  password  用户密码
-     * @return [json] 返回信息
-     * @throws Exception DbException
-     */
-    public function login(Request $request)
-    {
-        $data = $request->param();
-        check_params("agent_login", $data);
-        $this->check_exist($data['phone'], 'phone', 1);
-        $db_res = Db('total_agent')->field('id,username,agent_phone,status,password, parent_id')
-            ->where('agent_phone', $data['phone'])->find();
-
-        if ($db_res['password'] !== encrypt_password($data['password'], $data["phone"])) {
-            return_msg(400, '用户密码不正确！');
-        } else {
-            unset($db_res['password']); //密码不返回
-            /** 登录成功储存session */
-            Session::set("username_", $db_res);
-            return_msg(200, '登录成功！', $db_res);
-        }
-    }
-
-    /**
-     *一键登录代理商系统
-     * @param Request $request
-     * @throws DbException
-     * @throws \think\db\exception\DataNotFoundException
-     * @throws \think\db\exception\ModelNotFoundException
-     */
-    public function agent_login(Request $request)
-    {
-        $data = $request->param();
-        if (!isset($data['token'])) {
-            return_msg(400, '非法登录');
-        }
-        if (md5($data['phone'] . 'token') != $data['token']) {
-            return_msg(400, 'token验证失败');
-        }
-        $this->check_exist($data['phone'], 'phone', 1);
-        $status = TotalAgent::field('status')->where('agent_phone', $data['phone'])->find();
-        if ($status['status'] == 0) {
-            return_msg(400, '该代理商不能进入代理商系统');
-        }
-        $info = TotalAgent::field('id,username,agent_phone,status, parent_id')
-            ->where('agent_phone', $data['phone'])
-            ->find();
-        if ($info) {
-
-            Session::set("username_", $info);
-            /*$this->redirect('/agent/index/login',[
-                "phone" => $info["phone"],
-                "password" => $info['password'],
-                "token" => "access_token",
-            ]);*/
-
-            return_msg(200, '登录成功', $info);
-        } else {
-            return_msg(400, '登录失败');
-        }
-    }
-
-    /**
-     * 登出
-     */
-    public function logout()
-    {
-        Session::clear();
-        if (Session::has("username_")) {
-            return_msg(400, "失败");
-        } else {
-            return_msg(200, "成功");
-        }
-    }
-
 
     /**
      * 获取当前代理商的二级代理商
@@ -341,18 +258,33 @@ class Index extends Controller
 
 
     /**
-     * 显示交易数据
+     * 商户交易
      * 默认显示昨天的交易数据
      * @return \think\Response
      * @throws Exception
      */
     public function trad(Request $request)
     {
-        //获取当前代理商id
-        $agent_id = session('username_')["id"];
-
         $ky = $request->param("ky");
         $deal = $request->param("deal");
+        $ids = Db::name("total_merchant")->where("agent_id", $this->aid)->column("id");
+        if ($deal) {
+            $nod = Db::name("total_merchant")->alias("m")
+                ->where("agent_id",$this->aid)
+                ->join("cloud_order o", "o.merchant_id = m.id")
+//                ->whereTime("pay_time", "yesterday")
+                ->column("m.id");
+            if (count($nod)) {
+                halt($nod);
+                array_diff($ids, $nod);
+            }else {
+                return_msg(400, "没有数据");
+            }
+        }else {
+           //TODO
+        }
+
+
         if ($ky) {
             $k_f = "LIKE";
             $ky = $ky . "%";
@@ -360,17 +292,18 @@ class Index extends Controller
             $k_f = "NOT LIKE";
             $ky = "-2";
         }
+        $where = [
+            "a.name" => [$k_f, $ky],
+        ];
 
-        halt(1);
-        $where = ["name", $k_f, $ky];
         //获取总行数
         $rows = TotalMerchant::alias('a')
             ->join('cloud_order c', 'c.merchant_id=a.id', 'left')
-            ->where('a.agent_id', $agent_id)
+            ->where('a.agent_id', $this->aid)
             ->where($where)
-            ->whereTime('pay_time',  'yesterday')
+//            ->whereTime('pay_time',  'yesterday')
             ->group('a.id')
-            ->count();
+            ->count("a.id");
 
         $pages = page($rows);
         //根据代理商id查询昨日交易商户
@@ -378,32 +311,33 @@ class Index extends Controller
             ->field(['a.id,a.name,a.contact,a.phone,b.partner_name'])
             ->join('cloud_agent_partner b', 'a.partner_id=b.id', 'left')
             ->join('cloud_order c', 'c.merchant_id=a.id', 'left')
-            ->where('a.agent_id', $agent_id)
+            ->where('a.agent_id', $this->aid)
             ->where($where)
-            ->whereTime('pay_time', 'yesterday')
+//            ->whereTime('pay_time', 'yesterday')
             ->group('a.id')
             ->limit($pages['offset'], $pages['limit'])
             ->select();
-        $parent = AgentPartner::where('agent_id', $agent_id)->field('partner_name,id')->select();
+        $parent = AgentPartner::where('agent_id', $this->aid)->field('partner_name,id')->select();
         $data['parent'] = $parent;
         //取出商户支付宝和微信交易额交易量
         foreach ($data['list'] as &$v) {
-            $where = [
+            $map = [
                 'status' => 1,
                 'pay_type' => 'alipay',
-                'merchant_id' => $v['id']
+                'merchant_id' => $v['id'],
+
             ];
-            $alipay = Order::where($where)->sum('received_money');
-            $alipay_number = Order::where($where)->count();
+            $alipay = Order::where($map)->whereTime("pay_time", "yesterday")->sum('received_money');
+            $alipay_number = Order::where($map)->whereTime("pay_time", "yesterday")->count();
             $where1 = [
                 'status' => 1,
                 'pay_type' => 'wxpay',
                 'merchant_id' => $v['id']
             ];
             //取出微信交易额
-            $wxpay = Order::where($where1)->sum('received_money');
+            $wxpay = Order::where($where1)->whereTime("pay_time", "yesterday")->sum('received_money');
             //取出微信交易量
-            $wxpay_number = Order::where($where1)->count();
+            $wxpay_number = Order::where($where1)->whereTime("pay_time", "yesterday")->count();
             $v['alipay'] = $alipay;
             $v['alipay_number'] = $alipay_number;
             $v['wxpay'] = $wxpay;
@@ -837,7 +771,6 @@ class Index extends Controller
     public function merchant_list(Request $request)
     {
         //获取商户|联系人|联系方式
-        $agent_id = Session::get('username_')["id"];
         $name = $request->param('keyword');
         //获取合伙人id
         $partner_id = $request->param('partner_id');
@@ -881,11 +814,11 @@ class Index extends Controller
         }
         $where["a.status"] = [$status_f, $status];
         $where["a.partner_id"] = [$partner_f, $partner_id];
-        $where["a.agent_id"] = ["eq", $agent_id];
+        $where["a.agent_id"] = ["eq", $this->aid];
         $where["ag.agent_area"] = [$address_f, $address];
         $where["a.abbreviation|a.contact|a.phone|a.name"] = [$name_f, $name];
 
-        $total = Db::name('total_merchant')->where("agent_id", $agent_id)->count('id');
+        $total = Db::name('total_merchant')->where("agent_id", $this->aid)->count('id');
         $rows = TotalMerchant::alias('a')
             ->join('cloud_order', 'cloud_order.merchant_id = a.id')
             ->join('cloud_agent_partner', ' cloud_agent_partner.id = a.partner_id')
@@ -921,114 +854,114 @@ class Index extends Controller
      * @throws \think\exception\DbException
      * @throws  Exception
      */
-    public function merchant_deal(Request $request)
-    {
-        $name = $request->param('keyword');
-        //获取合伙人id
-        $deal = $request->param('deal');
-        $create_time = $request->param('opening_time');
-
-        if ($deal) {
-            $deal_f = "eq";
-        } else {
-            $deal_f = ">";
-            $deal = -2;
-        }
-
-        if ($name) {
-            $name_f = "LIKE";
-            $name = $name . "%";
-        } else {
-            $name_f = "NOT LIKE";
-            $name = "-2";
-        }
-        if ($create_time) {
-            $create_f = "between";
-            $night = strtotime(date("Y-m-d 23:59:59", $create_time));
-            $create_time = [(int)$create_time, $night];
-        } else {
-            $create_f = ">";
-            $create_time = -2;
-        }
-
-        $total = Db::name('total_merchant')->where("agent_id", Session::get("username_")['id'])->count('id');
-
-        $rows = TotalMerchant::alias('a')
-            ->field('a.abbreviation,a.contact,a.phone,cloud_order.received_money,cloud_order.cashier')
-            ->join('cloud_order', 'a.id=cloud_order.merchant_id')
-            ->join('cloud_agent_partner', 'cloud_agent_partner.id=a.partner_id')
-            ->where('a.name', $name_f, $name)
-            ->where('a.agent_id', Session::get("username_")['id'])
-            ->whereTime('cloud_order.pay_time', $create_f, $create_time)
-            ->group('a.id')
-            ->count('a.id');
-        $pages = page($rows);
-        if ($deal) {
-            $total_arr = Db::name("total_merchant")->where("agent_id", Session::get("username_")['id'])->field("id")->select();
-
-            foreach ($total_arr as $v) {
-                $ta[] = $v["id"];
-            }
-            $arr = Db::name("total_merchant")->alias("m")->where("m.agent_id", Session::get("username_")['id'])
-                ->join("cloud_order o", "o.merchant_id = m.id")
-                ->group("m.id")
-                ->field("m.id")->select();
-
-            foreach ($arr as $v) {
-                $aa[] = $v["id"];
-            }
-            $result = array_diff($ta, $aa);
-            $str = implode(',', $result);
-
-            $data['list'] = TotalMerchant::alias('a')
-                ->where("a.id", "in", $str)
-                ->where('a.name', $name_f, $name)
-                ->where('a.partner_id', $partner_f, $partner_id)
-                ->group('a.id')
-                ->limit($pages['offset'], $pages['limit'])
-                ->select();
-        } else {
-            $data['list'] = TotalMerchant::alias('a')
-                ->field('a.name,a.address,cloud_agent_partner.partner_name,a.id,a.abbreviation,a.contact,a.phone,cloud_order.received_money,cloud_order.cashier')
-                ->join('cloud_order', 'a.id=cloud_order.merchant_id')
-                ->join('cloud_agent_partner', 'cloud_agent_partner.id=a.partner_id')
-                ->where('a.agent_id', Session::get("username_")['id'])
-                ->where('a.name', $name_f, $name)
-                ->where('a.partner_id', $partner_f, $partner_id)
-                ->whereTime('cloud_order.pay_time', $create_f, $create_time)
-                ->group('a.id')
-                ->limit($pages['offset'], $pages['limit'])
-                ->select();
-        }
-
-
-        foreach ($data['list'] as &$v) {
-            $where = [
-                'status' => 1,
-                'pay_type' => 'alipay',
-                'merchant_id' => $v['id']
-            ];
-            $alipay = Order::where($where)->sum('received_money');
-            $alipay_number = Order::where($where)->count();
-            $where1 = [
-                'status' => 1,
-                'pay_type' => 'wxpay',
-                'merchant_id' => $v['id']
-            ];
-            //取出微信交易额
-            $wxpay = Order::where($where1)->sum('received_money');
-            //取出微信交易量
-            $wxpay_number = Order::where($where1)->count();
-            $v['alipay'] = $alipay;
-            $v['alipay_number'] = $alipay_number;
-            $v['wxpay'] = $wxpay;
-            $v['wxpay_number'] = $wxpay_number;
-        }
-        $data['pages'] = $pages;
-        $data['pages']['rows'] = $rows;
-        $data['pages']['total_row'] = $total;
-        check_data($data["list"], $data);
-    }
+//    public function merchant_deal(Request $request)
+//    {
+//        $name = $request->param('keyword');
+//        //获取合伙人id
+//        $deal = $request->param('deal');
+//        $create_time = $request->param('opening_time');
+//
+//        if ($deal) {
+//            $deal_f = "eq";
+//        } else {
+//            $deal_f = ">";
+//            $deal = -2;
+//        }
+//
+//        if ($name) {
+//            $name_f = "LIKE";
+//            $name = $name . "%";
+//        } else {
+//            $name_f = "NOT LIKE";
+//            $name = "-2";
+//        }
+//        if ($create_time) {
+//            $create_f = "between";
+//            $night = strtotime(date("Y-m-d 23:59:59", $create_time));
+//            $create_time = [(int)$create_time, $night];
+//        } else {
+//            $create_f = ">";
+//            $create_time = -2;
+//        }
+//
+//        $total = Db::name('total_merchant')->where("agent_id", Session::get("username_")['id'])->count('id');
+//
+//        $rows = TotalMerchant::alias('a')
+//            ->field('a.abbreviation,a.contact,a.phone,cloud_order.received_money,cloud_order.cashier')
+//            ->join('cloud_order', 'a.id=cloud_order.merchant_id')
+//            ->join('cloud_agent_partner', 'cloud_agent_partner.id=a.partner_id')
+//            ->where('a.name', $name_f, $name)
+//            ->where('a.agent_id', Session::get("username_")['id'])
+//            ->whereTime('cloud_order.pay_time', $create_f, $create_time)
+//            ->group('a.id')
+//            ->count('a.id');
+//        $pages = page($rows);
+//        if ($deal) {
+//            $total_arr = Db::name("total_merchant")->where("agent_id", Session::get("username_")['id'])->field("id")->select();
+//
+//            foreach ($total_arr as $v) {
+//                $ta[] = $v["id"];
+//            }
+//            $arr = Db::name("total_merchant")->alias("m")->where("m.agent_id", Session::get("username_")['id'])
+//                ->join("cloud_order o", "o.merchant_id = m.id")
+//                ->group("m.id")
+//                ->field("m.id")->select();
+//
+//            foreach ($arr as $v) {
+//                $aa[] = $v["id"];
+//            }
+//            $result = array_diff($ta, $aa);
+//            $str = implode(',', $result);
+//
+//            $data['list'] = TotalMerchant::alias('a')
+//                ->where("a.id", "in", $str)
+//                ->where('a.name', $name_f, $name)
+//                ->where('a.partner_id', $partner_f, $partner_id)
+//                ->group('a.id')
+//                ->limit($pages['offset'], $pages['limit'])
+//                ->select();
+//        } else {
+//            $data['list'] = TotalMerchant::alias('a')
+//                ->field('a.name,a.address,cloud_agent_partner.partner_name,a.id,a.abbreviation,a.contact,a.phone,cloud_order.received_money,cloud_order.cashier')
+//                ->join('cloud_order', 'a.id=cloud_order.merchant_id')
+//                ->join('cloud_agent_partner', 'cloud_agent_partner.id=a.partner_id')
+//                ->where('a.agent_id', Session::get("username_")['id'])
+//                ->where('a.name', $name_f, $name)
+//                ->where('a.partner_id', $partner_f, $partner_id)
+//                ->whereTime('cloud_order.pay_time', $create_f, $create_time)
+//                ->group('a.id')
+//                ->limit($pages['offset'], $pages['limit'])
+//                ->select();
+//        }
+//
+//
+//        foreach ($data['list'] as &$v) {
+//            $where = [
+//                'status' => 1,
+//                'pay_type' => 'alipay',
+//                'merchant_id' => $v['id']
+//            ];
+//            $alipay = Order::where($where)->sum('received_money');
+//            $alipay_number = Order::where($where)->count();
+//            $where1 = [
+//                'status' => 1,
+//                'pay_type' => 'wxpay',
+//                'merchant_id' => $v['id']
+//            ];
+//            //取出微信交易额
+//            $wxpay = Order::where($where1)->sum('received_money');
+//            //取出微信交易量
+//            $wxpay_number = Order::where($where1)->count();
+//            $v['alipay'] = $alipay;
+//            $v['alipay_number'] = $alipay_number;
+//            $v['wxpay'] = $wxpay;
+//            $v['wxpay_number'] = $wxpay_number;
+//        }
+//        $data['pages'] = $pages;
+//        $data['pages']['rows'] = $rows;
+//        $data['pages']['total_row'] = $total;
+//        check_data($data["list"], $data);
+//    }
 
     /**
      * 服务商列表-筛选搜索
@@ -1198,52 +1131,6 @@ class Index extends Controller
             ->whereTime("pay_time", $time)
             ->count("o.id");
         return $res;
-    }
-
-    /**
-     * 检验账号是存在数据库
-     * @param $value
-     * @param string $type
-     * @param $exist
-     * @throws \think\db\exception\DataNotFoundException
-     * @throws \think\db\exception\ModelNotFoundException
-     * @throws \think\exception\DbException
-     */
-    protected function check_exist($value, $type = 'phone', $exist)
-    {
-        $type_num = $type == 'phone' ? 2 : 4;
-        $flag = $type_num + $exist;
-        $phone_res = Db("total_agent")->where("agent_phone", $value)->find();
-//        $email_res = db("total_admin")->where("email", $value)->find();
-        $email_res = 0;
-        switch ($flag) {
-            /* 2+0 phone need no exist */
-            case 2:
-                if ($phone_res) {
-                    return_msg(400, '手机号已经被占用');
-                }
-                break;
-            /*  2+1 phone need exist */
-            case 3:
-                if (!$phone_res) {
-                    return_msg(400, '手机号不存在！');
-                }
-                break;
-            /* 4+0 email need no exist */
-            case 4:
-                if ($email_res) {
-                    return_msg(400, '此邮箱已经被占用！');
-                }
-                break;
-            /* 4+1 email need exist */
-            case 5:
-                if (!$email_res) {
-                    return_msg(400, '此邮箱不存在！');
-                }
-                break;
-
-        }
-
     }
 
 

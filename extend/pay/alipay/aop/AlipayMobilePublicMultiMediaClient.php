@@ -102,7 +102,7 @@ class AlipayMobilePublicMultiMediaClient{
 		$datas = explode("\r\n\r\n", $output, 2);
 		$header = $datas[0];
 
-		if( $httpCode == '200'){
+		if( $httpCode == 200){
 			$body = $datas[1];
 		}else{
 			$body = '';

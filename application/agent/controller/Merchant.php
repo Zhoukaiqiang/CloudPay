@@ -137,7 +137,7 @@ class Merchant extends Incom
             ->limit($pages['offset'],$pages['limit'])
             ->select();
         $data['pages']=$pages;
-        return_msg('200','success',$data);
+        return_msg(200,'success',$data);
     }
 
     /**
@@ -168,7 +168,7 @@ class Merchant extends Incom
             ->limit($pages['offset'],$pages['limit'])
             ->select();
 
-        return_msg('200','success',$data);
+        return_msg(200,'success',$data);
     }
 
     /**
@@ -198,7 +198,7 @@ class Merchant extends Incom
             ->limit($pages['offset'],$pages['limit'])
             ->select();
         $data['pages']=$pages;
-        return_msg('200','success',$data);
+        return_msg(200,'success',$data);
     }
 
     /**
@@ -225,7 +225,7 @@ class Merchant extends Incom
             ->limit($pages['offset'],$pages['limit'])
             ->select();
         $data['pages']=$pages;
-        return_msg('200','success',$data);
+        return_msg(200,'success',$data);
     }
 
     /**

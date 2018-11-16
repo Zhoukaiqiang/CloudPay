@@ -71,7 +71,7 @@ class Capital extends Admin
                 ->join('cloud_total_agent b','a.agent_id=b.id','left')
                 ->where('a.id',$id)
                 ->find();
-            return_msg('200','success',$data);
+            return_msg(200,'success',$data);
         }
     }
 
@@ -102,7 +102,7 @@ class Capital extends Admin
                 ->join('cloud_total_agent b','a.agent_id=b.id','left')
                 ->where('a.id',$id)
                 ->find();
-            return_msg('200','success',$data);
+            return_msg(200,'success',$data);
         }
     }
 

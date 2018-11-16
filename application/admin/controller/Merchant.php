@@ -48,7 +48,7 @@ class Merchant extends Admin
         //获取所有代理商
         $info=$this->get_agent();
         $data['agent']=$info;
-        return_msg('200','success',$data);
+        return_msg(200,'success',$data);
     }
 
     /**
@@ -114,7 +114,7 @@ class Merchant extends Admin
 //            ->limit($pages['offset'],$pages['limit'])
 //            ->select();
 //        $data['pages']=$pages;
-//        return_msg('200','success',$data);
+//        return_msg(200,'success',$data);
 //    }
 
     /**
@@ -132,7 +132,7 @@ class Merchant extends Admin
 //        //获取所有代理商
 //        $info=$this->get_agent();
 //        $data['agent']=$info;
-//        return_msg('200','success',$data);
+//        return_msg(200,'success',$data);
 //    }
 
     /**
@@ -196,7 +196,7 @@ class Merchant extends Admin
             ->limit($pages['offset'],$pages['limit'])
             ->select();
         $data['pages']=$pages;
-        return_msg('200','success',$data);
+        return_msg(200,'success',$data);
     }
 
     /**
@@ -213,7 +213,7 @@ class Merchant extends Admin
         //取出所有代理商
         $info=$this->get_agent();
         $data['agent']=$info;
-        return_msg('200','success',$data);
+        return_msg(200,'success',$data);
     }
 
     /**

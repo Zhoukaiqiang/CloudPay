@@ -74,7 +74,7 @@ class Proceeds extends Scancode
 
        $result=Db::name('merchant_member')->where('id',$member_id)->field('money')->find();
        if($result['money']-$money <= 0){
-           return_msg('400','余额不足');
+           return_msg(400,'余额不足');
        }
        $resu=Db::name('merchant_member')->where('id',$member_id)
            ->update(['money'=>['dec',$money],'consumption_time'=>time(),'consump_number'=>['inc',1]]);

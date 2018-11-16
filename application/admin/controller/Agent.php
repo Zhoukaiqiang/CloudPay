@@ -116,10 +116,10 @@ class Agent extends Admin
                 $info = Db::name("total_agent")->insertGetId($data);
                 if ($info) {
                     //保存成功
-                    return_msg('200', '保存成功', $info);
+                    return_msg(200, '保存成功', $info);
                 } else {
                     //保存失败
-                    return_msg('400', '保存失败');
+                    return_msg(400, '保存失败');
                 }
 
             } else {
@@ -164,12 +164,13 @@ class Agent extends Admin
             }
             //保存到数据表
             $info =Db::name("total_agent")->where('id', 'eq', $data['id'])->update($data, true);
+
             if ($info) {
                 //保存成功
-                return_msg('200', '修改成功', $info);
+                return_msg(200, '修改成功', $info);
             } else {
                 //保存失败
-                return_msg('400', '修改失败');
+                return_msg(400, '修改失败');
             }
         } else {
             $id = request()->param('id');

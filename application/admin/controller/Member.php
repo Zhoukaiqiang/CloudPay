@@ -19,11 +19,11 @@ class Member extends Admin
      */
     public function index()
     {
-        $start_time=request()->param('start_time') ? request()->param('start_time') : strtotime('-1 month');
-        $end_time=request()->param('end_time') ? request()->param('end_time') : time();
+        $start_time = request()->param('start_time') ? request()->param('start_time') : strtotime('-1 month');
+        $end_time = request()->param('end_time') ? request()->param('end_time') : time();
 
-        $time=[$start_time,$end_time];
-        $param="between";
+        $time = [$start_time, $end_time];
+        $param = "between";
 
         $role = $this->role_id;
         $admin_id = $this->admin_id;
@@ -39,12 +39,12 @@ class Member extends Admin
                 //取出代理商下所有商户数
                 $merchant_count = TotalMerchant::field('id,name')->where(['agent_id' => $s['id']])->select();
 
-                foreach ($merchant_count as $k=>$v) {
-                    $member_count += MerchantMember::where('merchant_id', $v['id'])->whereTime('register_time',$param,$time)->count();
+                foreach ($merchant_count as $k => $v) {
+                    $member_count += MerchantMember::where('merchant_id', $v['id'])->whereTime('register_time', $param, $time)->count();
 //        die;
-                    $recharge_money += MemberRecharge::where('merchant_id', $v['id'])->field('amount')->whereTime('recharge_time',$param,$time)->sum('amount');
+                    $recharge_money += MemberRecharge::where('merchant_id', $v['id'])->field('amount')->whereTime('recharge_time', $param, $time)->sum('amount');
 
-                    $discount_money += MemberRecharge::where('merchant_id', $v['id'])->field('discount_amount')->whereTime('recharge_time',$param,$time)->sum('discount_amount');
+                    $discount_money += MemberRecharge::where('merchant_id', $v['id'])->field('discount_amount')->whereTime('recharge_time', $param, $time)->sum('discount_amount');
 
                     $total_money += MerchantMember::field('money')->where('merchant_id', $v['id'])->sum('money');
 
@@ -52,11 +52,11 @@ class Member extends Admin
                     //商户名
                     $data['list'][$k]['merchant_name'] = $v['name'];
 
-                    $data['list'][$k]['member'] = MerchantMember::where('merchant_id', $v['id'])->whereTime('register_time',$param,$time)->count();
+                    $data['list'][$k]['member'] = MerchantMember::where('merchant_id', $v['id'])->whereTime('register_time', $param, $time)->count();
 
-                    $data['list'][$k]['recharge'] = MemberRecharge::where('merchant_id', $v['id'])->field('amount')->whereTime('recharge_time',$param,$time)->sum('amount');
+                    $data['list'][$k]['recharge'] = MemberRecharge::where('merchant_id', $v['id'])->field('amount')->whereTime('recharge_time', $param, $time)->sum('amount');
 
-                    $data['list'][$k]['discount'] = MemberRecharge::where('merchant_id', $v['id'])->whereTime('recharge_time',$param,$time)->field('discount_amount')->sum('discount_amount');
+                    $data['list'][$k]['discount'] = MemberRecharge::where('merchant_id', $v['id'])->whereTime('recharge_time', $param, $time)->field('discount_amount')->sum('discount_amount');
 
                     $data['list'][$k]['money'] = MerchantMember::field('money')->where('merchant_id', $v['id'])->sum('money');
                 }
@@ -80,12 +80,12 @@ class Member extends Admin
                 //取出代理商下所有商户数
                 $merchant_count = TotalMerchant::field('id,name')->where(['agent_id' => $s['id']])->select();
 
-                foreach ($merchant_count as $k=>$v) {
-                    $member_count += MerchantMember::where('merchant_id', $v['id'])->whereTime('register_time',$param,$time)->count();
+                foreach ($merchant_count as $k => $v) {
+                    $member_count += MerchantMember::where('merchant_id', $v['id'])->whereTime('register_time', $param, $time)->count();
 //        die;
-                    $recharge_money += MemberRecharge::where('merchant_id', $v['id'])->field('amount')->whereTime('recharge_time',$param,$time)->sum('amount');
+                    $recharge_money += MemberRecharge::where('merchant_id', $v['id'])->field('amount')->whereTime('recharge_time', $param, $time)->sum('amount');
 
-                    $discount_money += MemberRecharge::where('merchant_id', $v['id'])->field('discount_amount')->whereTime('recharge_time',$param,$time)->sum('discount_amount');
+                    $discount_money += MemberRecharge::where('merchant_id', $v['id'])->field('discount_amount')->whereTime('recharge_time', $param, $time)->sum('discount_amount');
 
                     $total_money += MerchantMember::field('money')->where('merchant_id', $v['id'])->sum('money');
 
@@ -95,9 +95,9 @@ class Member extends Admin
 
                     $data[$k]['member'] = MerchantMember::where('merchant_id', $v['id'])->count();
 
-                    $data[$k]['recharge'] = MemberRecharge::where('merchant_id', $v['id'])->field('amount')->whereTime('recharge_time',$param,$time)->sum('amount');
+                    $data[$k]['recharge'] = MemberRecharge::where('merchant_id', $v['id'])->field('amount')->whereTime('recharge_time', $param, $time)->sum('amount');
 
-                    $data[$k]['discount'] = MemberRecharge::where('merchant_id', $v['id'])->field('discount_amount')->whereTime('recharge_time',$param,$time)->sum('discount_amount');
+                    $data[$k]['discount'] = MemberRecharge::where('merchant_id', $v['id'])->field('discount_amount')->whereTime('recharge_time', $param, $time)->sum('discount_amount');
 
                     $data[$k]['money'] = MerchantMember::field('money')->where('merchant_id', $v['id'])->sum('money');
                 }
@@ -114,36 +114,58 @@ class Member extends Admin
 
 
     /**
-     *会员详情
+     * 会员详情
      * @throws \think\Exception
      * @throws \think\db\exception\DataNotFoundException
      * @throws \think\db\exception\ModelNotFoundException
      * @throws \think\exception\DbException
      */
-    public function merchant_member()
+    public function merchant_member(Request $request)
     {
-        $merchant_id = request()->param('id');
-        $start_time = request()->param('start_time') ? request()->param('start_time') : strtotime('-1 month');
-        $end_time = request()->param('start_time') ? request()->param('start_time') : time();
+        $mid = $request->param('id');
+        $phone = $request->param('phone');
+        $time = $request->param("time");
 
-        $time = [$start_time, $end_time];
-        $param = "between";
-        $data['list'] = MerchantMember::field('id,member_name,member_phone,money,member_birthday')->where('merchant_id', $merchant_id)->select();
-
-        foreach ($data['list'] as &$v) {
-            $v['recharge_money'] = MemberRecharge::where(['merchant_id' => $merchant_id, 'member_id' => $v['id']])->whereTime('recharge_time', $param, $time)->sum('amount');
-
-            $v['discount_money'] = MemberRecharge::where(['merchant_id' => $merchant_id, 'member_id' => $v['id']])->whereTime('recharge_time', $param, $time)->sum('discount_amount');
-
-            $v['discount_money'] = MemberRecharge::where(['member_id'=>$v['id']])->sum('discount_amount');
+        if ($phone) {
+            $nf = "LIKE";
+        } else {
+            $nf = "NOT LIKE";
+            $phone = "2";
         }
-        $data['member_count'] = MerchantMember::where('merchant_id', $merchant_id)->count();  //会员总数
+        if ($time) {
+            $tf = "between";
+        } else {
+            $tf = ">=";
+            $time = -2;
+        }
+        $where = [
+            "mm.merchant_id" => ["eq", $mid],
+            "mm.member_birthday" => [$tf, $time],
+            "mm.member_phone" => [$nf, $phone]
+        ];
 
-        $data['recharge_money'] = MemberRecharge::where('merchant_id', $merchant_id)->field('amount')->sum('amount');  //充值总额
 
-        $data['discount_money'] = MemberRecharge::where('merchant_id', $merchant_id)->field('discount_amount')->sum('discount_amount'); //优惠总额
+        $rows = Db::name("merchant_member")->where('merchant_id', $mid)->where('member_phone', $nf, $phone)
+            ->whereTime("register_time", $tf, $time)
+            ->count("id");
 
-        $data['total_money'] = MerchantMember::field('money')->where('merchant_id', $merchant_id)->sum('money');          //账户余额
+        $pages = page($rows);
+        $data['list'] = Db::name("merchant_member")->alias("mm")
+            ->field('mm.id, mm.member_name,mm.member_phone ,mm.member_birthday, sum(mr.order_money) recharge_money, sum(discount_amount) discount_money, mm.money')
+            ->join("member_recharge mr", "mr.member_id = mm.id")
+            ->group("mm.id")
+            ->where($where)
+            ->limit($pages['offset'], $pages["limit"])
+            ->select();
+
+        $data['member_count'] = MerchantMember::where('merchant_id', $mid)->count();  //会员总数
+
+        $data['recharge_money'] = MemberRecharge::where('merchant_id', $mid)->field('amount')->sum('amount');  //充值总额
+
+        $data['discount_money'] = MemberRecharge::where('merchant_id', $mid)->field('discount_amount')->sum('discount_amount'); //优惠总额
+
+        $data['total_money'] = MerchantMember::field('money')->where('merchant_id', $mid)->sum('money');          //账户余额
+
         check_data($data);
     }
 
@@ -175,9 +197,9 @@ class Member extends Admin
             $name = "-2";
         }
         $where = [
-            "mer.name"  =>[$nf, $name],
-            "mm.register_time" => [ $tf, $time],
-            "mr.status" => [ "eq", 1],
+            "mer.name" => [$nf, $name],
+            "mm.register_time" => [$tf, $time],
+            "mr.status" => ["eq", 1],
         ];
         $rows = Db::name("total_merchant")->where("name", $nf, $name)->count("id");
         $pages = page($rows);
@@ -190,63 +212,15 @@ class Member extends Admin
                 ->where("mer.id", $id["id"])
                 ->join("merchant_member mm", "mm.merchant_id = mer.id")
                 ->join("member_recharge mr", "mr.member_id = mm.id")
-                ->field("mer.name ,count(mm.id) member_n, sum(mr.order_money) re_money, sum(mr.discount_amount) discount, sum(mm.money) money")
+                ->field("mer.id,mer.name as merchant_name ,count(mm.id) member, sum(mr.order_money) recharge, sum(mr.discount_amount) discount, sum(mm.money) money")
                 ->find();
         }
         $res["pages"] = $pages;
+//        $res["member_count"] = 2;
+//        $res["discount_money"] = 2;
+//        $res["recharge_money"] = 2;
+//        $res["total_money"] = 2;
         check_data($res["list"], $res);
-
-    }
-
-    /**
-     * 会员详情搜索
-     * @param Request $request
-     * @throws \think\Exception
-     * @throws \think\db\exception\DataNotFoundException
-     * @throws \think\db\exception\ModelNotFoundException
-     * @throws \think\exception\DbException
-     */
-    public function detail_search(Request $request)
-    {
-        if ($request->post()) {
-            $mid = $request->post('id');
-            $phone = $request->post('phone');
-            $time  = $request->post("time");
-
-            if ($phone) {
-                $nf = "eq";
-            } else {
-                $nf = "<>";
-                $phone = 2;
-            }
-            if ($time) {
-                $tf = "between";
-                $time = [$time];
-            } else {
-                $tf = ">=";
-                $time = -2;
-            }
-            $where = [
-                "mm.merchant_id" => ["eq", $mid],
-                "mm.register_time" => [$tf, $time],
-                "mm.member_phone"  => [$nf , $phone]
-            ];
-
-            $rows = Db::name("merchant_member")->where('merchant_id',$mid)->where('member_phone', $nf,$phone)->count("id");
-
-            $pages = page($rows);
-            $res["list"] = Db::name("merchant_member")->alias("mm")
-                ->field("mm.member_name , mm.member_phone, sum(mr.order_money) re_money, sum(mr.discount_amount) discount, sum(mm.money) money, member_birthday mb")
-                ->join("member_recharge mr", "mr.member_id = mm.id")
-                ->where($where)
-                ->limit($pages["offset"], $pages["limit"])
-                ->group("mm.id")
-                ->select();
-
-
-            $res["pages"] = $pages;
-            check_data($res["list"], $res);
-        }
 
     }
 }

@@ -12,10 +12,12 @@ namespace app\merchant\controller;
 use app\merchant\model\MerchantShop;
 use app\merchant\model\MerchantUser;
 use app\merchant\model\Order;
+use PhpOffice\PhpSpreadsheet\Exception;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use think\Db;
 use think\Request;
 use think\Session;
-
 
 class Index extends Common
 {
@@ -141,6 +143,7 @@ class Index extends Common
     {
         if ($request->isGet()) {
             $time = $request->param("time");
+            $excel = $request->get("excel");
 
             if (isset($time)) {
                 $time_flag = "between";
@@ -165,7 +168,7 @@ class Index extends Common
                 "o.pay_time" => [$time_flag, $time],
             ];
 
-            $this->return_list($where, $where_join);
+            $this->return_list($where, $where_join, $excel);
 
         }
 
@@ -236,7 +239,7 @@ class Index extends Common
             $shop = $request->param("shop");
             $status = $request->param("status");
             $time = $request->param("time");
-
+            //是否导出Excel
             if (isset($time)) {
                 $time_flag = "between";
 
@@ -301,18 +304,19 @@ class Index extends Common
             check_data($data);
         }
     }
+
     /**
      * 返回列表数据
      * @param $where
      * @param $where_join
+     * @param $excel [bool] 是否需要返回Excel
      * @throws \think\db\exception\DataNotFoundException
      * @throws \think\db\exception\ModelNotFoundException
      * @throws \think\exception\DbException
      */
-    protected function return_list($where, $where_join)
+    protected function return_list($where, $where_join, $excel = null)
     {
         $Order = new Order();
-
         /** 默认展示今天的 门店数据 */
         $rows = $Order::where($where)->count("id");
         $pages = page($rows);
@@ -328,9 +332,58 @@ class Index extends Common
         $data["pages"] = $pages;
         $data["pages"]["rows"] = $rows;
 
+        if ($excel) {
+            /** 导出Excel */
+            $this->excelExport("data.xlsx", $data["list"]);
+        } else {
+            check_data($data["list"], $data);
+        }
 
-        check_data($data["list"], $data);
+
     }
 
+    /**
+     * excel表格导出
+     * @param string $fileName 文件名称
+     * @param array $headArr 表头名称
+     * @param array $data 要导出的数据
+     * @author static7
+     * @throws Exception
+     */
+
+    public function excelExport($fileName = '', $data = [])
+    {
+
+        ini_set("memory_limit", "-1");
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setCellValue("A1", "订单号");
+        $sheet->setCellValue("B1", "交易时间");
+        $sheet->setCellValue("C1", "交易门店");
+        $sheet->setCellValue("D1", "收款人");
+        $sheet->setCellValue("E1", "支付方式");
+        $sheet->setCellValue("F1", "订单金额");
+        $sheet->setCellValue("G1", "优惠金额");
+        $sheet->setCellValue("H1", "实收金额");
+        $sheet->setCellValue("I1", "订单状态");
+
+        $i = 1;
+        foreach ($data as $dd) {
+            $i++;
+            $sheet->setCellValue('A' . $i, $dd['order_number']);
+            $sheet->setCellValue('B' . $i, $dd['pay_time']);
+            $sheet->setCellValue('C' . $i, $dd['shop_name']);
+            $sheet->setCellValue('D' . $i, $dd['cashier']);
+            $sheet->setCellValue('E' . $i, $dd['pay_type']);
+            $sheet->setCellValue('F' . $i, $dd['received_money']);
+            $sheet->setCellValue('G' . $i, $dd['order_money']);
+            $sheet->setCellValue('H' . $i, $dd['discount']);
+            $sheet->setCellValue('I' . $i, $dd['status']);
+        }
+
+        $writer = new Xlsx($spreadsheet);
+        $writer->save("uploads/" . $fileName);
+        return_msg(200, "success", "uploads/" . $fileName);
+    }
 
 }
