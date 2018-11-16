@@ -514,20 +514,23 @@ class Capital extends Common
         }
     }
 
-    /*
-     *
+    /**
+     *门店对账
+     * @param Request $request
      */
     public function pc_bill_list(Request $request)
     {
 
         $pay_type = ["wxpay", "alipay", "etc", "cash"];
         //默认一月1s
-        $start_time=$request->param('start_time') ? $request->param('start_time') : strtotime('-1 week');
+        $start_time=$request->param('start_time') ? $request->param('start_time') : strtotime('-1 month');
         $end_time = $request->param('end_time') ? $request->param('end_time') : time();
-
+        $arr=[];
         for($i=0;$i<count($pay_type);$i++){
-            $this->search($pay_type[$i],'between',[$start_time,$end_time]);
+            $arr[]=$this->search($pay_type[$i],'between',[$start_time,$end_time]);
         }
+
+        check_data($arr);
     }
 
     public function search($pay_type,$param,$time)
@@ -550,6 +553,47 @@ class Capital extends Common
         //实际到账金额
         $received_money = Order::where(['merchant_id'=>$this->merchant_id,'pay_type'=>$pay_type])->whereTime('pay_time',$param,$time)->sum('received_money');
         $data[$pay_type][] = $received_money * $merchant_rate['merchant_rate'];
+
+        return $data;
+    }
+
+    /**
+     *门店名称搜索
+     */
+    public function shop_search()
+    {
+        $shop_name=request()->param('name');
+        $shop=MerchantShop::where(['merchant_id'=>$this->merchant_id,'shop_name'=>['like',$shop_name."%"]])->find();
+        $shop_id=$shop['id'];
+        $pay_type = ["wxpay", "alipay", "etc", "cash"];
+        $arr=[];
+        for($i=0;$i<count($pay_type);$i++){
+            $arr[]=$this->list_search($pay_type[$i],$shop_id);
+        }
+    }
+
+    public function list_search($pay_type,$shop_id)
+    {
+        $data[$pay_type][] = Order::where(['shop_id'=>$shop_id,'pay_type'=>$pay_type])->count();
+
+        $data[$pay_type][] = Order::where(['shop_id'=>$shop_id,'pay_type'=>$pay_type])->sum('order_money');
+
+        $data[$pay_type][] = Order::where(['shop_id'=>$shop_id,'pay_type'=>$pay_type])->sum('discount');
+        //实收金额
+        $data[$pay_type][] = Order::where(['shop_id'=>$shop_id,'pay_type'=>$pay_type])->sum('received_money');
+
+        //退款笔数
+        $data[$pay_type][] = Order::where(['shop_id'=>$shop_id,'pay_type'=>$pay_type,'status'=>2])->count();
+        //退款金额
+        $data[$pay_type][] = Order::where(['shop_id'=>$shop_id,'pay_type'=>$pay_type,'status'=>2])->sum('received_money');
+        //费率
+        $merchant_rate=TotalMerchant::field('merchant_rate')->where('id',$this->merchant_id)->find();
+        $data[$pay_type][] = $merchant_rate['merchant_rate'];
+        //实际到账金额
+        $received_money = Order::where(['shop_id'=>$shop_id,'pay_type'=>$pay_type])->sum('received_money');
+        $data[$pay_type][] = $received_money * $merchant_rate['merchant_rate'];
+
+        return $data;
     }
 
 }

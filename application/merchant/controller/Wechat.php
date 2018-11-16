@@ -853,6 +853,36 @@ class Wechat extends Controller
         }
     }
 
+    /**
+     * 订单查询
+     */
+    public function order_query(Request $request)
+    {
+        $true_url = "http://gateway.starpos.com.cn/adpweb/ehpspos3/sdkQryBarcodePay.json";
+        $key = "0FF9606C39C2CCF1515E5CE108B506F0";
+        /**设备号*/
+        $data[ 'opSys' ] = "3";
+        $data[ 'characterSet' ] = "00";
+        $data[ 'signType' ] = 'MD5';
+
+        $data[ 'version' ] = 'V1.0.0';
+//        return $data;
+        $data[ 'txnTime' ] = date("Ymdhis");
+
+        $data['trmNo'] = "95447192";
+        $data['orgNo'] = "27573";
+        $data['mercId'] = "800332000002146";
+        $data['tradeNo'] = (string)generate_order_no();
+        $data['logNo'] = "201811151623453555";
+        //合并数组
+
+        $data['signValue'] = sign_ature(0000,$data,$key);
+        $result = curl_request($true_url, true, $data, true);
+        $result = urldecode($result);
+        $result = json_decode($result, true);
+        halt($result);
+    }
+
     public function getCode($res)
     {
         //回调地址
