@@ -35,7 +35,7 @@ class Login extends Controller
     }
 
     /**
-     *一键登录代理商系统
+     * 一键登录代理商系统
      * @param Request $request
      * @throws Exception
      * @throws \think\db\exception\DataNotFoundException

@@ -284,10 +284,10 @@ class Merchant extends Incom
                 $arr['stoe_area_cod']=$data['stoe_area_cod'];//地区码
                 $arr['orgNo']=ORG_NO;//合作商机构号
                 $arr['crp_nm']=$data['contact'];//法人姓名
-//                halt($arr);
+
                 MerchantIncom::insert($arr,true);
                 $this->merchant_incom($insert_id);
-//                return_msg(200,'添加成功');
+
             }else{
                 return_msg(400,'添加失败');
             }
@@ -295,7 +295,7 @@ class Merchant extends Incom
             //取出当前代理商下所有合伙人
             $data['list']=AgentPartner::field(['id','partner_name'])->where('agent_id',$agent_id)->select();
             //显示所有一级分类
-//            $data['category']=AgentCategory::where('pid',0)->select();
+
             $data['category']=Mcc::field('sup_mcc_cd,sup_mcc_nm')->group('sup_mcc_cd')->select();
             //取出所有省份和省份名称
             $data['province']=AreaCode::field('merc_prov,prov_nm')->group('merc_prov')->select();

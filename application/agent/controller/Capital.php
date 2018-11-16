@@ -8,6 +8,7 @@ use app\agent\model\TotalAgent;
 use app\agent\model\TotalCapital;
 use app\agent\model\TotalMerchant;
 use think\Controller;
+use think\Db;
 use think\Exception;
 use think\Request;
 use think\Session;
@@ -20,28 +21,32 @@ class Capital extends Agent
      * @throws \think\db\exception\DataNotFoundException
      * @throws \think\db\exception\ModelNotFoundException
      * @throws \think\exception\DbException
+     * @throws Exception
      */
-    public function index()
+    public function index(Request $request)
     {
         //获取当前代理商id
-        $agent_id = Session::get("username_")['id'];
+        $time = $request->param("time");
+
+        if ($time) {
+            $tf = "between";
+        }else {
+            $tf = ">";
+            $time = "-2";
+        }
+
         $join = [
             ['cloud_agent_partner b', 'a.partner_id = b.id'],    //合伙人
             ['cloud_total_agent c', 'a.agent_id = c.id'],        //子代理商
             ['cloud_order d', 'd.merchant_id = a.id']            //订单表
         ];
 
-        /** 检查是几级代理商 */
-//        $check_level = TotalAgent::get($agent_id)->field("parent_id")->find();
-        //mark
-
-//        $check_level->getData()["parent_id"] == 0
-
         /** 一级代理商 */
         $rows = TotalMerchant::alias("a")
             ->join($join)
             ->where([
-                "a.agent_id" => $agent_id,     //属于当前代理商的 商户
+                "a.agent_id" => $this->aid,  //属于当前代理商的 商户
+                "a.create_time" => [$tf, $time]
             ])
             ->group('a.id')
             ->count("a.id");
@@ -52,8 +57,8 @@ class Capital extends Agent
             ->field(['a.id, a.name, b.partner_name, a.partner_id ,b.commission as partner_money, a.merchant_rate,c.agent_name,c.agent_rate,b.rate,b.proportion,b.model'])
             ->join($join)
             ->where([
-                "a.agent_id" => $agent_id,     //属于当前代理商的 商户
-                //"b.agent_id" => $agent_id,     //属于当前代理商的 合伙人
+                "a.agent_id" => $this->aid,     //属于当前代理商的 商户
+                "a.create_time" => [$tf, $time]
             ])
             ->group('a.id')
             ->limit($pages["offset"], $pages["limit"])
@@ -131,11 +136,11 @@ class Capital extends Agent
         //mark
 
         $data["index_count"]["pre_settle"] = $this->check_apply_money_by_month();
-        $data["index_count"]["settled_num"] = TotalCapital::where(["agent_id" => $agent_id, "status" => 1])
+        $data["index_count"]["settled_num"] = TotalCapital::where(["agent_id" => $this->aid, "status" => 1])
             ->whereTime("settlement_time", ">", $this->time_limit)
             ->count("id");
         $data["index_count"]["pre_settle_num"] = (int)date("m", time()) - $data["index_count"]["settled_num"];
-        $data["index_count"]["settled"] = TotalCapital::where(["agent_id" => $agent_id, "status" => 1])
+        $data["index_count"]["settled"] = TotalCapital::where(["agent_id" => $this->aid, "status" => 1])
             ->whereTime("settlement_time", ">", $this->time_limit)
             ->sum("settlement_money");
 
@@ -153,11 +158,8 @@ class Capital extends Agent
      */
     public function get_list(Request $request)
     {
-        if ($request->isGet()) {
-            $id = $request->param("id") ? $request->param("id") : Session::get("username_")["id"];
-            if (empty($id)) {
-                return_msg(400, "请登录");
-            }
+
+
             /**  时间查询 $rows */
             $time = $request->param("time");
             $status = $request->param("status");
@@ -168,9 +170,6 @@ class Capital extends Agent
                 $time = 0;
             } else {
                 $time_flag = "between";
-                $firstday = (int)$time;
-                $lastday = strtotime(date("Y-m-d", $firstday) . ' +1 month -1 day');
-                $time = [$firstday, $lastday];
             }
 
             if ($status == null) {
@@ -182,13 +181,13 @@ class Capital extends Agent
             /** @var [array] 准备查询条件 $query */
             $query = [
                 "status" => [$status_flag, $status],
-                "settlement_start" => [$time_flag, $time],
+                "settlement_time" => [$time_flag, $time],
             ];
-            $rows = TotalCapital::where("agent_id=$id")
+            $rows = TotalCapital::where("agent_id", $this->aid)
                 ->where($query)
                 ->count("id");
             $pages = page($rows);
-            $data["list"] = TotalCapital::where("agent_id=$id")
+            $data["list"] = TotalCapital::where("agent_id", $this->aid)
                 ->where($query)
                 ->limit($pages["offset"], $pages["limit"])
                 ->select();
@@ -196,19 +195,13 @@ class Capital extends Agent
             $data["pages"] = $pages;
             $data["pages"]["rows"] = $rows;
             /** 已申请佣金 */
-            $data["count"]["applied"] = $this->get_agent_sum($id, 0);
+            $data["count"]["applied"] = $this->get_agent_sum($this->aid, 0);
             /** 已结算佣金 */
-            $data["count"]["settled"] = $this->get_agent_sum($id, 1);
+            $data["count"]["settled"] = $this->get_agent_sum($this->aid, 1);
             /** 待结算佣金 */
-            $data["count"]["unsettle"] = $this->get_agent_sum($id, 2);
-            if (count($data["list"])) {
-                return_msg(200, "success", $data);
-            } else {
-                return_msg(400, "没有数据");
-            }
+            $data["count"]["unsettle"] = $this->get_agent_sum($this->aid, 2);
 
-        }
-
+            check_data($data["list"], $data);
 
     }
 
@@ -435,7 +428,7 @@ class Capital extends Agent
     public function apply_money(Request $request)
     {
 
-        $agent_id = $request->param("agent_id") ? $request->param("agent_id") : Session::get("username_")['id'];
+        $agent_id = $request->param("id");
 
         /**  agent_id不存在返回 */
         if (!$agent_id) {
@@ -503,13 +496,11 @@ class Capital extends Agent
     public function check_apply_money_by_month($time = null)
     {
 
-
         if (!$time) {
             $time_flag = ">";
             $time = $this->time_limit;
         } else {
             $time_flag = "between";
-            $time = [$time];
         }
 
         /** 时间区间 */
@@ -570,9 +561,8 @@ class Capital extends Agent
                 }
             }
 
-            for ($i = 0; $i < count($agent_id_arr); $i++) {
-
-                $sum += ($agent_sec_rate_arr[$i] - (float)$agent_rate) * $sec_merchant_total[$i];
+            foreach ($sec_merchant_total as $k => $v) {
+                $sum += ($agent_sec_rate_arr[$k] - (float)$agent_rate) * $sec_merchant_total[$k];
             }
 
             return array_sum($merchant_total) + $sum;
@@ -630,7 +620,7 @@ class Capital extends Agent
 
 
     /**
-     * 发送短信到手机
+     * 发送短信到手机 -- [结算操作]
      * @param $phone
      * @param $msg
      */
@@ -671,29 +661,37 @@ class Capital extends Agent
      * @throws \think\exception\DbException
      */
 
-    public function partner_list()
+    public function partner_list(Request $request)
     {
 
-        $id = Session::get("username_")["id"];
+        $id = $this->aid;
+        $time = $request->param("time");
+        if (!$time) {
+            $time_flag = ">";
+            $time = $this->time_limit;
+        } else {
+            $time_flag = "between";
+        }
+        $map = [
+            "create_time" => [$time_flag, $time]
+        ];
         $rate = TotalAgent::get($id)->toArray()["agent_rate"];
 
-        $rows = $data["list"] = AgentPartner::where(["agent_id" => $id])->count("id");
+        $rows = $data["list"] = AgentPartner::where(["agent_id" => $id])->where($map)->count("id");
         $pages = page($rows);
         $data["list"] = AgentPartner::where(["agent_id" => $id])
+            ->where($map)
             ->field("id,partner_name,model,proportion,rate")
             ->limit($pages["offset"], $pages["limit"])
             ->select();
 
-        if (!count($data["list"])) {
-            return_msg(400, "没有数据");
-        }
+        check_data($data["list"], '',0);
 
         $commission = 0;
         $partner_money = 0;
         $money = 0;
         $count = 0;
         foreach ($data["list"] as &$v) {
-
 
             /** 获取商户微信交易额 */
             $merchant["mer_wx_amount"] = $this->get_partner_amount($v["id"], "wxpay");
@@ -707,8 +705,7 @@ class Capital extends Agent
             /** 获取商户支付宝交易量 */
             $merchant["mer_ali_num"] = $this->get_partner_num($v["id"], "alipay");
 
-
-            $raw_data = TotalMerchant::where(["partner_id" => $v["id"]])->field("merchant_rate, id")->select();
+            $raw_data = TotalMerchant::all(["partner_id" => $v["id"]]);
 
             $merchant_rate = collection($raw_data)->toArray();
             /** 获取商户数量 */
@@ -717,6 +714,8 @@ class Capital extends Agent
             if ($v['model'] == 0) {
                 //按比例
                 foreach ($merchant_rate as $j) {
+
+
                     /** 该合伙人下1个商户总交易额 */
                     $money = Order::where(["merchant_id" => $j["id"]])->sum("received_money");
 
@@ -896,6 +895,7 @@ class Capital extends Agent
             return_msg(400, "没有查看权限");
         }
         $rows = TotalAgent::where(["parent_id" => $agent_id])
+            ->where("create_time")
             ->field("id,agent_name,agent_rate")
             ->count("id");
 

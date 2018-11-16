@@ -7,53 +7,12 @@ use app\agent\model\TotalMerchant;
 use think\Controller;
 use think\Db;
 use think\Exception;
+use think\Loader;
 use think\Request;
 use think\Session;
 
 class Service extends Agent
 {
-    /**
-     * 显示服务商列表
-     *
-     * @return \think\Response
-     */
-    public function service_list(Request $request)
-    {
-        //获取上级代理商id
-        $id = Session::get("username_")['id'];
-        $status = $request->param("status");
-        $ky = $request->param("ky");
-        if ($status !== null) {
-            $status_f = "eq";
-        } else {
-            $status_f = ">";
-            $status = -2;
-        }
-        if ($ky) {
-            $ky_f = "LIKE";
-            $ky = $ky . "%";
-        } else {
-            $ky_f = "NOT LIKE";
-            $ky = "-2";
-        }
-        $where = [
-            "status" => [$status_f, $status],
-            "agent_name" => [$ky_f, $ky],
-        ];
-
-        //获取所有行数
-        $rows = TotalAgent::where('parent_id', $id)->where($where)->count();
-
-        $pages = page($rows);
-        //获取当前代理商下的所有子代理
-        $data['list'] = TotalAgent::field(['id,agent_name,contact_person,agent_phone,agent_mode,agent_area,create_time,status'])
-            ->where('parent_id', $id)
-            ->where($where)
-            ->limit($pages['offset'], $pages['limit'])->select();
-        $data['pages'] = $pages;
-
-        check_data($data["list"], $data);
-    }
 
     /**
      * 启用子代
@@ -163,14 +122,15 @@ class Service extends Agent
         if (request()->isPost()) {
             $data = request()->post();
             //获取上级代理商id
-            $data['parent_id'] = Session::get('username_')['id'];
+            $data['parent_id'] = $this->aid;
             $data['create_time'] = time();
             //验证
-            $validate = Loader::validate('AgentValidate');
-            if (!$validate->scene('agent_detail')->check($data)) {
-                $error = $validate->getError();
-                return_msg(400, 'failure', $error);
-            }
+            $check = check_params("agent_detail", $data, "AgentValidate");
+//            $validate = Loader::validate('AgentValidate');
+//            if (!$validate->scene('agent_detail')->check($data)) {
+//                $error = $validate->getError();
+//                return_msg(400, 'failure', $error);
+//            }
             //上传图片
             $data['contract_picture'] = json_encode($data['contract_picture']);
             $data['json'] = json_encode($data['json']);
@@ -186,35 +146,53 @@ class Service extends Agent
 
     /**
      * 服务商商户
-     *
-     * @param  \think\Request $request
-     * @param  int $id
-     * @return \think\Response
-     * @throws Exception
+     * @param Request $request
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
      */
-    public function service_merchant()
+    public function service_merchant(Request $request)
     {
-        //获取上级代理商id
-        $id = request()->param("id");
+        $status = $request->param("status");
+        $ky = $request->param("ky");
 
+        if ($status != null ) {
+            $status_f = "eq";
+        } else {
+            $status_f = ">";
+            $status = -2;
+        }
+        if ($ky) {
+            $ky_f = "LIKE";
+            $ky = $ky . "%";
+        } else {
+            $ky_f = "NOT LIKE";
+            $ky = "-2";
+        }
+
+        $map = [
+            "a.status" => [$status_f, $status],
+            "a.name" => [$ky_f, $ky],
+        ];
         //获取总行数
-        $rows = TotalAgent::where('parent_id', $id)->count();
-        //分页
-        $pages = page($rows);
+        $ids = Db::name("total_agent")->where("b.parent_id", $this->aid)->alias("b")
+            ->join('cloud_total_merchant a', 'a.agent_id = b.id')
+            ->where($map)
+            ->column("b.id");
+        $pages = page(count($ids));
+        $ids = implode("," ,$ids);
+
+
         //获取子代中的商户信息
         $data['list'] = TotalMerchant::alias('a')
             ->field('a.id,a.name,a.address,a.channel,a.status,b.agent_name,b.agent_phone,a.opening_time')
             ->join('cloud_total_agent b', 'a.agent_id=b.id', 'left')
-            ->where(['b.parent_id' => $id])
+            ->where($map)
+            ->where('a.agent_id', "IN", $ids)
             ->limit($pages['offset'], $pages['limit'])
             ->select();
         $data['pages'] = $pages;
-
-        if (count($data['list'])) {
-            return_msg(200, 'success', $data);
-        } else {
-            return_msg(400, "没有数据");
-        }
+        check_data($data['list'], $data);
     }
 
 

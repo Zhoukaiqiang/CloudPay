@@ -846,122 +846,6 @@ class Index extends Agent
         check_data($data["list"], $data);
     }
 
-    /**
-     * 商户交易--筛选搜索
-     * @param Request $request
-     * @throws \think\db\exception\DataNotFoundException
-     * @throws \think\db\exception\ModelNotFoundException
-     * @throws \think\exception\DbException
-     * @throws  Exception
-     */
-//    public function merchant_deal(Request $request)
-//    {
-//        $name = $request->param('keyword');
-//        //获取合伙人id
-//        $deal = $request->param('deal');
-//        $create_time = $request->param('opening_time');
-//
-//        if ($deal) {
-//            $deal_f = "eq";
-//        } else {
-//            $deal_f = ">";
-//            $deal = -2;
-//        }
-//
-//        if ($name) {
-//            $name_f = "LIKE";
-//            $name = $name . "%";
-//        } else {
-//            $name_f = "NOT LIKE";
-//            $name = "-2";
-//        }
-//        if ($create_time) {
-//            $create_f = "between";
-//            $night = strtotime(date("Y-m-d 23:59:59", $create_time));
-//            $create_time = [(int)$create_time, $night];
-//        } else {
-//            $create_f = ">";
-//            $create_time = -2;
-//        }
-//
-//        $total = Db::name('total_merchant')->where("agent_id", Session::get("username_")['id'])->count('id');
-//
-//        $rows = TotalMerchant::alias('a')
-//            ->field('a.abbreviation,a.contact,a.phone,cloud_order.received_money,cloud_order.cashier')
-//            ->join('cloud_order', 'a.id=cloud_order.merchant_id')
-//            ->join('cloud_agent_partner', 'cloud_agent_partner.id=a.partner_id')
-//            ->where('a.name', $name_f, $name)
-//            ->where('a.agent_id', Session::get("username_")['id'])
-//            ->whereTime('cloud_order.pay_time', $create_f, $create_time)
-//            ->group('a.id')
-//            ->count('a.id');
-//        $pages = page($rows);
-//        if ($deal) {
-//            $total_arr = Db::name("total_merchant")->where("agent_id", Session::get("username_")['id'])->field("id")->select();
-//
-//            foreach ($total_arr as $v) {
-//                $ta[] = $v["id"];
-//            }
-//            $arr = Db::name("total_merchant")->alias("m")->where("m.agent_id", Session::get("username_")['id'])
-//                ->join("cloud_order o", "o.merchant_id = m.id")
-//                ->group("m.id")
-//                ->field("m.id")->select();
-//
-//            foreach ($arr as $v) {
-//                $aa[] = $v["id"];
-//            }
-//            $result = array_diff($ta, $aa);
-//            $str = implode(',', $result);
-//
-//            $data['list'] = TotalMerchant::alias('a')
-//                ->where("a.id", "in", $str)
-//                ->where('a.name', $name_f, $name)
-//                ->where('a.partner_id', $partner_f, $partner_id)
-//                ->group('a.id')
-//                ->limit($pages['offset'], $pages['limit'])
-//                ->select();
-//        } else {
-//            $data['list'] = TotalMerchant::alias('a')
-//                ->field('a.name,a.address,cloud_agent_partner.partner_name,a.id,a.abbreviation,a.contact,a.phone,cloud_order.received_money,cloud_order.cashier')
-//                ->join('cloud_order', 'a.id=cloud_order.merchant_id')
-//                ->join('cloud_agent_partner', 'cloud_agent_partner.id=a.partner_id')
-//                ->where('a.agent_id', Session::get("username_")['id'])
-//                ->where('a.name', $name_f, $name)
-//                ->where('a.partner_id', $partner_f, $partner_id)
-//                ->whereTime('cloud_order.pay_time', $create_f, $create_time)
-//                ->group('a.id')
-//                ->limit($pages['offset'], $pages['limit'])
-//                ->select();
-//        }
-//
-//
-//        foreach ($data['list'] as &$v) {
-//            $where = [
-//                'status' => 1,
-//                'pay_type' => 'alipay',
-//                'merchant_id' => $v['id']
-//            ];
-//            $alipay = Order::where($where)->sum('received_money');
-//            $alipay_number = Order::where($where)->count();
-//            $where1 = [
-//                'status' => 1,
-//                'pay_type' => 'wxpay',
-//                'merchant_id' => $v['id']
-//            ];
-//            //取出微信交易额
-//            $wxpay = Order::where($where1)->sum('received_money');
-//            //取出微信交易量
-//            $wxpay_number = Order::where($where1)->count();
-//            $v['alipay'] = $alipay;
-//            $v['alipay_number'] = $alipay_number;
-//            $v['wxpay'] = $wxpay;
-//            $v['wxpay_number'] = $wxpay_number;
-//        }
-//        $data['pages'] = $pages;
-//        $data['pages']['rows'] = $rows;
-//        $data['pages']['total_row'] = $total;
-//        check_data($data["list"], $data);
-//    }
 
     /**
      * 服务商列表-筛选搜索
@@ -973,9 +857,9 @@ class Index extends Agent
      */
     public function facilitator_list(Request $request)
     {
-        $parent_id = Session::get("username_")['id'];
+
         //服务商名称|联系人|联系方式
-        $name = $request->param('keyword');
+        $name = $request->param('ky');
         //服务商的状态，1启用 0停用 3全部
         $status = $request->param('status');
         //代理区域    0代表全部区域
@@ -1012,11 +896,11 @@ class Index extends Agent
             $create_time = -2;
         }
 
-        $total = Db::name('total_agent')->where("parent_id ", $parent_id)->count('id');
+        $total = Db::name('total_agent')->where("parent_id ", $this->aid)->count('id');
 
         $rows = Db::name('total_agent')->where([
             "agent_name" => [$name_f, $name],
-            'parent_id' => $parent_id,
+            'parent_id' => $this->aid,
             'agent_area' => [$agent_f, $agent_area],
             'status' => [$status_f, $status],
             'create_time' => [$create_f, $create_time]
@@ -1024,7 +908,7 @@ class Index extends Agent
         $pages = page($rows);
         $data['list'] = Db::name('total_agent')->where([
             "agent_name" => [$name_f, $name],
-            'parent_id' => $parent_id,
+            'parent_id' => $this->aid,
             'agent_area' => [$agent_f, $agent_area],
             'status' => [$status_f, $status],
             'create_time' => [$create_f, $create_time]
