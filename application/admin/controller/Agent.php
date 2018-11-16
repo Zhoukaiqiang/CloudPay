@@ -130,7 +130,7 @@ class Agent extends Admin
             //取出所有人员信息
             $data['data'] = TotalAdmin::field(['id', 'name', 'role_id'])->select();
             //取出所有一级代理商名称
-            $info = TotalAgent::where('parent_id', 0)->field('agent_name')->select();
+            $info = TotalAgent::where('id,parent_id', 0)->field('agent_name')->select();
             $data['agent'] = $info;
             return_msg(200, 'success', $data);
         }
