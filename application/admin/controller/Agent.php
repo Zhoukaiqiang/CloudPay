@@ -94,21 +94,23 @@ class Agent extends Admin
      * @param  $contract_time []合同有效期
      * @param  $contract_picture []合同图片
      * @return \think\Response
+     * @throws Exception
      */
     public function add(Request $request)
     {
         if ($request->isPost()) {
-            //mark
+
             $data = $request->post();
-            $data['password']  = encrypt_password(123456, $data["agent_phone"]);
+            $pwd = make_code(6);
+            $data['password']  = encrypt_password($pwd, $data["agent_phone"]);
             $data['contract_time'] = time();
+            $data['create_time'] = time();
 
             //发送密码到代理商
-//            $check_send = send_msg_to_phone($data['phone'], $data['password']);
-//            if (!$check_send) {
-//                return_msg(400, "短信发送失败");
-//            }
-            //验证
+            $check_send = $this->send_msg_to_phone($data['agent_phone'], $pwd);
+            if (!$check_send) {
+                return_msg(400, "短信发送失败");
+            }
 
             $validate = Loader::Validate('AdminValidate');
             if ($validate) {
@@ -130,12 +132,47 @@ class Agent extends Admin
             //取出所有人员信息
             $data['data'] = TotalAdmin::field(['id', 'name', 'role_id'])->select();
             //取出所有一级代理商名称
-            $info = TotalAgent::where('id,parent_id', 0)->field('agent_name')->select();
+            $info = TotalAgent::where('parent_id', 'eq',0)->field('agent_name')->select();
             $data['agent'] = $info;
             return_msg(200, 'success', $data);
         }
     }
 
+
+    /**
+     * 发送[pwd]到手机 -- [结算操作]
+     * @param $phone
+     * @param $msg
+     */
+    public function send_msg_to_phone($phone ,$msg)
+    {
+        $curl = curl_init();
+        curl_setopt($curl, CURLOPT_URL, 'https://api.mysubmail.com/message/xsend.json');
+
+        curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
+
+        curl_setopt($curl, CURLOPT_POST, 1);
+        $code = json_encode(["code" => $msg]);
+        $data = [
+            'appid' => '29499', //应用id
+            'to' => $phone,     //要接受短信的电话
+            'project' => "MwKYj3", //模板标识
+            'vars' => $code,
+            'signature' => '759a042683c8fe0160f069c8dd8d577d', //应用签名
+        ];
+
+        curl_setopt($curl, CURLOPT_POSTFIELDS, $data);
+        $res = curl_exec($curl);
+        curl_close($curl);
+        $res = json_decode($res);
+
+        if ($res->status !== 'success') {
+            return false;
+        } else {
+            return true;
+        }
+
+    }
 
     /**
      * 代理商详情.

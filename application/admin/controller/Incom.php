@@ -469,13 +469,13 @@ class Incom extends Controller
         $data['imgNm'] = $info['imgNm'];
         $data['merchant_id'] = $info['merchant_id'];
         $data['orgNo']=ORG_NO;
-//        halt($data);
-        $data = $data->toArray();
+
+        //$data = $data->toArray();
         $file = $request->file('imgFile');
         /** 转为二进制 */
 
         $data['imgFile'] = bin2hex(file_get_contents($file->getRealPath()));
-//        halt($data);
+
         $img = $this->upload_pics($file);
 
         $this->send($data, $img);

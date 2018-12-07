@@ -778,7 +778,7 @@ class Index extends Agent
         $create_time = $request->param('opening_time');
         $address = $request->param('address');
 
-        if ($status) {
+        if ($status !== null) {
             $status_f = "eq";
         } else {
             $status_f = ">";
@@ -792,10 +792,7 @@ class Index extends Agent
             $address = "-2";
         }
         if ($partner_id) {
-            $partner_f = "eq";
-        } else {
-            $partner_f = ">";
-            $partner_id = -2;
+            $where["a.partner_id"] = ["eq", $partner_id];
         }
         if ($name) {
             $name_f = "LIKE";
@@ -813,7 +810,6 @@ class Index extends Agent
             $create_time = -2;
         }
         $where["a.status"] = [$status_f, $status];
-        $where["a.partner_id"] = [$partner_f, $partner_id];
         $where["a.agent_id"] = ["eq", $this->aid];
         $where["ag.agent_area"] = [$address_f, $address];
         $where["a.abbreviation|a.contact|a.phone|a.name"] = [$name_f, $name];

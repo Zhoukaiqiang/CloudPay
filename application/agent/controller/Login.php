@@ -61,11 +61,6 @@ class Login extends Controller
         if ($info) {
 
             Session::set("username_", $info);
-            /*$this->redirect('/agent/index/login',[
-                "phone" => $info["phone"],
-                "password" => $info['password'],
-                "token" => "access_token",
-            ]);*/
 
             return_msg(200, '登录成功', $info);
         } else {

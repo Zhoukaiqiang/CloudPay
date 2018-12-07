@@ -29,7 +29,7 @@ return [
         'use_cookies'    => true,
         //设置过期时间  单位秒
         'path'           => TEMP_PATH,//表示session保存在自己网站根目录中的runtime/temp/目录中
-        'expire'         => 3600*24,       //设置该值后，请务必进行线上、本地缓存删除、ctrl+F5强制刷新浏览器
+        'expire'         => 3600*6,       //设置该值后，请务必进行线上、本地缓存删除、ctrl+F5强制刷新浏览器
     ],
     'msg'=>[
         'gateway'=>'',
@@ -42,13 +42,13 @@ return [
     ],
     'app_debug'              => true,
     // 应用Trace
-    'app_trace'              => false,
+    'app_trace'              => true,
     // 应用模式状态
     'app_status'             => '',
     // 是否支持多模块
     'app_multi_module'       => true,
     // 入口自动绑定模块
-    'auto_bind_module'       => false,
+    'auto_bind_module'       => true,
     // 注册的根命名空间
     'root_namespace'         => [],
     // 扩展函数文件
@@ -179,7 +179,7 @@ return [
     // 错误显示信息,非调试模式有效
     'error_message'          => '页面错误！请稍后再试～',
     // 显示错误信息
-    'show_error_msg'         => false,
+    'show_error_msg'         => true,
     // 异常处理handle类 留空使用 \think\exception\Handle
     'exception_handle'       => '',
 

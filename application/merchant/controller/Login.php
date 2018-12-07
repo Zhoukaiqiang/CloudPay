@@ -78,9 +78,7 @@ class Login extends Controller
                 return_msg(400, '用户名或密码不正确！');
             }
             $res = $db_res->toArray();
-//            halt($res);
             $shopName = MerchantShop::get($res["shop_id"])["shop_name"];
-//            Session::start();
             Session::set("shop_name", $shopName,'app');
             $user_pwd = encrypt_password($data['password'], $data["phone"]);
 
@@ -88,7 +86,6 @@ class Login extends Controller
 
                 return_msg(400, '用户密码不正确！');
             } else {
-//                halt($res);
                 /** 登录成功设置session */
                 if (empty($res["role"])) {
                     Session::set("username_", ["id" => $res['id'], "role" => -1], 'app');
@@ -99,7 +96,6 @@ class Login extends Controller
                 if (!isset($res['role'])) {
                     $res["role"] = -1;
                 }
-//                halt(Session::get("username_","app"));
                 $res['shop_name']=Session::get('shop_name','app');
                 return_msg(200, '登录成功！', $res);
             }

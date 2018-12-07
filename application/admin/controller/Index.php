@@ -256,9 +256,9 @@ class Index extends Admin
     {
         /* 搜索条件项 */
         $query['keywords'] = $request->param('keywords') ? $request->param('keywords') : -2;
-        $query['category'] = $request->param('category') ? $request->param('category') : -2;
+//        $query['category'] = $request->param('category') ? $request->param('category') : -2;
         $query['address'] = $request->param('address') ? $request->param('address') : -2;
-        $query['time'] = $request->param('time') ? json_decode($request->param('time')) : -2;
+//        $query['time'] = $request->param('time') ? json_decode($request->param('time')) : -2;
 
 
         $this->get_vendor_search_res($query);
@@ -286,20 +286,12 @@ class Index extends Admin
         } else {
             $param['address_flag'] = 'eq';
         }
-        /* 前端参数 JSON.stringfy([xxx,xxx]) */
-        switch (gettype($param['time'])) {
-            case 'array':
-                $param['time_flag'] = 'between';
-                break;
-            default:
-                $param['time_flag'] = '>';
-        }
+
         $total = Db::name('total_merchant')->count('id');
         /* 条件搜索查询有N条数据 */
         $rows = Db::name('total_merchant')->alias('m')
             ->where([
                 'm.name|m.contact|m.phone|m.agent_name' => [$param['keywords_flag'], "%" . $param['keywords'] . "%"],
-//                'm.category' => [$param['category_flag'], $param['category']],
                 'm.address' => [$param['address_flag'], $param['address']],
             ])
 //            ->whereTime('opening_time', $param['time_flag'], $param['time'])
@@ -313,7 +305,6 @@ class Index extends Admin
         $res["list"] = Db::name('total_merchant')->alias('m')
             ->where([
                 'm.name|m.contact|m.phone|m.agent_name' => [$param['keywords_flag'], $param['keywords'] . "%"],
-//                'm.category' => [$param['category_flag'], $param['category']],
                 'm.address' => [$param['address_flag'], $param['address']],
             ])
 //            ->whereTime('opening_time', $param['time_flag'], $param['time'])
@@ -448,7 +439,7 @@ class Index extends Admin
     }
 
     /**
-     * @param Request $request
+     * @param Request $request1
      * @param [string]  $pay_type 支付类型
      * @return [json] $data 返回数据
      * @throws \think\db\exception\DataNotFoundException
@@ -485,19 +476,14 @@ class Index extends Admin
             $i++;
         }
         foreach ($data["chartData"] as $k => $v) {
-            $filted_data[] = [
+            $filter[] = [
                 "amount" => $v,
                 "count" => $sum[$k],
                 "pay_time" => date('Y-m-d', strtotime(-7 + $k . ' days')),
             ];
         }
 
-
-        if (count($filted_data) > 0) {
-            $this->return_msg(200, '成功取出数据', $filted_data);
-        } else {
-            $this->return_msg(400, '没有数据');
-        }
+        check_data($filter);
 
     }
 

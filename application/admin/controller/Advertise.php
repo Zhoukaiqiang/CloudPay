@@ -5,18 +5,18 @@ namespace app\admin\controller;
 use app\admin\model\TotalAd;
 use app\admin\controller\Admin;
 use think\Controller;
+use think\Exception;
 use think\File;
 use think\Request;
 use think\Db;
 
 class Advertise extends Admin
 {
+
     /**
      * 显示广告
-     *
-     * @return \think\Response
+     * @throws Exception
      */
-
     public function index()
     {
         /* 获取最新的一则广告  */
@@ -77,6 +77,7 @@ class Advertise extends Admin
      * @throws \think\db\exception\DataNotFoundException
      * @throws \think\db\exception\ModelNotFoundException
      * @throws \think\exception\DbException
+     * @param
      */
     public function adSetInc(Request $request)
     {
@@ -109,8 +110,28 @@ class Advertise extends Admin
     public function getBg(Request $request)
     {
         if ($request->isGet()) {
-            $res = Db::name("total_agent")->field("agent_name,bg, agent_area")->find();
-            check_data($res);
+            $ky = $request->get("ky");
+            $time = $request->get("time");
+            if ($ky) {
+                $kf = "LIKE";
+                $ky = $ky . "%";
+            }else {
+                $kf = "NOT LIKE";
+                $ky = "-2";
+            }
+            if ($time) {
+                $tf = "between";
+            }else {
+                $tf = ">";
+                $time = 1;
+            }
+            $where = [
+                "agent_name" => [$kf , $ky],
+                "create_time" => [$tf , $time]
+            ];
+            $res['list'] = Db::name("total_agent")->where($where)->field("agent_name,bg, agent_area")->select();
+
+            check_data($res["list"], $res);
         }
     }
     /**

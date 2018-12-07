@@ -187,8 +187,7 @@ class Shop extends Commonality
 //        var_dump($file->getRealPath());die;
         $data['imgFile'] = bin2hex(file_get_contents($file->getRealPath()));//进件参数
         // 移动到框架应用根目录/public/uploads/ 目录下
-        $info = $file->validate(['size' => 512000, 'ext' => 'jpg,png,jpeg'])->move(ROOT_PATH . 'public' . DS . 'uploads');
-
+        $info = $file->validate(['size' => 512000, 'ext' => 'jpg,png,jpeg'])->move('uploads/');
 
         if ($info) {
 

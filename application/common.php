@@ -293,7 +293,7 @@ if (!function_exists('sign_ature')) {
     {
         if (!$key) {
             $key_main = KEY;
-        }else {
+        } else {
             $key_main = $key;
         }
         $str = '';
@@ -304,7 +304,7 @@ if (!function_exists('sign_ature')) {
                 //客户主扫
                 //查询
                 "qryNo",
-                'payChannel','authCode','total_amount','amount','trmNo','tradeNo','txnTime','signType','opSys','characterSet','serviceId', 'version', 'incom_type', 'stl_typ', 'stl_sign', 'stl_oac', 'bnk_acnm', 'wc_lbnk_no', 'bus_lic_no', 'bse_lice_nm', 'crp_nm', 'mercAdds', 'bus_exp_dt', 'crp_id_no', 'crp_exp_dt', 'stoe_nm', 'stoe_cnt_nm', 'stoe_cnt_tel', 'mcc_cd', 'stoe_area_cod', 'stoe_adds', 'trm_rec', 'mailbox', 'alipay_flg', 'yhkpay_flg' , 'mercId', 'orgNo', 'imgTyp', 'imgNm', 'log_no', 'stoe_id', 'lbnk_nm','orderNo','Amount','txnAmt'];
+                'payChannel', 'authCode', 'total_amount', 'amount', 'trmNo', 'tradeNo', 'txnTime', 'signType', 'opSys', 'characterSet', 'serviceId', 'version', 'incom_type', 'stl_typ', 'stl_sign', 'stl_oac', 'bnk_acnm', 'wc_lbnk_no', 'bus_lic_no', 'bse_lice_nm', 'crp_nm', 'mercAdds', 'bus_exp_dt', 'crp_id_no', 'crp_exp_dt', 'stoe_nm', 'stoe_cnt_nm', 'stoe_cnt_tel', 'mcc_cd', 'stoe_area_cod', 'stoe_adds', 'trm_rec', 'mailbox', 'alipay_flg', 'yhkpay_flg', 'mercId', 'orgNo', 'imgTyp', 'imgNm', 'log_no', 'stoe_id', 'lbnk_nm', 'orderNo', 'Amount', 'txnAmt'];
             foreach ($arr as $k => $v) {
                 if (in_array($k, $data)) {
                     $str .= $v;
@@ -312,7 +312,7 @@ if (!function_exists('sign_ature')) {
             }
 
         } elseif ($flag == 1111) {
-            $data = ['Amount','txnAmt,total_amount','amount','orderNo','result','logNo','tradeNo','sysTime','message','returnCode','check_flag', 'msg_cd', 'msg_dat', 'mercId', 'log_no', 'stoe_id', 'mobile', 'sign_stats', 'deliv_stats'];
+            $data = ['Amount', 'txnAmt,total_amount', 'amount', 'orderNo', 'result', 'logNo', 'tradeNo', 'sysTime', 'message', 'returnCode', 'check_flag', 'msg_cd', 'msg_dat', 'mercId', 'log_no', 'stoe_id', 'mobile', 'sign_stats', 'deliv_stats'];
             foreach ($arr as $key1 => $val) {
                 if (in_array($key1, $data)) {
                     $str .= $val;
@@ -322,7 +322,6 @@ if (!function_exists('sign_ature')) {
         return md5($str . $key_main);
     }
 }
-
 
 
 //批量上传图片
@@ -369,47 +368,6 @@ if (!function_exists('upload_pics_pay')) {
         return $goods_pics;
     }
 }
-
-//图片上传
-
-//if (!function_exists('upload_picspay')) {
-//    function upload_picspay($file)
-//    {
-//        //移动图片
-//        $info = $file->move(ROOT_PATH . 'public' . DS . 'uploads');
-//
-//        if ($info) {
-//            //文件上传成功,生成缩略图
-//            //获取文件路径
-//            $goods_logo = DS . 'uploads' . DS . $info->getSaveName();
-//            $goods_logo = str_replace('\\', '/', $goods_logo);
-//            return $goods_logo;
-//        } else {
-//            $error = $file->getError();
-//            $this->error($error);
-//        }
-//    }
-//}
-//
-//if (!function_exists('upload_pics')) {
-//    function upload_pics($file)
-//    {
-//        //移动图片
-//        $info = $file->validate(['size' => 5 * 1024 * 1024, 'ext' => 'jpg,png,gif,jpeg'])->move(ROOT_PATH . 'public' . DS . 'uploads');
-//
-//        if ($info) {
-//            //文件上传成功,生成缩略图
-//            //获取文件路径
-//            $goods_logo = DS . 'uploads' . DS . $info->getSaveName();
-//            $goods_logo = str_replace('\\', '/', $goods_logo);
-//            return $goods_logo;
-//        } else {
-//            $error = $file->getError();
-//            $this->error($error);
-//        }
-//    }
-//}
-
 
 if (!function_exists("check_time")) {
     /**
@@ -499,7 +457,6 @@ if (!function_exists('image_thumbnail')) {
 }
 
 
-
 /**
  * 检测用户是否存在于数据库
  * @param string $db [数据库全称]
@@ -572,24 +529,24 @@ function check_data($data, $return_data = null, $return = 1)
  * @param $key 商户key
  * @return mixed
  */
-function request_head($info,$msg)
+function request_head($info, $msg)
 {
-    $info['rec']=json_decode($info['rec']);
+    $info['rec'] = json_decode($info['rec']);
     /**设备号*/
-    $data[ 'opSys' ] = "3";
-    $data[ 'characterSet' ] = "00";
-    $data[ 'signType' ] = 'MD5';
+    $data['opSys'] = "3";
+    $data['characterSet'] = "00";
+    $data['signType'] = 'MD5';
 
-    $data[ 'version' ] = 'V1.0.0';
+    $data['version'] = 'V1.0.0';
 //        return $data;
-    $data[ 'txnTime' ] = date("Ymdhis");
+    $data['txnTime'] = date("Ymdhis");
 
     $data['trmNo'] = (string)$info['rec'][0]->trmNo;
     $data['orgNo'] = "27573";
     $data['mercId'] = $info['mercId'];
     $data['tradeNo'] = (string)generate_order_no();
     //合并数组
-    $arr = array_merge($data,$msg);
-    $arr['signValue'] = sign_ature(0000,$arr,$info['key']);
+    $arr = array_merge($data, $msg);
+    $arr['signValue'] = sign_ature(0000, $arr, $info['key']);
     return $arr;
 }

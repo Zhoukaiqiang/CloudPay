@@ -25,7 +25,6 @@ class Merchant extends Incom
     public function index_list()
     {
 
-        $agent_id=Session::get("username_")["id"];
 
         //获取总行数
         $rows=TotalMerchant::where('agent_id',$agent_id)->count();
@@ -51,22 +50,21 @@ class Merchant extends Incom
     {
         $agent_id=Session::get("username_")["id"];
         //获取总行数
-        $total=TotalMerchant::where('agent_id',$agent_id)->count('id');
-        $rows=TotalMerchant::alias('a')
+        $total = TotalMerchant::where('agent_id',$agent_id)->count('id');
+        $rows = TotalMerchant::alias('a')
             ->field('a.id,a.name,a.phone,a.address,a.contact,a.channel,a.opening_time,a.status,a.review_status,b.partner_name')
-            ->join('cloud_agent_partner b','a.partner_id=b.id','left')
+            ->join('cloud_agent_partner b','b.id = a.partner_id')
             ->where('a.agent_id',$agent_id)
             ->count('a.id');
         $pages=page($rows);
         $data['list']=TotalMerchant::alias('a')
             ->field('a.id,a.name,a.phone,ag.agent_area as address,a.contact,a.channel,a.opening_time,a.status,a.review_status,b.partner_name')
-            ->join('cloud_agent_partner b','a.partner_id = b.id','left')
+            ->join('cloud_agent_partner b','b.id = a.partner_id')
             ->join("cloud_total_agent ag", "ag.id = a.agent_id")
             ->where('a.agent_id',$agent_id)
             ->limit($pages['offset'],$pages['limit'])
             ->select();
         $arr = Db::name('agent_partner')->where('agent_id',$agent_id)->field(['id','partner_name'])->select();
-
 
         $data['pages']=$pages;
         $data['partner']=$arr;

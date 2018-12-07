@@ -85,7 +85,7 @@ class Capital extends Admin
      */
     public function deal()
     {
-        if(request()->isPost()){
+        if(request()->isGet()){
             $data = request()->post();
             $data["status"] = 0;
             //跟新数据
