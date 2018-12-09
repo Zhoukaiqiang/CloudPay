@@ -52,30 +52,42 @@ class Waiter extends Commonality
         if($nerid!=0){
             $id=$nerid;
         }
-
-            $data['count']=Order::where('shop_id',$id)
-                ->whereTime('create_time', 'today')
-                ->count('id');
-            $data['shop_id']=$id;
+        //所有下单信息
+        $data['count']=Order::where('shop_id',$id)
+            ->where(['table_name'=>['<>','null']])
+            ->whereTime('create_time', 'today')
+            ->count('id');
+        $data['service'] = Order::where('shop_id',$id)
+            ->where(['table_name'=>['<>','null'],'user_id'=>['<>','null']])
+            ->whereTime('create_time', 'today')
+            ->count('id');
+        $data['shop_id']=$id;
 
 //        var_dump($data);die;
 //            return_msg(200,'success',$shop);
-            //order_receiving接单状况 1已接单  status 0未支付
-            //下单消息 服务消息
+        //order_receiving接单状况 1已接单  status 0未支付
+        //下单消息 服务消息
 
-            $result=Order::alias('a')
-                ->field(['b.name','a.status','a.order_receiving','a.table_name','a.create_time','a.receivi_time'])
-                ->join('cloud_merchant_user b','b.id=a.user_id','left')
-                ->where(['a.shop_id'=>$id,'a.status'=>0])
-                ->whereTime('a.create_time', 'today')
-                ->select();
-            if($role==-1){
-                $data=['shop'=>$shop,'count'=>$data,'result'=>$result];
-            }else{
-                $data=['count'=>$data,'result'=>$result];
-            }
+        $result['list']=Order::alias('a')
+            ->field(['a.id','b.name','a.status','a.order_receiving','a.table_name','a.create_time','a.receivi_time'])
+            ->join('cloud_merchant_user b','b.id=a.user_id','left')
+            ->where(['a.shop_id'=>$id,'a.table_name'=>['<>','null']])
+            ->whereTime('a.create_time', 'today')
+            ->select();
 
-            return_msg(200,'success',$data);
+        $result['user'] = Order::alias('a')
+            ->field(['a.id','b.name','a.status','a.order_receiving','a.table_name','a.create_time','a.receivi_time'])
+            ->join('cloud_merchant_user b','b.id=a.user_id','left')
+            ->where(['a.shop_id'=>$id,'a.table_name'=>['<>','null'],'a.user_id'=>['<>','null']])
+            ->whereTime('a.create_time', 'today')
+            ->select();
+        if($role==-1){
+            $data=['shop'=>$shop,'count'=>$data,'result'=>$result];
+        }else{
+            $data=['count'=>$data,'result'=>$result];
+        }
+
+        return_msg(200,'success',$data);
 
     }
 
@@ -101,7 +113,6 @@ class Waiter extends Commonality
      */
     public function waiter_set()
     {
-
         if($this->role==-1){
             $shop=MerchantShop::where('merchant_id',$this->id)->field(['id','shop_name'])->select();
             return json_encode($shop);
@@ -205,7 +216,7 @@ class Waiter extends Commonality
 //            var_dump($file);die;
             //原图
 
-           $file=$tailor;
+            $file=$tailor;
 
             $data['dish_img']=$file;
             $dish=Db::name('merchant_dish')->insert($data);
@@ -258,7 +269,11 @@ class Waiter extends Commonality
             }
         }else{
             //取出菜品信息
-            $data['list']=MerchantDish::where('id',$id)->select();
+            $data['list']=MerchantDish::alias('a')
+                ->field('a.*,b.dish_norm')
+                ->join('cloud_merchant_dish_norm b','a.norm_id=b.id','left')
+                ->where('a.id',$id)
+                ->select();
             //属性
             foreach($data['list'] as &$v){
                 $arr=ltrim($v['dish_attr'],'[');
@@ -282,7 +297,7 @@ class Waiter extends Commonality
         if(empty($shop_id) || empty($name)){
             return_msg(400,'error','请输入桌位名称或传入门店');
         }
-      return $this->qrcode(0,$shop_id,$name);
+        return $this->qrcode(0,$shop_id,$name);
     }
 
     /**
@@ -294,7 +309,7 @@ class Waiter extends Commonality
      */
     public function save_code(Request $request)
     {
-       $data= $request->post();
+        $data= $request->post();
         list($usec, $sec) = explode(" ", microtime());
         $times=str_replace('.','',$usec + $sec);
 
@@ -397,9 +412,9 @@ class Waiter extends Commonality
     {
 
         //paymentorder  付款顺序   1先上菜后付款   2先付款后上菜
-       Db::name('merchant_shop')->update($request->post());
+        Db::name('merchant_shop')->update($request->post());
 
-            return_msg(200,'success','设置成功');
+        return_msg(200,'success','设置成功');
 
     }
 
@@ -602,32 +617,32 @@ class Waiter extends Commonality
 //            $data['summoney']=$res;
 //            return_msg(200,'successs',$data);
 
-            //非支付状态
-            $data=Order::alias('a')
+        //非支付状态
+        $data=Order::alias('a')
 //                ->field(['sum(b.money*b.deal) money','a.discount','c.istableware','c.tableware_money','a.order_number','a.table_name','a.id','b.create_time','a.order_person','a.meal_number','a.create_time','b.name', 'b.deal','a.status'])
-                ->field(['c.id as shop_id,c.istableware','a.discount','c.tableware_money','a.order_number','a.table_name','a.id','a.meal_number','a.order_money','a.discount','a.received_money','a.create_time','b.name','a.order_person','sum(b.money*b.deal) money','b.deal','a.status'])
-                ->join('shop_comestible b','a.id=b.order_id','left')
-                ->join('merchant_shop c','a.shop_id=c.id')
-                ->where(['a.id'=>['=',$order_id]])
-                ->group('b.id')
-                ->select();
-            if(!$data){
-                return_msg(400,'success','此订单出现意外');
-            }
-            //餐具是否收费
-            if($data[0]['istableware']!=0){
-                //meal_number 用餐人数
-                $data[]=['name'=>'餐具','deal'=>$data[0]['meal_number'],'money'=>$data[0]['tableware_money']*$data[0]['meal_number']];
-            }
-            $sum=0;
-            foreach ($data as $k=>$v)
-            {
-                $sum+=$v['money'];
-            }
-            //总金额
-            $data[0]['sum_money']=$sum;
+            ->field(['c.id as shop_id,c.istableware','a.discount','c.tableware_money','a.order_number','a.table_name','a.id','a.meal_number','a.order_money','a.discount','a.received_money','a.create_time','b.name','a.order_person','sum(b.money*b.deal) money','b.deal','a.status'])
+            ->join('shop_comestible b','a.id=b.order_id','left')
+            ->join('merchant_shop c','a.shop_id=c.id')
+            ->where(['a.id'=>['=',$order_id]])
+            ->group('b.id')
+            ->select();
+        if(!$data){
+            return_msg(400,'success','此订单出现意外');
+        }
+        //餐具是否收费
+        if($data[0]['istableware']!=0){
+            //meal_number 用餐人数
+            $data[]=['name'=>'餐具','deal'=>$data[0]['meal_number'],'money'=>$data[0]['tableware_money']*$data[0]['meal_number']];
+        }
+        $sum=0;
+        foreach ($data as $k=>$v)
+        {
+            $sum+=$v['money'];
+        }
+        //总金额
+        $data[0]['sum_money']=$sum;
 
-            return_msg(200,'successs',$data);
+        return_msg(200,'successs',$data);
 
 
     }
@@ -648,10 +663,10 @@ class Waiter extends Commonality
         $end_time=$request->param('end_time') ? strtotime($request->param('end_time')) : mktime(23,59,59,date('m'),date('d'),date('Y'));
         //$status 5全部状态 支付状态 0未支付 1已支付 2已关闭 3会员充值
         $status=$request->param('status');
-       if($status!==0 && $status<4){
-           $symbol='=';
-       }else{
-           $status=5;
+        if($status!==0 && $status<4){
+            $symbol='=';
+        }else{
+            $status=5;
             $symbol='<>';
         }
         $data=Order::where(['shop_id'=>['=',$id],'create_time'=>['between',[$create_time,$end_time]],'status'=>[$symbol,$status]])->field(['received_money','table_name','create_time','status','id'])->select();
@@ -767,7 +782,7 @@ class Waiter extends Commonality
         if($id){
             $data=MerchantDish::where('id',$id)->field('dish_attr')->find();
             $data=explode(',',$data['dish_attr']);
-            
+
             return_msg(200,'success',json_encode($data));
         }
 
@@ -824,7 +839,7 @@ class Waiter extends Commonality
      * @throws \think\db\exception\ModelNotFoundException
      * @throws \think\exception\DbException
      */
-        public function call_service()
+    public function call_service()
     {
         $shop_id=$this->id;
         //服务员端
@@ -856,8 +871,8 @@ class Waiter extends Commonality
      */
     public function receiving(Request $request)
     {
-        $id=$request->param('order_id');
-        $data=['id'=>$id,'order_receiving'=>1];
+        $id=$request->param('id');
+        $data=['id'=>$id,'receivi_time'=>time(),'user_id'=>$this->id];
         $result=Order::update($data);
         if($result){
             return_msg(200,'success','接单成功');
@@ -893,15 +908,15 @@ class Waiter extends Commonality
                 $data = Db::query("select FROM_UNIXTIME(create_time,'%Y%m%d') create_time,count(id) ids,id,table_name from cloud_order where FROM_UNIXTIME(create_time,'%Y%m%d')=curdate() and order_receiving=1 and user_id=$user_id group by table_name");
             }else{
                 $data = Db::query("select FROM_UNIXTIME(create_time,'%Y%m%d') create_time,count(id) ids,id,table_name from cloud_order where order_receiving=1 and user_id=$user_id and create_time between $create_time and $end_time group by table_name");
-                }
-                $result=$this->service_query($data);
+            }
+            $result=$this->service_query($data);
             if($result){
                 return_msg(200,'success',$result);
             }else{
                 return_msg(400,'error','没有此时间段的服务记录');
             }
 
-            }
+        }
 
 
 
@@ -957,7 +972,7 @@ class Waiter extends Commonality
      * @param $file_url
      * @param string $new_name
      */
-   public function download($file_url,$new_name=''){
+    public function download($file_url,$new_name=''){
 
         if(!file_exists($file_url)){ //检查文件是否存在
             echo '404';
@@ -991,17 +1006,17 @@ class Waiter extends Commonality
 
     public function shiyan()
     {
-     /*   $arr=[6=>"/www/wwwroot/CloudPay/public/uploads/20181018/86f2b35d816282eba85a1ba86a73f429.png",
-            7=>"/www/wwwroot/CloudPay/public/uploads/20181018/14da24389a4d54f31ff8002b3190edcc.png",
-            8=>"/www/wwwroot/CloudPay/public/uploads/20181018/51608e6faebf8e0ca85e76198b0a5a55.png"
-            ];
-//        MerchantShop::where('merchant_id',2)->update(['imgFile'=>json_encode($arr)]);
-        $data=MerchantShop::where('id',106)->field('imgFile')->find();
-        $data=json_decode($data->imgFile,true);
-        unset($data[7]);
-$data[7]="/www/wwwroot/CloudPay/public/uploads/20181018/14da24389a4d54f31ff8002b3190edcc.png";
+        /*   $arr=[6=>"/www/wwwroot/CloudPay/public/uploads/20181018/86f2b35d816282eba85a1ba86a73f429.png",
+               7=>"/www/wwwroot/CloudPay/public/uploads/20181018/14da24389a4d54f31ff8002b3190edcc.png",
+               8=>"/www/wwwroot/CloudPay/public/uploads/20181018/51608e6faebf8e0ca85e76198b0a5a55.png"
+               ];
+   //        MerchantShop::where('merchant_id',2)->update(['imgFile'=>json_encode($arr)]);
+           $data=MerchantShop::where('id',106)->field('imgFile')->find();
+           $data=json_decode($data->imgFile,true);
+           unset($data[7]);
+   $data[7]="/www/wwwroot/CloudPay/public/uploads/20181018/14da24389a4d54f31ff8002b3190edcc.png";
 
-        sort($data);var_dump($data);*/
+           sort($data);var_dump($data);*/
 
 
 

@@ -17,7 +17,6 @@ use app\merchant\model\TotalMerchant;
 use think\Controller;
 use think\Db;
 use think\Request;
-use think\Session;
 
 class Proceeds extends Scancode
 {
@@ -31,6 +30,7 @@ class Proceeds extends Scancode
     public function cash_income(Request $request)
     {
         $money=$request->param('cash_money');
+        $req = $request->param();
         $id=$this->id;
         if($this->role==1 ||$this->role==2 || $this->role==3){
             $rulew=MerchantUser::where('id',$id)->field('merchant_id')->find();
@@ -46,10 +46,12 @@ class Proceeds extends Scancode
             'create_time'=>time(),
             'pay_time'=>time(),
             'pay_type'=>'cash',
-            'order_number'=>generate_order_no(),
+            'shop_id'=>$req["shop_id"],
+            'order_number'=>generate_order_no(007),
             'merchant_id'=>$merchant_id,
             'person_info_id'=>$this->id,
             'user_id'=>$this->id,
+            'cashier'=>$req['cashier'],
         ];
         $resu=Db::name('order')->insert($arr);
         if($resu){
@@ -68,16 +70,16 @@ class Proceeds extends Scancode
     {
 
         //支付金额
-       $money= $request->param('money');
-       //会员id
-       $member_id= $request->param('member_id');
+        $money= $request->param('money');
+        //会员id
+        $member_id= $request->param('member_id');
 
-       $result=Db::name('merchant_member')->where('id',$member_id)->field('money')->find();
-       if($result['money']-$money <= 0){
-           return_msg(400,'余额不足');
-       }
-       $resu=Db::name('merchant_member')->where('id',$member_id)
-           ->update(['money'=>['dec',$money],'consumption_time'=>time(),'consump_number'=>['inc',1]]);
+        $result=Db::name('merchant_member')->where('id',$member_id)->field('money')->find();
+        if($result['money']-$money <= 0){
+            return_msg('400','余额不足');
+        }
+        $resu=Db::name('merchant_member')->where('id',$member_id)
+            ->update(['money'=>['dec',$money],'consumption_time'=>time(),'consump_number'=>['inc',1]]);
         if($resu){
             //获取商户id
             $merchant=Db::name('merchant_member,shop_id')->where('id',$member_id)->field('merchant_id')->find();
@@ -126,7 +128,7 @@ class Proceeds extends Scancode
      * sysoldtraceno   原交易凭证号
      * sysoldreferno   原交易参考号
      * operid     操作员
-         *
+     *
      */
     public function index()
     {
@@ -147,15 +149,12 @@ class Proceeds extends Scancode
      */
     public function shop_lordesau(Request $request)
     {
-        $data=$request->post();
+        $data = $request->post();
         $data['amount']=$data['amount']*100;
         $data['total_amount']=$data['total_amount']*100;
-        $data['user_id']=$this->id;
+
         //如果是商户收款
-        if($this->role==-1){
-            $shop=MerchantShop::where('merchant_id',$this->id)->field('id')->find();
-            $data['shop_id']=$shop->id;
-        }
+
         //支付渠道
         $data['payChannel']=$this->isplay($data['authCode']);
         //公共参数
@@ -164,16 +163,13 @@ class Proceeds extends Scancode
             ->join('merchant_incom b','b.merchant_id=a.merchant_id')
             ->where('a.id', $data[ 'shop_id' ])
             ->find();
-//       $data= $this->publics($data);
-//       halt($shop);
-//       unset($data['shop_id']);
-//       unset($data['key']);
+
         $info=request_head($shop,$data);
-//        unset($info['shop_id']);
+
         $info['merchant_id']=$shop['merchant_id'];
-//        halt($info);
-       //调用星_pos接口
-       return $this->lord_esau($info);
+
+        //调用星_pos接口
+        return $this->lord_esau($info);
 
     }
 
@@ -196,7 +192,6 @@ class Proceeds extends Scancode
     /**
      * 客户主扫
      * @param Request $request
-     * @deprecated 弃用
      */
 
     public function clientLordesau(Request $request)
@@ -207,6 +202,19 @@ class Proceeds extends Scancode
 
     }
 
+    protected function IsWeixinOrAlipay(){
+
+        //判断是不是微信
+        if ( strpos($_SERVER['HTTP_USER_AGENT'], 'MicroMessenger') !== false ) {
+            return "WeiXIN";
+        }
+        //判断是不是支付宝
+        if (strpos($_SERVER['HTTP_USER_AGENT'], 'AlipayClient') !== false) {
+            return "Alipay:true";
+        }
+        //哪个都不是
+        return $_SERVER["HTTP_USER_AGENT"];
+    }
 
     /**
      * 客户主扫  查询订单详情

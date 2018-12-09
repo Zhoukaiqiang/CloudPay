@@ -64,17 +64,17 @@ class MerchantValidate extends Validate
         ["mailbox", "require|email", "邮箱必填|邮箱格式不正确"],
 //        ["alipay_flg", "require", "请至少在扫码产品或银行卡产品选择一项"],
 //        ["yhkpay_flg", "require", "请至少在扫码产品或银行卡产品选择一项"],
-        ["trm_rec", "require|between:0,10", "请选择终端数量"],
+        ["trm_rec", "require|between:0,10|number", "请选择终端数量|必须为数字"],
         ["stoe_adds", "require|chsAlphaNum", "门店地址必填"],
         ["stoe_area_cod", "require|length:6", "地区码必填|请填写6位数地区码"],
         ["mcc_cd", "require|max:6", "MCC码必填"],
-        ["stoe_cnt_tel", "require|length:11", "联系人手机号必填"],
-        ["stoe_cnt_nm", "require|chsAlpha", "联系人名称必填"],
+        ["stoe_cnt_tel", "require|length:11", "联系人手机号必填|手机号长度不正确"],
+        ["stoe_cnt_nm", "require|chsAlpha", "联系人名称必填|联系人名称必须是汉字、汉字"],
         ["stoe_nm", "require|chsAlphaNum", "签购单名称必填"],
         ["wc_lbnk_no", "require|length:12|number", "联行行号必填"],
         ["crp_exp_dt_tmp", "require|date", "结算人身份证有限期必填"],
-        ["icrp_id_no", "require|length:18", "身份证号必填"],
-        ["bnk_acnm", "require|chsAlpNum|max:45", "户名必填"],
+        ["icrp_id_no", "require", "身份证号必填"],
+        ["bnk_acnm", "require|chsAlpha", "户名必填|必须为汉字、字母"],
         ["stoe_oac", "require|number|between:1,23", "结算账户必填"],
         ["stl_sign", "require|number|length:1", "结算标志必填"],
         ["stl_type", "require|number|length:1", "结算类型必填"],
@@ -89,7 +89,15 @@ class MerchantValidate extends Validate
         ["dish_attr", "require", "请输入属性"],
         ["dish_img", "require", "请选择菜品图片"],
 
-
+        //生成收款二维码
+        ["sid", "require", "门店ID必须"],
+        ["amount", "require", "实收金额必须"],
+        ["t_amount", "require", "总金额必须"],
+        ["channel", "require", "支付渠道必须"],
+        ["cashier", "require", "收银员必须"],
+        ["authCode", "require", "授权码必须"],
+        ['shop_name','require','请输入门店名'],
+        ['stl_oac','require','请输入结算账户']
     ];
 
     //命名规则 控制器_函数名称
@@ -101,6 +109,9 @@ class MerchantValidate extends Validate
         //充值送
         'recharge'=>[
             'recharge_money', 'give_money', 'active_time,shop_id'
+        ],
+        "add_shop" => [
+            "shop_name", "stoe_cnt_nm","mailbox", "trm_rec","stoe_cnt_tel",'stl_sign','stoe_adds','stoe_area_cod','icrp_id_no','crp_exp_dt_tmp','stl_oac','bnk_acnm','wc_lbnk_no','stoe_nm'
         ],
         //选择时间充值送
         'new_recharge'=>[
@@ -137,27 +148,35 @@ class MerchantValidate extends Validate
             'member_name','member_phone','member_birthday'
         ],
 
+
         //增加门店  对私
         //结算类型  1--T+1   2-- D+1  对公不能选择D+1
         //服务费率  结算类型 D+1 必输
         //结算人身份证有限期 9999-12-31 永久 结算标志为 1--对私必输  [1999-12-31]
         "add_store" => ["stl_sign", "stl_typ", "stl_oac", "bnk_acnm", "icrp_id_no","crp_exp_dt_tmp", "wc_lbnk_no"
-        ,"stoe_nm", "stoe_cn_nm", "stoe_cnt_tel", "mcc_cd", "stoe_area_cod", "stoe_adds", "trm_rec",
+            ,"stoe_nm", "stoe_cn_nm", "stoe_cnt_tel", "mcc_cd", "stoe_area_cod", "stoe_adds", "trm_rec",
             "mailbox", "alipay_flg", "yhkpay_flg"
         ],
-
+        "add_shop" => [
+            "shop_name", "stoe_cnt_nm","mailbox", "trm_rec","stoe_cnt_tel"
+        ],
         //台牌码 --支付
         "tag_pay" => ["amount", "mid"],
 
         //菜品新增
         "add_cuisine"=>[
-            'dish_name','norm_id','dish_describe','dish_attr','money','dish_img'
+            'dish_name','norm_id','dish_describe','dish_attr','money'
         ],
 
         //编辑菜品
         "edit_cuisine"=>[
             'dish_name','norm_id','dish_describe','dish_attr','money'
         ],
+        "make_code" => ["sid", "amount","t_amount","channel","cashier"],
+        //提现
+        "deposit" => ["sid"],
+        //商户主扫
+        "scan_code" => ["authCode"],
     ];
 
 }

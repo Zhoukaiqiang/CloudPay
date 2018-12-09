@@ -17,6 +17,8 @@ use app\merchant\model\ShopActiveExclusive;
 use app\merchant\model\ShopActiveRecharge;
 use app\merchant\model\ShopActiveShare;
 use app\merchant\model\TotalMerchant;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use think\Controller;
 use think\Db;
 use think\Exception;
@@ -24,6 +26,7 @@ use think\Request;
 
 class Member extends Common
 {
+    public $url = 'http://sandbox.starpos.com.cn/emercapp';
 
     /**
      * 显示会员列表
@@ -548,16 +551,28 @@ class Member extends Common
         } else {
             $mid = Db::name("merchant_user")->where("id", $this->user_id)->find()["merchant_id"];
         }
+        //查看当前商户是否有会员互通
+        $merchant_total = MerchantGroup::field('merchant_id')->select();
+        foreach($merchant_total as &$s){
+            $s['merchant_id'] = explode(",",$s['merchant_id']);
+        }
+        $mids = [];
+        foreach($merchant_total as $h){
+            if(in_array($mid,$h['merchant_id'])){
+                $mids = $h['merchant_id'];
+            }
+        }
+
         $excel = $request->param("excel");
 
-        $row = MerchantMember::where('merchant_id', $mid)->count();
-        //查看当前商户是否有会员互通
+        $row = MerchantMember::where('merchant_id', 'in',$mids)->count();
+
         $pages = page($row);
         if ($excel) {
             $pages["limit"] = 100;
         }
         $data['list'] = MerchantMember::field("id,member_name,money,member_phone,register_time,member_birthday")
-            ->where('merchant_id', $mid)
+            ->where('merchant_id','in' ,$mids)
             ->order("register_time desc")
             ->limit($pages['offset'], $pages['limit'])
             ->select();
@@ -575,13 +590,11 @@ class Member extends Common
         $data['page'] = $pages;
         if ($excel) {
             /** 导出Excel */
-            exit("data-".date('Y-m-d') .".xlsx");
-            $this->excelExport(1, $data["list"]);
+            $this->excelExport(date('Ymd')."-member.xlsx", $data["list"]);
         }else {
             check_data($data["list"], $data);
         }
     }
-
 
     /**
      * excel表格导出
@@ -598,34 +611,28 @@ class Member extends Common
         ini_set("memory_limit", "-1");
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
-        $sheet->setCellValue("A1","订单号");
-        $sheet->setCellValue("B1","交易时间");
-        $sheet->setCellValue("C1","交易门店");
-        $sheet->setCellValue("D1","收款人");
-        $sheet->setCellValue("E1","支付方式");
-        $sheet->setCellValue("F1","订单金额");
-        $sheet->setCellValue("G1","优惠金额");
-        $sheet->setCellValue("H1","实收金额");
-        $sheet->setCellValue("I1","订单状态");
+        $sheet->setCellValue("A1","会员名称");
+        $sheet->setCellValue("B1","手机号");
+        $sheet->setCellValue("C1","账户金额");
+        $sheet->setCellValue("D1","生日时间");
+        $sheet->setCellValue("E1","注册时间");
 
         $i = 1;
         foreach ($data as $dd) {
             $i++;
-            $sheet->setCellValue('A' . $i, $dd['order_number']);
-            $sheet->setCellValue('B' . $i, $dd['pay_time']);
-            $sheet->setCellValue('C' . $i, $dd['shop_name']);
-            $sheet->setCellValue('D' . $i, $dd['cashier']);
-            $sheet->setCellValue('E' . $i, $dd['pay_type']);
-            $sheet->setCellValue('F' . $i, $dd['received_money']);
-            $sheet->setCellValue('G' . $i, $dd['order_money']);
-            $sheet->setCellValue('H' . $i, $dd['discount']);
-            $sheet->setCellValue('I' . $i, $dd['status']);
+            strval($dd);
+            $sheet->setCellValue('A' . $i, $dd['member_name']);
+            $sheet->setCellValue('B' . $i, $dd['member_phone']);
+            $sheet->setCellValue('C' . $i, $dd['money']);
+            $sheet->setCellValue('D' . $i, $dd['member_birthday']);
+            $sheet->setCellValue('E' . $i, $dd['register_time']);
         }
 
         $writer = new Xlsx($spreadsheet);
-        $writer->save("uploads/". $fileName);
-        return_msg(200, "success","uploads/". $fileName);
+        $writer->save("uploads/excel/". $fileName);
+        return_msg(200, "success","uploads/excel/". $fileName);
     }
+
 
     /**
      *会员搜索
@@ -665,7 +672,7 @@ class Member extends Common
     }
 
     /**
-     *会员详情
+     *会员详情充值记录
      * @param Request $request
      * @throws \think\db\exception\DataNotFoundException
      * @throws \think\db\exception\ModelNotFoundException
@@ -687,6 +694,27 @@ class Member extends Common
         check_data($data);
     }
 
+    /**
+     *会员详情消费记录
+     * @param Request $request
+     * @throws Exception
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function pc_member_consump(Request $request)
+    {
+        $member_id = $request->param('id');
+        $row = Order::where('member_id',$member_id)->count();
+        $pages = page($row);
+        $data['list'] = Order::field('order_number,pay_time,pay_type,order_money,discount,received_money')
+            ->where('member_id',$member_id)
+            ->limit($pages['offset'],$pages['limit'])
+            ->order('pay_time desc')
+            ->select();
+        $data['page'] = $pages;
+        check_data($data['list'],$data);
+    }
     /**
      * 会员详情搜索
      * @param Request $request
@@ -815,28 +843,37 @@ class Member extends Common
             ->field('a.id,a.discount,a.active_time,a.start_time,a.end_time,a.apply_name,b.shop_name')
             ->join('cloud_merchant_shop b', 'a.shop_id=b.id', 'left')
             ->where('a.merchant_id', $this->merchant_id)
+            ->order('a.create_time','desc')
             ->find();
+
         //会员专享??
-        $data[] = ShopActiveExclusive::field('id,name,start_time,end_time,consump_number,last_consump,recharge_total,consump_total,register_status')
+        $data[] = ShopActiveExclusive::field('id,name,start_time,end_time,consump_number,last_consump,recharge_total,consump_total,register_status, SN as shop_name, apply_name')
             ->where('merchant_id', $this->merchant_id)
             ->find();
         //充值送
 //        halt($data);
         $data[] = ShopActiveRecharge::alias('a')
-            ->field('a.id,a.name,a.recharge_money,a.give_money,a.active_time,a.start_time,a.end_time,b.shop_name')
+            ->field('a.id,a.name,a.recharge_money,a.give_money,a.active_time,a.start_time,a.end_time,b.shop_name,a.name as shop_name,shop_id as apply_name')
             ->join('cloud_merchant_shop b', 'a.shop_id=b.id', 'left')
             ->where('a.merchant_id', $this->merchant_id)
             ->find();
         //分享
         $data[] = ShopActiveShare::alias('a')
-            ->field('a.id,a.lowest_consump,a.money,a.start_time,a.end_time,b.shop_name')
+            ->field('a.id,a.lowest_consump,a.money,a.start_time,a.end_time,b.shop_name,a.apply_name')
             ->join('cloud_merchant_shop b', 'a.shop_id=b.id', 'left')
             ->where('a.merchant_id', $this->merchant_id)
+            ->order('a.create_time','desc')
             ->find();
-
+        //halt($data);
         foreach ($data as $k => &$v) {
-            if ($v != null) {
 
+            if ($v != null) {
+                if($v['shop_name'] == null){
+                    $v['shop_name'] = "全部";
+                }
+                if($v['apply_name'] == null){
+                    $v['apply_name'] ="全部";
+                }
                 if ($k == 0) {
                     $v['type'] = "折扣";
                 } elseif ($k == 1) {
@@ -848,6 +885,19 @@ class Member extends Common
                 }
             }
         }
+        /*foreach($data['discount'] as &$v){
+            $v['type']="折扣";
+        }
+        foreach($data['exclusive'] as &$v){
+            $v['type']="会员专享";
+        }
+        foreach($data['recharge'] as &$v){
+            $v['type']="充值送";
+        }
+        foreach($data['share'] as &$v){
+            $v['type']="分享";
+        }*/
+//        halt($data);
         check_data($data);
     }
 

@@ -23,20 +23,6 @@ class Pay
     protected $url = "http://gateway.starpos.com.cn/adpweb/ehpspos3/sdkBarcodePosPay.json";  //客户主扫
 
     /**
-     * 生成H5点餐页面收款码
-     * @param Request $request
-     * @throws \think\db\exception\DataNotFoundException
-     * @throws \think\db\exception\ModelNotFoundException
-     * @throws \think\exception\DbException
-     */
-    public function clientScan(Request $request)
-    {
-        $data = $request->post();
-        /** （请求星POS） 获取交易信息 存入数据库*/
-        $this->starPos($data);
-    }
-
-    /**
      * 获取WX/ALI首款码
      * @param Request $request
      * @throws \think\db\exception\DataNotFoundException
@@ -47,7 +33,7 @@ class Pay
     {
         $data = $request->post();
         /** （请求星POS） 获取交易信息 存入数据库*/
-        check_params("make_qrcode", $data , "MerchantValidate");
+        check_params("make_code", $data , "MerchantValidate");
         $this->generateCode($data);
     }
 
@@ -63,6 +49,7 @@ class Pay
         $mid = Db::name("merchant_shop")->where("id",$param['sid'])->find()["merchant_id"];
         $res = Db::name("merchant_incom")->where("merchant_id", $mid)->find();
         $trms = json_decode($res["rec"], true);
+
         if ($trms) {
             if (count($trms)) {
                 $trmNo = $trms[0]["trmNo"];
@@ -100,30 +87,19 @@ class Pay
             } else {
                 return_msg(400, "错误");
             }
-            /** 订单入库 */
-            switch ($re["result"]) {
-                case "S":
-                    $rst = 1;
-                    break;
-                case "F":
-                    $rst = 2;
-                    break;
-                case "Z":
-                    $rst = -1;  //未知
-                    break;
-                default:
-                    $rst = 0;
-            }
+
             $dt['order_money'] = (int)$re["total_amount"] / 100;
             $dt['received_money'] = (int)$re["amount"] / 100;
             $dt['create_time'] = time();
             $dt['pay_type'] = strtolower($param["channel"]);
-            $dt['status'] = $rst;
+            $dt['status'] = 0;
             $dt['merchant_id'] = $mid;
             $dt['logNo'] = $re["logNo"];
             $dt['order_no'] = $re["orderNo"];
             $dt['order_number'] = $data["tradeNo"];
             $dt['pay_time'] = strtotime($data["txnTime"]);
+            $dt['shop_id'] = $param['sid'];
+
             /** 保存订单号到Session */
 
             Db::name("order")->insertGetId($dt);
@@ -133,286 +109,24 @@ class Pay
         }
     }
 
-    /**
-     * H5点餐页面收款码
-     * @param $param
-     * @throws \think\db\exception\DataNotFoundException
-     * @throws \think\db\exception\ModelNotFoundException
-     * @throws \think\exception\DbException
-     */
-    protected function starPos($param)
-    {
-        $res = Db::name("merchant_shop")->where("id", $param['shop_id'])->find();
-        /*$res = Db::name('merchant_shop')->alias('a')
-          ->field('a.merchant_id,a.rec,a.mercId,b.key')
-            ->join('cloud_merchant_incom b','a.merchant_id=b.id','left')
-          ->where('a.id',$param['shop_id'])
-          ->find();*/
-        //halt($res);
-        $trms = json_decode($res["rec"], true);
-        if (count($trms)) {
-            $trmNo = $trms[0]["trmNo"];
-        } else {
-            $trmNo = $trms;
-        }
 
-        $channel = $this->IsWeixinOrAlipay();
-        if ($channel != "WXPAY" && $channel != "ALIPAY") {
-            return_msg(400, "渠道错误");
-        } elseif ($channel) {
-            /** 公共参数 */
-            $data["opSys"] = "3";
-            $data["characterSet"] = "00";
-            $data["orgNo"] = "27573";
-            $data["mercId"] = $res["mercId"];
-            $data["trmNo"] = (string)$trmNo;
-            $data["tradeNo"] = generate_order_no($param['shop_id']);
-            $data["txnTime"] = (string)date("YmdHis");
-            $data["signType"] = "MD5";
-            $data["version"] = "V1.0.0";
-            /** 客户主扫参数 */
-            $data["amount"] = strval($param['amount'] * 100);
-            $data["total_amount"] = strval($param['amount'] * 100);
-            $data["payChannel"] = $channel;
-            //halt($res['key']);
-            $data["signValue"] = sign_ature(0000, $data, $res["key"]);
-            //halt($data);
-            $rp = curl_request($this->url, true, $data, true);
-            $re = json_decode(urldecode($rp), true);
-            //halt($re);
-            if ($re["returnCode"] == "000000") {
-                /** 生成二维码 */
-                $qrCode = new QrCode($re["payCode"]);
-                $filename = md5($qrCode->getText()) . ".png";
-                $root = "uploads/";
-                $pngAbsolutePath = $root . $filename;
-                if (!file_exists($pngAbsolutePath)) {
-                    $qrCode->writeFile($pngAbsolutePath);
-                }
-                /** 订单入库 */
-                switch ($re["result"]) {
-                    case "S":
-                        $rst = 1;
-                        break;
-                    case "F":
-                        $rst = 2;
-                        break;
-                    case "Z":
-                        $rst = -1;  //未知
-                        break;
-                    default:
-                        $rst = 0;
-                }
-                $dt['order_money'] = (int)$re["total_amount"] / 100;
-                $dt['received_money'] = (int)$re["amount"] / 100;
-                $dt['create_time'] = time();
-                $dt['pay_type'] = strtolower("$channel");
-                $dt['status'] = $rst;
-                $dt['merchant_id'] = $res['merchant_id'];
-                $dt['logNo'] = $re["logNo"];
-                $dt['order_no'] = $re["orderNo"];
-                $dt['order_number'] = $data["tradeNo"];
-                $dt['pay_time'] = strtotime($data["txnTime"]);
-                /** 保存订单号到Session */
-                Session::set("logNo", $re["logNo"], "_app");
-                Db::name("order")->insertGetId($dt);
-                return_msg(200,'success',$pngAbsolutePath);
-            } else {
-                return_msg(400, $re["message"]);
-            }
-        }
-    }
 
     /**
-     * 台牌码 --商户码
+     * 台牌码 --
      * @param $request [mix] 参数
      */
     public function merchant_tag()
     {
-        $mid = $this->merchant_id;
-        $shop_name = Session::get("shop_name", "app");
-        $url = "http://merc.hzyspay.com/tag/index.php?merchant_id=$mid&shop_name=$shop_name";
-        $qrCode = new QrCode($url);
-        $filename = md5($qrCode->getText()) . ".png";
-        $root = "uploads/";
-        $pngAbsolutePath = $root . $filename;
-        if (!file_exists($pngAbsolutePath)) {
-            $qrCode->writeFile($pngAbsolutePath);
-        }
-        if ($pngAbsolutePath) {
-            return_msg(200, "成功", $pngAbsolutePath);
-        } else {
-            return_msg(400, "失败");
-        }
-    }
-
-    /**
-     * 台牌码支付 --根据Merchant_id 返回收款URL
-     * @param [int] $amount
-     * @param [int] $mid 商户ID
-     * @param [int] $total_amount
-     * @param [string] $channel
-     * @param Request $request
-     * @throws \think\db\exception\DataNotFoundException
-     * @throws \think\db\exception\ModelNotFoundException
-     * @throws \think\exception\DbException
-     */
-    public function MerchantTagPay(Request $request)
-    {
-        $param = $request->param();
-        check_params("tag_pay", $param, "MerchantValidate");
-        $res = Db::name("merchant_incom")->where("merchant_id", $param["mid"])->find();
-        $trms = json_decode($res["rec"], true);
-        if (count($trms)) {
-            $trmNo = $trms[0]["trmNo"];
-        } else {
-            $trmNo = $trms;
-        }
-
-        /** 公共参数 */
-        $data["opSys"] = "3";
-        $data["characterSet"] = "00";
-        $data["orgNo"] = "27573";
-        $data["mercId"] = $res["mercId"];
-        $data["trmNo"] = (string)$trmNo;
-        $data["tradeNo"] = generate_order_no($this->merchant_id);
-        $data["txnTime"] = (string)date("YmdHis");
-        $data["signType"] = "MD5";
-        $data["version"] = "V1.0.0";
-        /** 客户主扫参数 */
-        $data["amount"] = strval($param['amount'] * 100);
-        $data["total_amount"] = strval($param['amount'] * 100);
-        $data["payChannel"] = $param["channel"];
-        $data["signValue"] = sign_ature(0000, $data, $res["key"]);
-        $rp = curl_request($this->url, true, $data, true);
-        $re = json_decode(urldecode($rp), true);
-
-        if ($re["returnCode"] == "000000") {
-
-            echo json_encode(["code" => 200, "msg" => "成功", "data" => $re["payCode"]]);
-
-            /** 订单入库 */
-            switch ($re["result"]) {
-                case "S":
-                    $rst = 1;
-                    break;
-                case "F":
-                    $rst = 2;
-                    break;
-                case "Z":
-                    $rst = -1;  //未知
-                    break;
-                default:
-                    $rst = 0;
-            }
-            $dt['order_money'] = (int)$re["total_amount"] / 100;
-            $dt['received_money'] = (int)$re["amount"] / 100;
-            $dt['create_time'] = time();
-            $dt['pay_type'] = strtolower($param["channel"]);
-            $dt['status'] = $rst;
-            $dt['merchant_id'] = $this->merchant_id;
-            $dt['logNo'] = $re["logNo"];
-            $dt['order_no'] = $re["orderNo"];
-            $dt['order_number'] = $data["tradeNo"];
-            $dt['pay_time'] = strtotime($data["txnTime"]);
-            /** 保存订单号到Session */
-            Session::set("logNo", $re["logNo"], "_app");
-            Db::name("order")->insertGetId($dt);
-
-        } else {
-            return_msg(400, $re["message"]);
+        $param = \request()->param("sid");
+        $res = Db::name("total_qrcode")->where("shop_id",$param['sid'])->find();
+        if ($res) {
+            return_msg(200, "success", $res["qrcode"]);
+        }else {
+            return_msg(400, "Fail");
         }
     }
 
 
-    /**
-     * 微信公众号查询
-     * @description 连贯操作
-     */
-    public function wx_query(Array $arg = [])
-    {
-        /** 查询 -> 支付 */
-        $trms = json_decode($arg["rec"], true);
-        if (count($trms)) {
-            $trmNo = $trms[0]["trmNo"];
-        } else {
-            $trmNo = $trms;
-        }
-        $param = [
-            "orgNo" => "27573",
-            "mercId" => $arg["mercId"],
-            "trmNo" => $trmNo,
-            "txnTime" => (string)date("YmdHis", time()),
-            "signType" => 'MD5',
-            "version" => 'V1.0.0',
-        ];
-        $key = $arg["key"];
-        $param["signValue"] = sign_ature(0000, $param, $key);
-        $url = "http://gateway.starpos.com.cn/adpweb/ehpspos3/pubSigQry.json";
-        $res = curl_request($url, true, $param, true);
-        $res = json_decode(urldecode($res), true);
-        /** 如果查询成功请求公众号支付否则返回错误信息 */
-        if ($res["returnCode"] == "000000") {
-            return true;
-        } else {
-            return_msg(400, "微信查询失败：" . $res["message"]);
-        }
-    }
-
-    /**微信公众号支付
-     * @param Request $request
-     * @param $mid $amount $t_amount $code;
-     */
-    public function wxpay(Request $request)
-    {
-        $query = $request->param();
-        check_params("wxpay", $query, "MerchantValidate");
-        $res = Db::name("merchant_shop")->where("id",$query["sid"])->find();
-
-        $this->wx_query($res);
-        /** 查询 -> 支付 */
-        $trms = json_decode($res["rec"], true);
-        if (count($trms)) {
-            $trmNo = $trms[0]["trmNo"];
-        } else {
-            $trmNo = $trms;
-        }
-
-        $param["orgNo"] = "27573";
-        $param["trmNo"] = (string)$trmNo;
-        $param["txnTime"] = (string)date("YmdHis");
-        $param["version"] = "V1.0.0";
-        $param["mercId"] = $res["mercId"];
-        $param["amount"] = (string)1; //金额
-        $param["total_amount"] = (string)1;  //总金额
-        $param["code"] = "071qUnwD0UAzAd2MRTtD0209wD0qUnwi";  //授权码 未使用的话，5分钟后过期
-        $key = $res["key"];
-        $param["signValue"] = sign_ature(0000, $param, $key);
-
-        $url = "http://gateway.starpos.com.cn/adpweb/ehpspos3/pubSigPay.json";
-        $res = curl_request($url, true, $param, true);
-        $res = json_decode(urldecode($res), true);
-
-        /** 如果查询成功请求公众号支付否则返回错误信息 */
-        if ($res["returnCode"] == "000000") {
-            /** [array] 成功存入数据库 $data */
-            $data = [
-                "order_no" => $res["orderNo"],
-                "order_number" => $res["LogNo"],
-                "order_money" => $res["total_amount"],
-                "received_money" => $res["amount"],
-                "pay_time" => $res["apiTimestamp"],
-                "payer" => $res["PrepayId"],
-                "order_remark" => $res["attach"],
-                "pay_type" => "wxpay",
-                "merchant_id" => $query["mid"],
-            ];
-            Db::name("order")->insertGetId($data);
-            return_msg(200, $res);
-        } else {
-            return_msg(400, $res["message"]);
-        }
-    }
 
     /**
      * 订单查询

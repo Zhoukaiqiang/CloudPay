@@ -53,6 +53,7 @@ class Login extends Controller
      */
     public function login()
     {
+        //echo encrypt_password('123456', 13706612262);die;
         if (request()->isPost()) {
             $data = \request()->post();
 
@@ -69,16 +70,24 @@ class Login extends Controller
             if (!$db_res) {
                 $Merc = new TotalMerchant();
                 $db_res = $Merc::alias("merc")
-                    ->join("cloud_merchant_shop ms" ,"ms.merchant_id = merc.id")
+                    ->join("cloud_merchant_shop ms" ,"ms.merchant_id = merc.id",'left')
                     ->field("merc.id, merc.name, merc.phone, merc.password, merc.status, ms.id as shop_id")
                     ->where('merc.phone',$data['phone'])
                     ->find();
             }
+
             if($db_res==null){
                 return_msg(400, '用户名或密码不正确！');
             }
+            if(isset($db_res['status'])){
+                if($db_res['status'] == 0){
+                    return_msg(400, '该商户为停用状态,不能进入商户系统');
+                }
+            }
             $res = $db_res->toArray();
+//            halt($res);
             $shopName = MerchantShop::get($res["shop_id"])["shop_name"];
+
             Session::set("shop_name", $shopName,'app');
             $user_pwd = encrypt_password($data['password'], $data["phone"]);
 
@@ -86,6 +95,7 @@ class Login extends Controller
 
                 return_msg(400, '用户密码不正确！');
             } else {
+
                 /** 登录成功设置session */
                 if (empty($res["role"])) {
                     Session::set("username_", ["id" => $res['id'], "role" => -1], 'app');
@@ -114,6 +124,7 @@ class Login extends Controller
     {
         if (request()->isPost()) {
             $data = request()->param();
+
             /** 检验参数 */
             if(!isset($data['token'])){
                 return_msg(400,'非法登录');
@@ -128,9 +139,12 @@ class Login extends Controller
                 ->field("merc.id, merc.name, merc.phone, merc.password, merc.status, ms.id as shop_id")
                 ->where("merc.phone", $data['phone'])
                 ->find();
-
+            if($db_res['status'] == 0){
+                return_msg(400,'该商户为停用状态,不能进入商户系统');
+            }
+//            halt($db_res);
             $res = $db_res->toArray();
-
+//            halt($db_res);
             /** 登录成功设置session */
             if (empty($res['role'])) {
                 Session::set("username_", ["id" => $res['id'], "role" => -1], 'app');
@@ -301,11 +315,11 @@ class Login extends Controller
         curl_setopt($curl, CURLOPT_POST, 1);
         //配置submail
         $data = [
-            'appid' => '29499', //应用id
+            'appid' => '27075', //应用id
             'to' => $phone,     //要接受短信的电话
-            'project' => "8hBHG4", //模板标识
+            'project' => 'Jaayb', //模板标识
             'vars' => "{'code': '" . $msg . "'}",
-            'signature' => '759a042683c8fe0160f069c8dd8d577d', //应用签名
+            'signature' => '5ac305ef38fb126d2a0ec5304040ab7d', //应用签名
         ];
 
         curl_setopt($curl, CURLOPT_POSTFIELDS, $data);
